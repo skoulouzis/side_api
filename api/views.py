@@ -27,7 +27,7 @@ class TodoItemViewSet(viewsets.ModelViewSet):
 
 
 class UserViewSet(viewsets.ModelViewSet):
-    serialdizer_class = UserSerializer
+    serializer_class = UserSerializer
     authentication_classes = (TokenAuthentication,)
     User = get_user_model()
     queryset = User.objects.all()
@@ -40,4 +40,4 @@ class UserViewSet(viewsets.ModelViewSet):
         User = get_user_model()
         self.object = get_object_or_404(User, pk=request.user.id)
         serializer = self.get_serializer(self.object)
-        return Response(serializer.ata)
+        return Response(serializer.data)
