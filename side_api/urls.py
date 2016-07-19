@@ -14,20 +14,25 @@ Including another URLconf
 """
 from django.conf.urls import include, url
 from django.contrib import admin
-from rest_framework import routers
+from rest_framework_nested import routers
 from rest_framework.authtoken.views import obtain_auth_token
 
 import views
-from api.views import TodoItemViewSet, UserViewSet
+from api.views import TodoItemViewSet, UserViewSet, SwitchAppViewSet, SwitchAppGraphViewSet
 
 router = routers.DefaultRouter(trailing_slash=False)
 router.register("todos", TodoItemViewSet, base_name="todo")
 router.register("users", UserViewSet, base_name="user")
+router.register("switchapps", SwitchAppViewSet, base_name="switchapps")
+
+app_graph_router = routers.NestedSimpleRouter(router, r'switchapps', lookup='switchapps')
+app_graph_router.register(r'graphs', SwitchAppGraphViewSet, base_name='switchapps-graphs')
 
 urlpatterns = [
     url(r'^admin/', include(admin.site.urls)),
     url(r'^$', views.index, name='index'),
     url(r'^api/', include(router.urls)),
+    url(r'^api/', include(app_graph_router.urls)),
     url(r'^api-auth-token/', obtain_auth_token),
     url(r'^api-register/', views.register),
 ]
