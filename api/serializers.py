@@ -1,7 +1,7 @@
 import json
 
 from rest_framework import serializers
-from models import TodoItem, SwitchApp, SwitchAppGraph
+from models import TodoItem, SwitchApp, SwitchAppGraph, SwitchComponent
 from django.contrib.auth.models import User
 
 
@@ -20,7 +20,16 @@ class UserSerializer(serializers.ModelSerializer):
 class SwitchAppSerializer(serializers.ModelSerializer):
     class Meta:
         model = SwitchApp
-        fields = ('id', 'uuid', 'title', 'description', 'graphs')
+        fields = ('id', 'uuid', 'title', 'description')
+
+
+class SwitchComponentSerializer(serializers.ModelSerializer):
+    app = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
+    properties = serializers.CharField(allow_null=True)
+
+    class Meta:
+        model = SwitchComponent
+        fields = ('id', 'uuid', 'title', 'properties', 'app')
 
 
 class SwitchAppGraphSerializer(serializers.ModelSerializer):

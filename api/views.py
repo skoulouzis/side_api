@@ -12,8 +12,9 @@ from rest_framework import views
 from rest_framework_xml.parsers import XMLParser
 
 from api.permissions import BelongsToUser, AppBelongsToUser
-from models import TodoItem, SwitchApp, SwitchAppGraph
-from serializers import TodoItemSerializer, UserSerializer, SwitchAppSerializer, SwitchAppGraphSerializer
+from models import TodoItem, SwitchApp, SwitchAppGraph, SwitchComponent
+from serializers import TodoItemSerializer, UserSerializer, SwitchAppSerializer, SwitchAppGraphSerializer, \
+    SwitchComponentSerializer
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth import get_user_model
@@ -45,7 +46,8 @@ class SwitchAppViewSet(viewsets.ModelViewSet):
         return SwitchApp.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        app = serializer.save(user=self.request.user)
+        SwitchAppGraph.objects.create(app_id=app.id)
 
 
 class SwitchAppGraphViewSet(viewsets.ModelViewSet):
@@ -74,7 +76,7 @@ class SwitchAppGraphViewSet(viewsets.ModelViewSet):
     def put(self, request, switchapps_pk=None, **kwargs):
         json_data = request.data
         graph = self.queryset.filter(app_id=switchapps_pk).latest('updated_at')
-        graph.file.save(graph.app.uuid+'.json', ContentFile(json.dumps(json_data)))
+        graph.file.save(str(graph.app.uuid)+'.json', ContentFile(json.dumps(json_data)))
         serializer = self.get_serializer(graph)
         return Response(serializer.data)
 
@@ -106,3 +108,26 @@ class UserViewSet(viewsets.ModelViewSet):
         self.object = get_object_or_404(User, pk=request.user.id)
         serializer = self.get_serializer(self.object)
         return Response(serializer.data)
+
+
+class SwitchComponentViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint that allows TodoItems to be CRUDed.
+    """
+    serializer_class = SwitchComponentSerializer
+
+    def get_queryset(self):
+        app_id = self.request.query_params.get('app_id', None)
+        uuid = self.request.query_params.get('uuid', None)
+        if app_id is not None:
+            queryset = SwitchComponent.objects.filter(app_id=app_id)
+            if uuid is not None:
+                queryset = SwitchComponent.objects.filter(app_id=app_id, uuid=uuid)
+        else:
+            queryset = SwitchComponent.objects.filter(app__user=self.request.user)
+        return queryset
+
+    def perform_create(self, serializer):
+        app_id = self.request.data['app_id']
+        app = SwitchApp.objects.filter(id=app_id).first()
+        serializer.save(app=app)
