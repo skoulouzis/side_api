@@ -40,10 +40,16 @@ class SwitchAppViewSet(viewsets.ModelViewSet):
     """
     serializer_class = SwitchAppSerializer
     authentication_classes = (TokenAuthentication,)
-    permission_classes = (IsAuthenticated, BelongsToUser,)
+    #permission_classes = (IsAuthenticated, BelongsToUser,)
+    permission_classes = (IsAuthenticated,)
+
+    def list(self, request, **kwargs):
+        apps = SwitchApp.objects.filter(user=self.request.user)
+        serializer = self.get_serializer(apps, many=True)
+        return Response(serializer.data)
 
     def get_queryset(self):
-        return SwitchApp.objects.filter(user=self.request.user)
+        return SwitchApp.objects.filter()
 
     def perform_create(self, serializer):
         app = serializer.save(user=self.request.user)
