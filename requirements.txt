@@ -8,3 +8,4 @@ djangorestframework-jwt==1.7.2
 drf-nested-routers
 djangorestframework-xml
 PyYAML===3.11
+django-cleanup===0.4.2
