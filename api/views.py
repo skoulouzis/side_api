@@ -1,4 +1,6 @@
 import json
+import yaml
+import os
 
 from django.core.files.base import ContentFile
 from django.http import JsonResponse, HttpResponse, StreamingHttpResponse, FileResponse
@@ -18,6 +20,9 @@ from serializers import TodoItemSerializer, UserSerializer, SwitchAppSerializer,
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth import get_user_model
+
+from side_api import settings
+
 
 class TodoItemViewSet(viewsets.ModelViewSet):
     """
@@ -55,6 +60,50 @@ class SwitchAppViewSet(viewsets.ModelViewSet):
         app = serializer.save(user=self.request.user)
         SwitchAppGraph.objects.create(app_id=app.id)
 
+    @detail_route(methods=['get'], permission_classes=[])
+    def tosca(self, request, pk=None, *args, **kwargs):
+        graph = SwitchAppGraph.objects.filter(app_id=pk).latest('updated_at')
+        with open(graph.file.url, 'r') as f:
+            graph_json = json.loads(f.read())
+
+        components = []
+        network = []
+
+        for cell in graph_json['cells']:
+            object = {}
+            if cell['type'] == 'switch.Component':
+                db_record = SwitchComponent.objects.get(uuid=cell['id'])
+                object['id'] = db_record.id
+                object['title'] = db_record.title
+                object['class'] = db_record.type
+                object['uuid'] = cell['id']
+                object['scaling_mode'] = db_record.mode
+                object['inPorts'] = cell['inPorts']
+                object['outPorts'] = cell['outPorts']
+                object['metadata'] = yaml.load(db_record.properties)
+                components.append(object)
+
+            if cell['type'] == 'switch.Network':
+                db_record = SwitchComponent.objects.get(uuid=cell['id'])
+                object['id'] = db_record.id
+                object['title'] = db_record.title
+                object['class'] = db_record.type
+                object['uuid'] = cell['id']
+                object['scaling_mode'] = db_record.mode
+                object['inPorts'] = cell['inPorts']
+                object['outPorts'] = cell['outPorts']
+                object['metadata'] = yaml.load(db_record.properties)
+                network.append(object)
+
+        data = {
+            'data': {
+                'components': components,
+                'network_components': network
+            }
+        }
+
+        return JsonResponse(data)
+
 
 class SwitchAppGraphViewSet(viewsets.ModelViewSet):
     authentication_classes = (TokenAuthentication,)
@@ -73,7 +122,7 @@ class SwitchAppGraphViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(graph)
         return Response(serializer.data)
 
-    @list_route(permission_classes=[IsAuthenticated])
+    @list_route(permission_classes=[])
     def latest(self, request, switchapps_pk=None, *args, **kwargs):
         graph = self.queryset.filter(app_id=switchapps_pk).latest('updated_at')
         serializer = self.get_serializer(graph)
@@ -82,21 +131,29 @@ class SwitchAppGraphViewSet(viewsets.ModelViewSet):
     def put(self, request, switchapps_pk=None, **kwargs):
         json_data = request.data
         graph = self.queryset.filter(app_id=switchapps_pk).latest('updated_at')
-        graph.file.save(str(graph.app.uuid)+'.json', ContentFile(json.dumps(json_data)))
+
+        suffixes = ['second', 'first']
+        suffixes_next = ['third', 'second']
+        uuid = str(graph.app.uuid)
+
+        if os.path.isfile(os.path.join(settings.BASE_DIR, 'graphs', uuid+'_third.json')):
+            os.remove(os.path.join(settings.BASE_DIR, 'graphs', uuid+'_third.json'))
+
+        for suffix in suffixes:
+            for filename in os.listdir(os.path.join(settings.BASE_DIR, 'graphs')):
+                if filename.startswith(uuid):
+                    if filename.endswith(suffix+'.json'):
+                        new_name = "%s_%s.json" % (uuid, suffixes_next[suffixes.index(suffix)])
+                        os.rename(os.path.join(settings.BASE_DIR, 'graphs', filename), os.path.join(settings.BASE_DIR, 'graphs', new_name))
+
+        for filename in os.listdir(os.path.join(settings.BASE_DIR, 'graphs')):
+            if filename == uuid+'.json':
+                os.rename(os.path.join(settings.BASE_DIR, 'graphs', filename), os.path.join(settings.BASE_DIR, 'graphs', uuid+'_first.json'))
+
+        graph.file.save(uuid+'.json', ContentFile(json.dumps(json_data)))
+        graph.file.close()
         serializer = self.get_serializer(graph)
         return Response(serializer.data)
-
-    @detail_route(methods=['get'],permission_classes=[IsAuthenticated])
-    def json(self, request, pk=None, switchapps_pk=None, *args, **kwargs):
-        graph = self.queryset.get(id=pk, app_id=switchapps_pk)
-        file = open(graph.file.url, 'r')
-        return FileResponse(file)
-
-    @detail_route(methods=['get'], permission_classes=[IsAuthenticated])
-    def tosca(self, request, pk=None, switchapps_pk=None, *args, **kwargs):
-        graph = self.queryset.get(id=pk, app_id=switchapps_pk)
-        file = open(graph.file.url, 'r')
-        return FileResponse(file)
 
 
 class UserViewSet(viewsets.ModelViewSet):

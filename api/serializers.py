@@ -20,7 +20,8 @@ class UserSerializer(serializers.ModelSerializer):
 class SwitchAppSerializer(serializers.ModelSerializer):
     class Meta:
         model = SwitchApp
-        fields = ('id', 'uuid', 'title', 'description')
+        user = UserSerializer(required=False)
+        fields = ('id', 'uuid', 'title', 'description', 'user')
 
 
 class SwitchComponentSerializer(serializers.ModelSerializer):
@@ -29,7 +30,7 @@ class SwitchComponentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SwitchComponent
-        fields = ('id', 'uuid', 'title', 'properties', 'app')
+        fields = ('id', 'uuid', 'title', 'type', 'mode', 'properties', 'app')
 
 
 class SwitchAppGraphSerializer(serializers.ModelSerializer):
@@ -40,4 +41,7 @@ class SwitchAppGraphSerializer(serializers.ModelSerializer):
         fields = ('id', 'created_at', 'updated_at', 'graph')
 
     def get_graph(self, obj):
-        return json.loads(obj.file.read())
+        obj.file.open()
+        response = json.loads(obj.file.read())
+        obj.file.close()
+        return response

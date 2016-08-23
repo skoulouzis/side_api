@@ -41,6 +41,8 @@ class SwitchComponent(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     uuid = models.UUIDField(editable=True)
     title = models.CharField(max_length=512, null=True)
+    mode = models.CharField(max_length=512, null=True)
+    type = models.CharField(max_length=512, null=True)
     properties = models.TextField(null=True)
 
     class JSONAPIMeta:
