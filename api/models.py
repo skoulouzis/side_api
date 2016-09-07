@@ -10,6 +10,8 @@ class SwitchApp(models.Model):
     title = models.CharField(max_length=512)
     uuid = models.UUIDField(default=uuid.uuid4, editable=False)
     description = models.CharField(max_length=1024, null=True)
+    public_view = models.BooleanField(default=False)
+    public_editable = models.BooleanField(default=False)
 
     class JSONAPIMeta:
         resource_name = "switchapps"
