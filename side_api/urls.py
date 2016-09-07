@@ -18,10 +18,9 @@ from rest_framework_nested import routers
 from rest_framework.authtoken.views import obtain_auth_token
 
 import views
-from api.views import TodoItemViewSet, UserViewSet, SwitchAppViewSet, SwitchAppGraphViewSet, SwitchComponentViewSet
+from api.views import UserViewSet, SwitchAppViewSet, SwitchAppGraphViewSet, SwitchComponentViewSet
 
 router = routers.DefaultRouter(trailing_slash=False)
-router.register("todos", TodoItemViewSet, base_name="todo")
 router.register("users", UserViewSet, base_name="user")
 router.register("switchapps", SwitchAppViewSet, base_name="switchapps")
 router.register("switchcomponents", SwitchComponentViewSet, base_name="switchcomponents")

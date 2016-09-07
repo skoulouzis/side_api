@@ -1,14 +1,8 @@
 import json
 
 from rest_framework import serializers
-from models import TodoItem, SwitchApp, SwitchAppGraph, SwitchComponent
+from models import SwitchApp, SwitchAppGraph, SwitchComponent
 from django.contrib.auth.models import User
-
-
-class TodoItemSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TodoItem
-        fields = ('label', 'text', 'done')
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -18,19 +12,27 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class SwitchAppSerializer(serializers.ModelSerializer):
+    editable = serializers.SerializerMethodField(read_only=True, required=False)
+    user = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
+
     class Meta:
         model = SwitchApp
-        user = UserSerializer(required=False)
-        fields = ('id', 'uuid', 'title', 'description', 'user')
+        fields = ('id', 'uuid', 'title', 'description', 'user', 'editable')
 
+    def get_editable(self, obj):
+        return self.context['request'].user == obj.user
 
 class SwitchComponentSerializer(serializers.ModelSerializer):
     app = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
+    editable = serializers.SerializerMethodField(read_only=True, required=False)
     properties = serializers.CharField(allow_null=True)
 
     class Meta:
         model = SwitchComponent
-        fields = ('id', 'uuid', 'title', 'type', 'mode', 'properties', 'app')
+        fields = ('id', 'uuid', 'title', 'type', 'mode', 'properties', 'app', 'editable')
+
+    def get_editable(self, obj):
+        return self.context['request'].user == obj.app.user
 
 
 class SwitchAppGraphSerializer(serializers.ModelSerializer):

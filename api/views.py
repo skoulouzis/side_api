@@ -14,8 +14,8 @@ from rest_framework import views
 from rest_framework_xml.parsers import XMLParser
 
 from api.permissions import BelongsToUser, AppBelongsToUser
-from models import TodoItem, SwitchApp, SwitchAppGraph, SwitchComponent
-from serializers import TodoItemSerializer, UserSerializer, SwitchAppSerializer, SwitchAppGraphSerializer, \
+from models import SwitchApp, SwitchAppGraph, SwitchComponent
+from serializers import UserSerializer, SwitchAppSerializer, SwitchAppGraphSerializer, \
     SwitchComponentSerializer
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
@@ -24,24 +24,9 @@ from django.contrib.auth import get_user_model
 from side_api import settings
 
 
-class TodoItemViewSet(viewsets.ModelViewSet):
-    """
-    API endpoint that allows TodoItems to be CRUDed.
-    """
-    serializer_class = TodoItemSerializer
-    authentication_classes = (TokenAuthentication,)
-    permission_classes = (IsAuthenticated, BelongsToUser,)
-
-    def get_queryset(self):
-        return TodoItem.objects.filter(user=self.request.user)
-
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
-
-
 class SwitchAppViewSet(viewsets.ModelViewSet):
     """
-    API endpoint that allows TodoItems to be CRUDed.
+    API endpoint that allows SwitchApps to be CRUDed.
     """
     serializer_class = SwitchAppSerializer
     authentication_classes = (TokenAuthentication,)
@@ -49,7 +34,8 @@ class SwitchAppViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated,)
 
     def list(self, request, **kwargs):
-        apps = SwitchApp.objects.filter(user=self.request.user)
+        apps = SwitchApp.objects.filter()
+        #apps = SwitchApp.objects.filter(user=self.request.user)
         serializer = self.get_serializer(apps, many=True)
         return Response(serializer.data)
 
