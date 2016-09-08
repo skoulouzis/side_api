@@ -16,6 +16,9 @@ class SwitchApp(models.Model):
     class JSONAPIMeta:
         resource_name = "switchapps"
 
+    def __unicode__(self):
+        return 'SwitchApp: ' + self.title + ' by ' + self.user.username
+
 
 class SwitchAppGraph(models.Model):
     app = models.ForeignKey(SwitchApp, related_name='graphs')
