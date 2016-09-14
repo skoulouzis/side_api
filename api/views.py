@@ -65,7 +65,7 @@ class SwitchAppViewSet(viewsets.ModelViewSet):
                 # data_obj['id'] = db_record.id
                 data_obj['title'] = db_record.title
                 data_obj['uuid'] = cell['id']
-                data_obj['metadata'] = yaml.load(db_record.properties)
+                data_obj['metadata'] = yaml.load(str(db_record.properties))
 
                 if cell['type'] == 'switch.Component':
                     data_obj['scaling_mode'] = db_record.mode
