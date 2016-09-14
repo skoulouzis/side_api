@@ -65,17 +65,21 @@ class SwitchAppViewSet(viewsets.ModelViewSet):
                 # data_obj['id'] = db_record.id
                 data_obj['title'] = db_record.title
                 data_obj['uuid'] = cell['id']
+                properties = {}
 
-                if db_record.properties != 'data: "enter metadata as YAML"':
+                if 'enter metadata as YAML' not in db_record.properties:
                     metadata = yaml.load(str(db_record.properties).replace("\t","    "))
-                    data_obj.update(metadata)
+                    properties.update(metadata)
 
                 if cell['type'] == 'switch.Component':
-                    data_obj['scaling_mode'] = db_record.mode
-                    data_obj['inPorts'] = cell['inPorts']
-                    data_obj['outPorts'] = cell['outPorts']
+                    properties['scaling_mode'] = db_record.mode
+                    properties['inPorts'] = cell['inPorts']
+                    properties['outPorts'] = cell['outPorts']
                     if 'parent' in cell:
-                        data_obj['group'] = cell['parent']
+                        properties['group'] = cell['parent']
+
+                    data_obj['properties'] = properties
+
                     if db_record.type == 'Component':
                         components.append(data_obj)
                     elif db_record.type == 'Network':
@@ -84,12 +88,16 @@ class SwitchAppViewSet(viewsets.ModelViewSet):
                         external.append(data_obj)
 
                 if cell['type'] == 'switch.Attribute':
-                    data_obj['class'] = db_record.type
+                    properties['class'] = db_record.type
+
+                    data_obj['properties'] = properties
                     attributes.append(data_obj)
 
                 if cell['type'] == 'switch.Group':
                     if 'embeds' in cell:
-                        data_obj['members'] = cell['embeds']
+                        properties['members'] = cell['embeds']
+
+                    data_obj['properties'] = properties
                     groups.append(data_obj)
 
         data = {
