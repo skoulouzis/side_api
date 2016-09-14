@@ -3,8 +3,7 @@ from __future__ import unicode_literals
 import uuid as uuid
 from django.contrib.auth.models import User
 from django.db import models
-
-from api import admin
+from django.contrib import admin
 
 
 class SwitchApp(models.Model):
