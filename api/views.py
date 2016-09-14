@@ -62,10 +62,10 @@ class SwitchAppViewSet(viewsets.ModelViewSet):
             data_obj = {}
             if cell['type'].startswith('switch'):
                 db_record = SwitchComponent.objects.get(uuid=cell['id'])
-                # data_obj['id'] = db_record.id
-                data_obj['title'] = db_record.title
-                data_obj['uuid'] = cell['id']
                 properties = {}
+                # data_obj['id'] = db_record.id
+                properties['title'] = db_record.title
+                # data_obj['uuid'] = cell['id']
 
                 if 'enter metadata as YAML' not in db_record.properties:
                     metadata = yaml.load(str(db_record.properties).replace("\t","    "))
@@ -78,7 +78,7 @@ class SwitchAppViewSet(viewsets.ModelViewSet):
                     if 'parent' in cell:
                         properties['group'] = cell['parent']
 
-                    data_obj['properties'] = properties
+                    data_obj[cell['id']] = properties
 
                     if db_record.type == 'Component':
                         components.append(data_obj)
@@ -90,14 +90,14 @@ class SwitchAppViewSet(viewsets.ModelViewSet):
                 if cell['type'] == 'switch.Attribute':
                     properties['class'] = db_record.type
 
-                    data_obj['properties'] = properties
+                    data_obj[cell['id']] = properties
                     attributes.append(data_obj)
 
                 if cell['type'] == 'switch.Group':
                     if 'embeds' in cell:
                         properties['members'] = cell['embeds']
 
-                    data_obj['properties'] = properties
+                    data_obj[cell['id']] = properties
                     groups.append(data_obj)
 
         data = {
