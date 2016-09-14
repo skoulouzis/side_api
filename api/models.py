@@ -44,4 +44,4 @@ class SwitchComponent(models.Model):
         resource_name = "switchcomponents"
 
     def __unicode__(self):
-        return 'SwitchApp: ' + self.title + '(' + self.uuid + ') in ' + self.app.title
+        return 'SwitchApp: ' + self.title + '(' + str(self.uuid) + ') in ' + self.app.title
