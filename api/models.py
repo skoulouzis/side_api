@@ -42,3 +42,6 @@ class SwitchComponent(models.Model):
 
     class JSONAPIMeta:
         resource_name = "switchcomponents"
+
+    def __unicode__(self):
+        return 'SwitchApp: ' + self.title + '(' + self.uuid + ') in ' + self.app.title
