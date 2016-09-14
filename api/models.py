@@ -4,6 +4,8 @@ import uuid as uuid
 from django.contrib.auth.models import User
 from django.db import models
 
+from api import admin
+
 
 class SwitchApp(models.Model):
     user = models.ForeignKey(User)
@@ -45,3 +47,7 @@ class SwitchComponent(models.Model):
 
     def __unicode__(self):
         return 'SwitchApp: ' + self.title + '(' + str(self.uuid) + ') in ' + self.app.title
+
+
+class SwitchComponentAdmin(admin.ModelAdmin):
+    fields = ('title', 'uuid', 'app_title')
