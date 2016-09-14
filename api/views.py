@@ -30,12 +30,12 @@ class SwitchAppViewSet(viewsets.ModelViewSet):
     """
     serializer_class = SwitchAppSerializer
     authentication_classes = (TokenAuthentication,)
-    #permission_classes = (IsAuthenticated, BelongsToUser,)
+    # permission_classes = (IsAuthenticated, BelongsToUser,)
     permission_classes = (IsAuthenticated,)
 
     def list(self, request, **kwargs):
         apps = SwitchApp.objects.filter()
-        #apps = SwitchApp.objects.filter(user=self.request.user)
+        # apps = SwitchApp.objects.filter(user=self.request.user)
         serializer = self.get_serializer(apps, many=True)
         return Response(serializer.data)
 
@@ -53,38 +53,49 @@ class SwitchAppViewSet(viewsets.ModelViewSet):
             graph_json = json.loads(f.read())
 
         components = []
+        external = []
         network = []
+        attributes = []
+        groups = []
 
         for cell in graph_json['cells']:
-            object = {}
-            if cell['type'] == 'switch.Component':
+            data_obj = {}
+            if cell['type'].startswith('switch'):
                 db_record = SwitchComponent.objects.get(uuid=cell['id'])
-                object['id'] = db_record.id
-                object['title'] = db_record.title
-                object['class'] = db_record.type
-                object['uuid'] = cell['id']
-                object['scaling_mode'] = db_record.mode
-                object['inPorts'] = cell['inPorts']
-                object['outPorts'] = cell['outPorts']
-                object['metadata'] = yaml.load(db_record.properties)
-                components.append(object)
+                # data_obj['id'] = db_record.id
+                data_obj['title'] = db_record.title
+                data_obj['uuid'] = cell['id']
+                data_obj['metadata'] = yaml.load(db_record.properties)
 
-            if cell['type'] == 'switch.Network':
-                db_record = SwitchComponent.objects.get(uuid=cell['id'])
-                object['id'] = db_record.id
-                object['title'] = db_record.title
-                object['class'] = db_record.type
-                object['uuid'] = cell['id']
-                object['scaling_mode'] = db_record.mode
-                object['inPorts'] = cell['inPorts']
-                object['outPorts'] = cell['outPorts']
-                object['metadata'] = yaml.load(db_record.properties)
-                network.append(object)
+                if cell['type'] == 'switch.Component':
+                    data_obj['scaling_mode'] = db_record.mode
+                    data_obj['inPorts'] = cell['inPorts']
+                    data_obj['outPorts'] = cell['outPorts']
+                    if 'parent' in cell:
+                        data_obj['group'] = cell['parent']
+                    if db_record.type == 'Component':
+                        components.append(data_obj)
+                    elif db_record.type == 'Network':
+                        network.append(data_obj)
+                    elif db_record.type == 'External Component':
+                        external.append(data_obj)
+
+                if cell['type'] == 'switch.Attribute':
+                    data_obj['class'] = db_record.type
+                    attributes.append(data_obj)
+
+                if cell['type'] == 'switch.Group':
+                    if 'embeds' in cell:
+                        data_obj['members'] = cell['embeds']
+                    groups.append(data_obj)
 
         data = {
             'data': {
                 'components': components,
-                'network_components': network
+                'external_components': external,
+                'network_components': network,
+                'elements': attributes,
+                'groups': groups
             }
         }
 
@@ -122,21 +133,23 @@ class SwitchAppGraphViewSet(viewsets.ModelViewSet):
         suffixes_next = ['third', 'second']
         uuid = str(graph.app.uuid)
 
-        if os.path.isfile(os.path.join(settings.BASE_DIR, 'graphs', uuid+'_third.json')):
-            os.remove(os.path.join(settings.BASE_DIR, 'graphs', uuid+'_third.json'))
+        if os.path.isfile(os.path.join(settings.BASE_DIR, 'graphs', uuid + '_third.json')):
+            os.remove(os.path.join(settings.BASE_DIR, 'graphs', uuid + '_third.json'))
 
         for suffix in suffixes:
             for filename in os.listdir(os.path.join(settings.BASE_DIR, 'graphs')):
                 if filename.startswith(uuid):
-                    if filename.endswith(suffix+'.json'):
+                    if filename.endswith(suffix + '.json'):
                         new_name = "%s_%s.json" % (uuid, suffixes_next[suffixes.index(suffix)])
-                        os.rename(os.path.join(settings.BASE_DIR, 'graphs', filename), os.path.join(settings.BASE_DIR, 'graphs', new_name))
+                        os.rename(os.path.join(settings.BASE_DIR, 'graphs', filename),
+                                  os.path.join(settings.BASE_DIR, 'graphs', new_name))
 
         for filename in os.listdir(os.path.join(settings.BASE_DIR, 'graphs')):
-            if filename == uuid+'.json':
-                os.rename(os.path.join(settings.BASE_DIR, 'graphs', filename), os.path.join(settings.BASE_DIR, 'graphs', uuid+'_first.json'))
+            if filename == uuid + '.json':
+                os.rename(os.path.join(settings.BASE_DIR, 'graphs', filename),
+                          os.path.join(settings.BASE_DIR, 'graphs', uuid + '_first.json'))
 
-        graph.file.save(uuid+'.json', ContentFile(json.dumps(json_data)))
+        graph.file.save(uuid + '.json', ContentFile(json.dumps(json_data)))
         graph.file.close()
         serializer = self.get_serializer(graph)
         return Response(serializer.data)
