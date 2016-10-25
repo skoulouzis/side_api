@@ -19,7 +19,8 @@ class SwitchAppSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SwitchApp
-        fields = ('id', 'uuid', 'title', 'description', 'user', 'public_view', 'public_editable', 'belongs_to_user', 'visible', 'editable')
+        fields = ('id', 'uuid', 'title', 'description', 'user', 'public_view', 'public_editable',
+                  'status', 'belongs_to_user', 'visible', 'editable')
 
     def get_visible(self, obj):
         return self.context['request'].user == obj.user or obj.public_editable or obj.public_view

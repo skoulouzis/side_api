@@ -13,6 +13,8 @@ class SwitchApp(models.Model):
     description = models.CharField(max_length=1024, null=True)
     public_view = models.BooleanField(default=False)
     public_editable = models.BooleanField(default=False)
+    # Status: 0 no plan virtual infrastructure; 1 planned; 2 provisioned; 3 deployed
+    status = models.IntegerField(default=0)
 
     class JSONAPIMeta:
         resource_name = "switchapps"
