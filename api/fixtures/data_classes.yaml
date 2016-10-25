@@ -1,0 +1,134 @@
+- fields: {title: switch.Component}
+  model: api.switchcomponentclass
+  pk: 1
+- fields: {title: switch.Group}
+  model: api.switchcomponentclass
+  pk: 2
+- fields: {title: switch.Attribute}
+  model: api.switchcomponentclass
+  pk: 3
+- fields: {title: switch.Service}
+  model: api.switchcomponentclass
+  pk: 4
+- fields: {title: switch.ComponentLink}
+  model: api.switchcomponentclass
+  pk: 5
+- fields: {icon_code: '&#xf013', icon_colour: 'rgb(255, 255, 255)', icon_svg: M1024
+      640q0 106 -75 181t-181 75t-181 -75t-75 -181t75 -181t181 -75t181 75t75 181zM1536
+      749v-222q0 -12 -8 -23t-20 -13l-185 -28q-19 -54 -39 -91q35 -50 107 -138q10 -12
+      10 -25t-9 -23q-27 -37 -99 -108t-94 -71q-12 0 -26 9l-138 108q-44 -23 -91 -38
+      q-16 -136 -29 -186q-7 -28 -36 -28h-222q-14 0 -24.5 8.5t-11.5 21.5l-28 184q-49
+      16 -90 37l-141 -107q-10 -9 -25 -9q-14 0 -25 11q-126 114 -165 168q-7 10 -7 23q0
+      12 8 23q15 21 51 66.5t54 70.5q-27 50 -41 99l-183 27q-13 2 -21 12.5t-8 23.5v222q0
+      12 8 23t19 13 l186 28q14 46 39 92q-40 57 -107 138q-10 12 -10 24q0 10 9 23q26
+      36 98.5 107.5t94.5 71.5q13 0 26 -10l138 -107q44 23 91 38q16 136 29 186q7 28
+      36 28h222q14 0 24.5 -8.5t11.5 -21.5l28 -184q49 -16 90 -37l142 107q9 9 24 9q13
+      0 25 -10q129 -119 165 -170q7 -8 7 -22 q0 -12 -8 -23q-15 -21 -51 -66.5t-54 -70.5q26
+      -50 41 -98l183 -28q13 -2 21 -12.5t8 -23.5z, primary_colour: 'rgb(51, 122, 183)',
+    secondary_colour: 'rgb(46, 109, 164)', switch_class: 1, title: Component}
+  model: api.switchcomponenttype
+  pk: 1
+- fields: {icon_code: '&#xf29c', icon_colour: 'rgb(51, 51, 51)', icon_svg: M880 336v-160q0
+      -14 -9 -23t-23 -9h-160q-14 0 -23 9t-9 23v160q0 14 9 23t23 9h160q14 0 23 -9t9
+      -23zM1136 832q0 -50 -15 -90t-45.5 -69t-52 -44t-59.5 -36q-32 -18 -46.5 -28t-26
+      -24t-11.5 -29v-32q0 -14 -9 -23t-23 -9h-160q-14 0 -23 9t-9 23v68q0 35 10.5 64.5
+      t24 47.5t39 35.5t41 25.5t44.5 21q53 25 75 43t22 49q0 42 -43.5 71.5t-95.5 29.5q-56
+      0 -95 -27q-29 -20 -80 -83q-9 -12 -25 -12q-11 0 -19 6l-108 82q-10 7 -12 20t5
+      23q122 192 349 192q129 0 238.5 -89.5t109.5 -214.5zM768 1280q-130 0 -248.5 -51t-204
+      -136.5 t-136.5 -204t-51 -248.5t51 -248.5t136.5 -204t204 -136.5t248.5 -51t248.5
+      51t204 136.5t136.5 204t51 248.5t-51 248.5t-136.5 204t-204 136.5t-248.5 51zM1536
+      640q0 -209 -103 -385.5t-279.5 -279.5t-385.5 -103t-385.5 103t-279.5 279.5t-103
+      385.5t103 385.5 t279.5 279.5t385.5 103t385.5 -103t279.5 -279.5t103 -385.5z,
+    primary_colour: 'rgb(255, 255, 255)', secondary_colour: 'rgb(204, 204, 204)',
+    switch_class: 1, title: External Component}
+  model: api.switchcomponenttype
+  pk: 2
+- fields: {icon_code: '&#xf0c1', icon_colour: 'rgb(255, 255, 255)', icon_svg: M1456
+      320q0 40 -28 68l-208 208q-28 28 -68 28q-42 0 -72 -32q3 -3 19 -18.5t21.5 -21.5t15
+      -19t13 -25.5t3.5 -27.5q0 -40 -28 -68t-68 -28q-15 0 -27.5 3.5t-25.5 13t-19 15t-21.5
+      21.5t-18.5 19q-33 -31 -33 -73q0 -40 28 -68l206 -207q27 -27 68 -27q40 0 68 26
+      l147 146q28 28 28 67zM753 1025q0 40 -28 68l-206 207q-28 28 -68 28q-39 0 -68
+      -27l-147 -146q-28 -28 -28 -67q0 -40 28 -68l208 -208q27 -27 68 -27q42 0 72 31q-3
+      3 -19 18.5t-21.5 21.5t-15 19t-13 25.5t-3.5 27.5q0 40 28 68t68 28q15 0 27.5 -3.5t25.5
+      -13t19 -15 t21.5 -21.5t18.5 -19q33 31 33 73zM1648 320q0 -120 -85 -203l-147 -146q-83
+      -83 -203 -83q-121 0 -204 85l-206 207q-83 83 -83 203q0 123 88 209l-88 88q-86
+      -88 -208 -88q-120 0 -204 84l-208 208q-84 84 -84 204t85 203l147 146q83 83 203
+      83q121 0 204 -85l206 -207 q83 -83 83 -203q0 -123 -88 -209l88 -88q86 88 208 88q120
+      0 204 -84l208 -208q84 -84 84 -204z, primary_colour: 'rgb(91, 192, 222)', secondary_colour: 'rgb(70,
+      184, 218)', switch_class: 1, title: Network}
+  model: api.switchcomponenttype
+  pk: 3
+- fields: {icon_code: '&#xf247', icon_colour: 'rgb(51, 51, 51)', icon_svg: M2048 1152h-128v-1024h128v-384h-384v128h-1280v-128h-384v384h128v1024h-128v384h384v-128h1280v128h384v-384zM1792
+      1408v-128h128v128h-128zM128 1408v-128h128v128h-128zM256 -128v128h-128v-128h128zM1664
+      0v128h128v1024h-128v128h-1280v-128h-128v-1024h128v-128 h1280zM1920 -128v128h-128v-128h128zM1280
+      896h384v-768h-896v256h-384v768h896v-256zM512 512h640v512h-640v-512zM1536 256v512h-256v-384h-384v-128h640z,
+    primary_colour: 'rgb(255, 255, 255)', secondary_colour: 'rgb(255, 255, 255)',
+    switch_class: 2, title: Component Group}
+  model: api.switchcomponenttype
+  pk: 4
+- fields: {icon_code: '&#xf201', icon_colour: 'rgb(255, 255, 255)', icon_svg: M2048
+      0v-128h-2048v1536h128v-1408h1920zM1920 1248v-435q0 -21 -19.5 -29.5t-35.5 7.5l-121
+      121l-633 -633q-10 -10 -23 -10t-23 10l-233 233l-416 -416l-192 192l585 585q10
+      10 23 10t23 -10l233 -233l464 464l-121 121q-16 16 -7.5 35.5t29.5 19.5h435q14
+      0 23 -9 t9 -23z, primary_colour: 'rgb(92, 184, 92)', secondary_colour: 'rgb(76,
+      174, 76)', switch_class: 3, title: Monitoring Agent}
+  model: api.switchcomponenttype
+  pk: 5
+- fields: {icon_code: '&#xf130', icon_colour: 'rgb(255, 255, 255)', icon_svg: M1152
+      832v-128q0 -221 -147.5 -384.5t-364.5 -187.5v-132h256q26 0 45 -19t19 -45t-19
+      -45t-45 -19h-640q-26 0 -45 19t-19 45t19 45t45 19h256v132q-217 24 -364.5 187.5t-147.5
+      384.5v128q0 26 19 45t45 19t45 -19t19 -45v-128q0 -185 131.5 -316.5t316.5 -131.5
+      t316.5 131.5t131.5 316.5v128q0 26 19 45t45 19t45 -19t19 -45zM896 1216v-512q0
+      -132 -94 -226t-226 -94t-226 94t-94 226v512q0 132 94 226t226 94t226 -94t94 -226z,
+    primary_colour: 'rgb(212, 225, 87)', secondary_colour: 'rgb(189, 213, 125)', switch_class: 3,
+    title: Event Listener}
+  model: api.switchcomponenttype
+  pk: 6
+- fields: {icon_code: '&#xf129', icon_colour: 'rgb(255, 255, 255)', icon_svg: M640
+      192v-128q0 -26 -19 -45t-45 -19h-512q-26 0 -45 19t-19 45v128q0 26 19 45t45 19h64v384h-64q-26
+      0 -45 19t-19 45v128q0 26 19 45t45 19h384q26 0 45 -19t19 -45v-576h64q26 0 45
+      -19t19 -45zM512 1344v-192q0 -26 -19 -45t-45 -19h-256q-26 0 -45 19t-19 45v192
+      q0 26 19 45t45 19h256q26 0 45 -19t19 -45z, primary_colour: 'rgb(255, 127, 80)',
+    secondary_colour: 'rgb(230, 115, 72)', switch_class: 3, title: Message Passer}
+  model: api.switchcomponenttype
+  pk: 7
+- fields: {icon_code: '&#xf024', icon_colour: 'rgb(255, 255, 255)', icon_svg: M320
+      1280q0 -72 -64 -110v-1266q0 -13 -9.5 -22.5t-22.5 -9.5h-64q-13 0 -22.5 9.5t-9.5
+      22.5v1266q-64 38 -64 110q0 53 37.5 90.5t90.5 37.5t90.5 -37.5t37.5 -90.5zM1792
+      1216v-763q0 -25 -12.5 -38.5t-39.5 -27.5q-215 -116 -369 -116q-61 0 -123.5 22t-108.5
+      48 t-115.5 48t-142.5 22q-192 0 -464 -146q-17 -9 -33 -9q-26 0 -45 19t-19 45v742q0
+      32 31 55q21 14 79 43q236 120 421 120q107 0 200 -29t219 -88q38 -19 88 -19q54
+      0 117.5 21t110 47t88 47t54.5 21q26 0 45 -19t19 -45z, primary_colour: 'rgb(240,
+      173, 78)', secondary_colour: 'rgb(238, 162, 54)', switch_class: 3, title: Constraint}
+  model: api.switchcomponenttype
+  pk: 8
+- fields: {icon_code: '&#xf121', icon_colour: 'rgb(255, 255, 255)', icon_svg: M617
+      137l-50 -50q-10 -10 -23 -10t-23 10l-466 466q-10 10 -10 23t10 23l466 466q10 10
+      23 10t23 -10l50 -50q10 -10 10 -23t-10 -23l-393 -393l393 -393q10 -10 10 -23t-10
+      -23zM1208 1204l-373 -1291q-4 -13 -15.5 -19.5t-23.5 -2.5l-62 17q-13 4 -19.5 15.5t-2.5
+      24.5 l373 1291q4 13 15.5 19.5t23.5 2.5l62 -17q13 -4 19.5 -15.5t2.5 -24.5zM1865
+      553l-466 -466q-10 -10 -23 -10t-23 10l-50 50q-10 10 -10 23t10 23l393 393l-393
+      393q-10 10 -10 23t10 23l50 50q10 10 23 10t23 -10l466 -466q10 -10 10 -23t-10
+      -23z, primary_colour: 'rgb(217, 83, 79)', secondary_colour: 'rgb(212, 63, 58)',
+    switch_class: 3, title: Adaptation Profile}
+  model: api.switchcomponenttype
+  pk: 9
+- fields: {icon_code: '&#xf07a', icon_colour: 'rgb(255, 255, 255)', icon_svg: M640
+      0q0 -52 -38 -90t-90 -38t-90 38t-38 90t38 90t90 38t90 -38t38 -90zM1536 0q0 -52
+      -38 -90t-90 -38t-90 38t-38 90t38 90t90 38t90 -38t38 -90zM1664 1088v-512q0 -24
+      -16.5 -42.5t-40.5 -21.5l-1044 -122q13 -60 13 -70q0 -16 -24 -64h920q26 0 45 -19t19
+      -45 t-19 -45t-45 -19h-1024q-26 0 -45 19t-19 45q0 11 8 31.5t16 36t21.5 40t15.5
+      29.5l-177 823h-204q-26 0 -45 19t-19 45t19 45t45 19h256q16 0 28.5 -6.5t19.5 -15.5t13
+      -24.5t8 -26t5.5 -29.5t4.5 -26h1201q26 0 45 -19t19 -45z, primary_colour: 'rgb(254,
+      97, 198)', secondary_colour: 'rgb(218, 92, 183)', switch_class: 3, title: Requirement}
+  model: api.switchcomponenttype
+  pk: 10
+- fields: {icon_code: '&#xf26c', icon_colour: 'rgb(255, 255, 255)', icon_svg: M1792
+      288v960q0 13 -9.5 22.5t-22.5 9.5h-1600q-13 0 -22.5 -9.5t-9.5 -22.5v-960q0 -13
+      9.5 -22.5t22.5 -9.5h1600q13 0 22.5 9.5t9.5 22.5zM1920 1248v-960q0 -66 -47 -113t-113
+      -47h-736v-128h352q14 0 23 -9t9 -23v-64q0 -14 -9 -23t-23 -9h-832q-14 0 -23 9t-9
+      23 v64q0 14 9 23t23 9h352v128h-736q-66 0 -113 47t-47 113v960q0 66 47 113t113
+      47h1600q66 0 113 -47t47 -113z, primary_colour: 'rgb(198, 107, 225)', secondary_colour: 'rgb(184,
+      70, 218)', switch_class: 4, title: Virtual Machine}
+  model: api.switchcomponenttype
+  pk: 11
