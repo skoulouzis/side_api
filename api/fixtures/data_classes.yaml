@@ -132,3 +132,16 @@
       70, 218)', switch_class: 4, title: Virtual Machine}
   model: api.switchcomponenttype
   pk: 11
+- fields: {icon_code: xx, icon_colour: 'rgb(255, 255, 255)', icon_svg: xx, primary_colour: 'rgb(255,
+      255, 255)', secondary_colour: 'rgb(255, 255, 255)', switch_class: 5, title: ComponentLink}
+  model: api.switchcomponenttype
+  pk: 12
+- fields: {icon_code: '&#xf0ec', icon_colour: 'rgb(255, 255, 255)', icon_svg: M1792
+      1184v192q0 13-9.5 22.5t-22.5 9.5h-1376v192q0 13-9.5 22.5t-22.5 9.5q-12 0-24-10l-319-320q-9-9-9-22
+      0-14 9-23l320-320q9-9 23-9 13 0 22.5 9.5t9.5 22.5v192h1376q13 0 22.5 9.5t9.5
+      22.5zm0-544q0 14-9 23l-320 320q-9 9-23 9-13 0-22.5-9.5t-9.5-22.5v-192h-1376q-13
+      0-22.5-9.5t-9.5-22.5v-192q0-13 9.5-22.5t22.5-9.5h1376v-192q0-14 9-23t23-9q12
+      0 24 10l319 319q9 9 9 23z, primary_colour: 'rgb(204, 0, 204)', secondary_colour: 'rgb(184,
+      70, 218)', switch_class: 4, title: Virtual Network}
+  model: api.switchcomponenttype
+  pk: 13
