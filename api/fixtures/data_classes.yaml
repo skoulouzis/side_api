@@ -7,12 +7,15 @@
 - fields: {title: switch.Attribute}
   model: api.switchcomponentclass
   pk: 3
-- fields: {title: switch.Service}
+- fields: {title: switch.VirtualResource}
   model: api.switchcomponentclass
   pk: 4
 - fields: {title: switch.ComponentLink}
   model: api.switchcomponentclass
   pk: 5
+- fields: {title: switch.ServiceLink}
+  model: api.switchcomponentclass
+  pk: 6
 - fields: {icon_code: '&#xf013', icon_colour: 'rgb(255, 255, 255)', icon_svg: M1024
       640q0 106 -75 181t-181 75t-181 -75t-75 -181t75 -181t181 -75t181 75t75 181zM1536
       749v-222q0 -12 -8 -23t-20 -13l-185 -28q-19 -54 -39 -91q35 -50 107 -138q10 -12
@@ -145,3 +148,6 @@
       70, 218)', switch_class: 4, title: Virtual Network}
   model: api.switchcomponenttype
   pk: 13
+- fields: {switch_class: 5, title: ComponentLink}
+  model: api.switchcomponenttype
+  pk: 14

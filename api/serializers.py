@@ -39,7 +39,7 @@ class SwitchComponentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SwitchComponent
-        fields = ('id', 'uuid', 'title', 'type', 'mode', 'properties', 'app', 'editable')
+        fields = ('id', 'uuid', 'title', 'type', 'mode', 'properties', 'app', 'editable', 'switch_type')
 
     def get_editable(self, obj):
         return self.context['request'].user == obj.app.user
