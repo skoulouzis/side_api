@@ -227,7 +227,6 @@ class SwitchAppViewSet(viewsets.ModelViewSet):
                         vr_properties = {
                             "type": "switch/compute",
                             "OStype": "Ubuntu 14.04",
-                            "domain": "ec2.us-east-1.amazonaws.com",
                             "script": os.path.join(settings.BASE_DIR, 'external_tools', 'provisioner','topology','t1','script','install.sh'),
                             "installation": os.path.join(settings.BASE_DIR, 'external_tools', 'provisioner','topology','t1','installation','Server'),
                             "public_address": str(virtual_machine.uuid)
@@ -236,14 +235,22 @@ class SwitchAppViewSet(viewsets.ModelViewSet):
                         # Depending on the requirement properties the virtual machine will be different
                         requirement_properties = yaml.load(str(requirement.properties).replace("\t", "    "))
                         if 'machine_type' in requirement_properties:
-                            if requirement_properties['machine_type']=="big":
+                            if requirement_properties['machine_type'] == "big":
                                 vr_properties['nodetype'] = "t2.large"
-                            elif requirement_properties['machine_type']=="small":
+                            elif requirement_properties['machine_type'] == "small":
                                 vr_properties['nodetype'] = "t2.small"
                             else:
                                 vr_properties['nodetype'] = "t2.medium"
                         else:
                             vr_properties['nodetype'] = "t2.medium"
+
+                        if 'location' in requirement_properties:
+                            if requirement_properties['location'] == "us-east":
+                                vr_properties['domain'] = "ec2.us-east-1.amazonaws.com"
+                            else:
+                                vr_properties['domain'] = "ec2.us-west-1.amazonaws.com"
+                        else:
+                            vr_properties['domain'] = "ec2.us-east-1.amazonaws.com"
 
                         # Add a ethernet port to the VM properties for every "component_link" (target and source) of
                         # of every "component" linked to the requirement
@@ -384,13 +391,16 @@ class SwitchAppViewSet(viewsets.ModelViewSet):
 
                 app.status = 2
                 app.save()
-
-                # Delete files input and output files used by the provisioner
-                os.remove(os.path.join(settings.BASE_DIR, 'external_tools', 'provisioner', uuid + '.yml'))
-                os.remove(os.path.join(settings.BASE_DIR, 'external_tools', 'provisioner', uuid + '_provisioned.yml'))
             else:
                 result = 'error'
                 message = 'provision has failed'
+
+        # Delete files input and output files used by the provisioner
+        if os.path.isfile(os.path.join(settings.BASE_DIR, 'external_tools', 'provisioner', uuid + '.yml')):
+            os.remove(os.path.join(settings.BASE_DIR, 'external_tools', 'provisioner', uuid + '.yml'))
+        if os.path.isfile(os.path.join(settings.BASE_DIR, 'external_tools', 'provisioner', uuid + '_provisioned.yml')):
+            os.remove(os.path.join(settings.BASE_DIR, 'external_tools', 'provisioner', uuid + '_provisioned.yml'))
+
 
         provision_result = {
             'provision': {
@@ -488,26 +498,26 @@ class SwitchAppGraphViewSet(viewsets.ModelViewSet):
                             portlen = 0
 
                             for port in inPorts:
-                                graph_obj['inPorts'].append(port.title)
+                                graph_obj['inPorts'].append({'type': 'in', 'id': str(port.id), 'name': port.title})
                                 key = '.inPorts>.port%s' % str(portlen)
                                 ref_y = (portlen * 2 * gap) + gap
                                 portlen += 1
                                 graph_obj['attrs'][key] = {'ref': '.body', 'ref-y': ref_y}
                                 graph_obj['attrs'][key + '>.port-label'] = {'text': port.title}
-                                graph_obj['attrs'][key + '>.port-body'] = {'port':{'type': 'in', 'id': port.title}}
+                                graph_obj['attrs'][key + '>.port-body'] = {'port':{'type': 'in', 'id': str(port.id), 'name': port.title}}
 
                         if len(outPorts) > 0:
                             gap = 100 / (len(outPorts) * 2)
                             portlen = 0
 
                             for port in outPorts:
-                                graph_obj['outPorts'].append(port.title)
+                                graph_obj['outPorts'].append({'type': 'out', 'id': str(port.id), 'name': port.title})
                                 key = '.outPorts>.port%s' % str(portlen)
                                 ref_y = (portlen * 2 * gap) + gap
                                 portlen += 1
                                 graph_obj['attrs'][key] = {'ref': '.body', 'ref-dx': 0, 'ref-y': ref_y}
                                 graph_obj['attrs'][key + '>.port-label'] = {'text': port.title}
-                                graph_obj['attrs'][key + '>.port-body'] = {'port':{'type': 'out', 'id': port.title}}
+                                graph_obj['attrs'][key + '>.port-body'] = {'port':{'type': 'out', 'id': str(port.id), 'name': port.title}}
 
                         height = len(inPorts) if len(inPorts) > len(outPorts) else len(outPorts)
                         if height < 2:
@@ -553,13 +563,15 @@ class SwitchAppGraphViewSet(viewsets.ModelViewSet):
                 if cell.type == 'switch.ComponentLink':
                     graph_component = SwitchAppGraphComponentLink.objects.filter(id=cell.id).first()
                     graph_obj['target'] = {
-                        "port": graph_component.target.title,
+                        "port": graph_component.target.id,
                         "id": graph_component.target.graph_component.component.uuid
                     }
+                    graph_obj['attrs']['targetPortObj'] = {"id": graph_component.target.id, "name": graph_component.target.title, "type": 'in'}
                     graph_obj['source'] = {
-                        "port": graph_component.source.title,
+                        "port": graph_component.source.id,
                         "id": graph_component.source.graph_component.component.uuid
                     }
+                    graph_obj['attrs']['sourcePortObj']={"id":graph_component.source.id, "name":graph_component.source.title, "type":'out'}
 
                     if graph_component.source.graph_component.component.mode == 'onetomany':
                         source_text = '1..*'
@@ -790,14 +802,40 @@ class SwitchAppGraphViewSet(viewsets.ModelViewSet):
 
                     if 'inPorts' in cell:
                         for port in cell['inPorts']:
-                            port_obj, created = SwitchAppGraphPort.objects.get_or_create(graph_component=graph_obj, type='in', title=port)
+                            if not port['id'].startswith('in'):
+                                port_obj = SwitchAppGraphPort.objects.filter(graph_component=graph_obj, id=port['id']).first()
+                            else:
+                                port_obj = None
+
+                            if port_obj is None:
+                                port_obj = SwitchAppGraphPort.objects.create(graph_component=graph_obj,
+                                                                                             type=port['type'],
+                                                                                             title=port['name'])
+                            else:
+                                port_obj.title=port['name']
+                                port_obj.type=port['type']
+                                port_obj.save()
+
                             port_objs.append(port_obj)
 
                         graph_obj.ports = port_objs
 
                     if 'outPorts' in cell:
                         for port in cell['outPorts']:
-                            port_obj, created = SwitchAppGraphPort.objects.get_or_create(graph_component=graph_obj, type='out', title=port)
+                            if not port['id'].startswith('out'):
+                                port_obj = SwitchAppGraphPort.objects.filter(graph_component=graph_obj, id=port['id']).first()
+                            else:
+                                port_obj = None
+
+                            if port_obj is None:
+                                port_obj = SwitchAppGraphPort.objects.create(graph_component=graph_obj,
+                                                                             type=port['type'],
+                                                                             title=port['name'])
+                            else:
+                                port_obj.title = port['name']
+                                port_obj.type = port['type']
+                                port_obj.save()
+
                             port_objs.append(port_obj)
 
                         graph_obj.ports = port_objs
@@ -841,8 +879,10 @@ class SwitchAppGraphViewSet(viewsets.ModelViewSet):
                     component = SwitchComponent.objects.filter(uuid=source['id'], app_id=switchapps_pk).first()
                     if component is not None:
                         if 'port' in source:
-                            source_obj, created = SwitchAppGraphPort.objects.get_or_create(
-                                graph_component__component=component, type='out', title=source['port'])
+                            port = cell['attrs']['sourcePortObj']
+                            source_obj = SwitchAppGraphPort.objects.filter(id=port['id']).first()
+                            if source_obj is None:
+                                source_obj = SwitchAppGraphPort.objects.create(graph_component__component=component, type='out', title=port['name'])
 
                 if 'target' in cell:
                     target = cell['target']
@@ -850,8 +890,11 @@ class SwitchAppGraphViewSet(viewsets.ModelViewSet):
                     if component is not None:
                         if 'port' in target:
                             is_connection = True
-                            target_obj, created = SwitchAppGraphPort.objects.get_or_create(
-                                graph_component__component=component, type='in', title=target['port'])
+                            port = cell['attrs']['targetPortObj']
+                            target_obj = SwitchAppGraphPort.objects.filter(id=port['id']).first()
+                            if target_obj is None:
+                                graph_obj = SwitchAppGraphComponent(component.graph_component.first())
+                                target_obj = SwitchAppGraphPort.objects.create(graph_component__component=component, type='in', title=port['name'])
 
                 component, created = SwitchComponent.objects.get_or_create(uuid=cell['id'],
                                                                            app_id=switchapps_pk)
