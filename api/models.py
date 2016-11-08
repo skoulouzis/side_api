@@ -101,6 +101,7 @@ class SwitchAppGraphPort(models.Model):
     graph_component = models.ForeignKey(SwitchAppGraphComponent, related_name='ports')
     type = models.CharField(max_length=512, null=True)
     title = models.CharField(max_length=512, null=True)
+    uuid = models.CharField(max_length=512, null=True)
 
     class JSONAPIMeta:
         resource_name = "graph_ports"

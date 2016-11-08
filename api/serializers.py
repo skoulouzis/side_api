@@ -34,6 +34,7 @@ class SwitchAppSerializer(serializers.ModelSerializer):
 
 class SwitchComponentSerializer(serializers.ModelSerializer):
     app = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
+    switch_type = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
     editable = serializers.SerializerMethodField(read_only=True, required=False)
     properties = serializers.CharField(allow_null=True)
 
