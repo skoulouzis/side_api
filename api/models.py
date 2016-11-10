@@ -141,3 +141,17 @@ class SwitchComponentAdmin(admin.ModelAdmin):
 #
 # class SwitchComponentTypeAdmin(admin.ModelAdmin):
 #     fields = ('title', 'switch_class', 'primary_colour', 'secondary_colour', 'icon_colour', 'icon_svg', 'icon_code')
+
+
+def generate_fileName(instance, filename):
+    return '/'.join(['documents', str(instance.user.id), filename])
+
+
+class SwitchDocument(models.Model):
+    user = models.ForeignKey(User)
+    description = models.CharField(max_length=255, blank=True)
+    file = models.FileField(upload_to=generate_fileName)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class JSONAPIMeta:
+        resource_name = "switchdocument"

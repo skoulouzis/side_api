@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>File Upload</title>
+  </head>
+  <body>
+      <h1>Upload file for user: {{ user.username }}</h1>
+      <br/>
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Upload</button>
+      </form>
+  </body>
+</html>

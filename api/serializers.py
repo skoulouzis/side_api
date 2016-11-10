@@ -1,7 +1,7 @@
 import json
 
 from rest_framework import serializers
-from models import SwitchApp, SwitchAppGraph, SwitchComponent
+from models import SwitchApp, SwitchAppGraph, SwitchComponent, SwitchDocument
 from django.contrib.auth.models import User
 
 
@@ -58,3 +58,15 @@ class SwitchAppGraphSerializer(serializers.ModelSerializer):
         response = json.loads(obj.file.read())
         obj.file.close()
         return response
+
+
+class SwitchDocumentSerializer(serializers.ModelSerializer):
+    user = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
+    belongs_to_user = serializers.SerializerMethodField(read_only=True, required=False)
+
+    class Meta:
+        model = SwitchDocument
+        fields = ('id', 'description', 'file', 'user', 'belongs_to_user')
+
+    def get_belongs_to_user(self, obj):
+        return self.context['request'].user == obj.user

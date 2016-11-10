@@ -5,6 +5,12 @@ from django.db import migrations, models
 from django.conf import settings
 import uuid
 
+from django.core.management import call_command
+
+
+def load_fixture(apps, schema_editor):
+    call_command('loaddata', 'data_classes', app_label='api')
+
 
 class Migration(migrations.Migration):
 
@@ -158,4 +164,5 @@ class Migration(migrations.Migration):
             name='target',
             field=models.ForeignKey(related_name='sources', to='api.SwitchAppGraphPort'),
         ),
+        migrations.RunPython(load_fixture),
     ]

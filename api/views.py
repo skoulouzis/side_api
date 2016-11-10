@@ -5,7 +5,8 @@ import subprocess
 import uuid
 
 from django.core.files.base import ContentFile
-from django.http import JsonResponse, HttpResponse, StreamingHttpResponse, FileResponse
+from django.http import JsonResponse, HttpResponse, StreamingHttpResponse, FileResponse, HttpResponseRedirect
+from django.template.defaultfilters import safe
 from rest_framework import viewsets
 from rest_framework.decorators import list_route, detail_route
 from rest_framework.generics import get_object_or_404
@@ -22,11 +23,15 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth import get_user_model
 
-from side_api import settings
-import services
+from side_api import settings, utils
+from services import JenaFusekiService
 
 from yaml.dumper import Dumper
 from yaml.representer import SafeRepresenter
+
+from forms import SwitchDocumentForm
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
 
 
 class YamlDumper(Dumper):
@@ -62,6 +67,37 @@ class SwitchAppViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         app = serializer.save(user=self.request.user)
         SwitchAppGraph.objects.create(app_id=app.id)
+
+    @detail_route(methods=['get'], permission_classes=[])
+    def kb_classes(self, request, pk=None, *args, **kwargs):
+        kb_service = JenaFusekiService(utils.getPropertyFromConfigFile("ASAP_API", "url"))
+        classes = kb_service.getClasses()
+        return JsonResponse(classes)
+
+    @list_route(methods=['get'], permission_classes=[])
+    def kb_application_component_type(self, request, pk=None, *args, **kwargs):
+        kb_service = JenaFusekiService(utils.getPropertyFromConfigFile("ASAP_API", "url"))
+        component_types = kb_service.getAllApplicationComponentTypes()
+        return JsonResponse(component_types, safe= False)
+
+    @detail_route(methods=['get'], permission_classes=[])
+    def kb_component_type(self, request, pk=None, *args, **kwargs):
+        kb_service = JenaFusekiService(utils.getPropertyFromConfigFile("ASAP_API", "url"))
+        component_type = kb_service.getApplicationComponentType(request.data)
+        return JsonResponse(component_type)
+
+    @detail_route(methods=['get'], permission_classes=[])
+    def kb_component_profile(self, request, pk=None, *args, **kwargs):
+        kb_service = JenaFusekiService(utils.getPropertyFromConfigFile("ASAP_API", "url"))
+        component_profile = kb_service.getApplicationComponentProfile()
+        return JsonResponse(component_profile)
+
+    @detail_route(methods=['get'], permission_classes=[])
+    def kb_virtual_infrastructure(self, request, pk=None, *args, **kwargs):
+        kb_service = JenaFusekiService(utils.getPropertyFromConfigFile("ASAP_API", "url"))
+        virtual_infrastrucutre = kb_service.getVirtualInfrastructure()
+        return JsonResponse(virtual_infrastrucutre)
+
 
     @detail_route(methods=['get'], permission_classes=[])
     def tosca(self, request, pk=None, *args, **kwargs):
@@ -179,18 +215,22 @@ class SwitchAppViewSet(viewsets.ModelViewSet):
 
     @detail_route(methods=['get'], permission_classes=[])
     def validate(self, request, pk=None, *args, **kwargs):
-        # TODO: implement the validation
-        app_tosca_json = json.loads(self.tosca(request=request, pk=pk).content)
+        details = []
+        for component in SwitchComponent.objects.filter(app_id=pk).all():
+            component_properties = yaml.load(str(component.properties).replace("\t", "    "))
+            for name,value in component_properties.items():
+                if value == "SET_ITS_VALUE":
+                    details.append("Component '"  + component.title + "' needs its property '" + name + "' to be set.")
 
-        formal_validation_result = services.validate(pk, app_tosca_json)
-        result = 'ok'
-        message = 'validation done correctly'
+        if len(details)==0:
+            result = 'ok'
+            details.append('validation done correctly')
+        else:
+            result = 'error'
 
         validation_result = {
-            'validation': {
-                'result': result,
-                'message': formal_validation_result.content
-            }
+            'result': result,
+            'details': details
         }
 
         return JsonResponse(validation_result)
@@ -199,232 +239,224 @@ class SwitchAppViewSet(viewsets.ModelViewSet):
     def planVirtualInfrastructure(self, request, pk=None, *args, **kwargs):
         # TODO: implement the planning of the virtual infrastructure
         result = ''
-        message = ''
+        details = []
         app = SwitchApp.objects.get(id=pk)
         if app.status >= 1:
             result = 'error'
-            message = 'application has already a planned infrastructure'
+            details.append('application has already a planned infrastructure')
         else:
             num_hw_req = SwitchComponent.objects.filter(app_id=pk, switch_type__title='Requirement').count()
             if num_hw_req == 0:
                 result = 'error'
-                message = 'no hardware requirements defined'
+                details.append('no hardware requirements defined')
             else:
-                app_tosca_json = json.loads(self.tosca(request=request, pk=pk).content)
-                return_code = subprocess.call(
-                    ['java', '-jar', os.path.join(settings.BASE_DIR, 'external_tools', 'planner', 'test.jar'), pk])
-                if return_code == 0:
-                    result = 'ok'
-                    message = 'plan done correctly'
-                    app.status = 1
-                    app.save()
+                validation_result = json.loads(self.validate(request=request, pk=pk).content)
+                if validation_result['result'] == "error":
+                    result = 'error'
+                    details.append('Please make sure that the application is valid before to plan the virtual infrastructure')
+                else:
+                    app_tosca_json = json.loads(self.tosca(request=request, pk=pk).content)
+                    return_code = subprocess.call(['java', '-jar', os.path.join(settings.BASE_DIR, 'external_tools', 'planner', 'SwitchPlanner_test.jar'), pk])
+                    if return_code == 0:
+                        result = 'ok'
+                        details.append('plan done correctly')
+                        app.status = 1
+                        app.save()
 
-                    # Temporary simulate the planner
-                    # For each hw requirement in the app create a vm and link it to the requirement
-                    for requirement in SwitchComponent.objects.filter(app_id=pk,
-                                                                      switch_type__title='Requirement').all():
-                        # Create virtual machine that satisfies the requirement, storing it in the db
-                        virtual_machine = SwitchComponent.objects.create(app_id=pk, uuid=uuid.uuid4(),
-                                                                         title='VM_' + requirement.title, mode='single',
-                                                                         type='Virtual Machine')
-                        virtual_machine.switch_type = SwitchComponentType.objects.get(title='Virtual Machine')
-                        vr_properties = {
-                            "type": "switch/compute",
-                            "OStype": "Ubuntu 14.04",
-                            "script": os.path.join(settings.BASE_DIR, 'external_tools', 'provisioner', 'topology', 't1',
-                                                   'script', 'install.sh'),
-                            "installation": os.path.join(settings.BASE_DIR, 'external_tools', 'provisioner', 'topology',
-                                                         't1', 'installation', 'Server'),
-                            "public_address": str(virtual_machine.uuid)
-                        }
+                        # Temporary simulate the planner
+                        # For each hw requirement in the app create a vm and link it to the requirement
+                        for requirement in SwitchComponent.objects.filter(app_id=pk,switch_type__title='Requirement').all():
+                            #Create virtual machine that satisfies the requirement, storing it in the db
+                            virtual_machine = SwitchComponent.objects.create(app_id=pk, uuid = uuid.uuid4(),
+                                    title = 'VM_' + requirement.title, mode = 'single', type='Virtual Machine')
+                            virtual_machine.switch_type = SwitchComponentType.objects.get(title='Virtual Machine')
+                            vr_properties = {
+                                "type": "switch/compute",
+                                "OStype": "Ubuntu 14.04",
+                                "script": "",
+                                "installation": "",
+                                "public_address": str(virtual_machine.uuid)
+                            }
 
-                        # Depending on the requirement properties the virtual machine will be different
-                        requirement_properties = yaml.load(str(requirement.properties).replace("\t", "    "))
-                        if 'machine_type' in requirement_properties:
-                            if requirement_properties['machine_type'] == "big":
-                                vr_properties['nodetype'] = "t2.large"
-                            elif requirement_properties['machine_type'] == "small":
-                                vr_properties['nodetype'] = "t2.small"
+                            # Depending on the requirement properties the virtual machine will be different
+                            requirement_properties = yaml.load(str(requirement.properties).replace("\t", "    "))
+                            if 'machine_type' in requirement_properties:
+                                if requirement_properties['machine_type'] == "big":
+                                    vr_properties['nodetype'] = "t2.large"
+                                elif requirement_properties['machine_type'] == "small":
+                                    vr_properties['nodetype'] = "t2.small"
+                                else:
+                                    vr_properties['nodetype'] = "t2.medium"
                             else:
                                 vr_properties['nodetype'] = "t2.medium"
-                        else:
-                            vr_properties['nodetype'] = "t2.medium"
 
-                        if 'location' in requirement_properties:
-                            if requirement_properties['location'] == "us-east":
-                                vr_properties['domain'] = "ec2.us-east-1.amazonaws.com"
+                            if 'location' in requirement_properties:
+                                if requirement_properties['location'] == "us-east":
+                                    vr_properties['domain'] = "ec2.us-east-1.amazonaws.com"
+                                else:
+                                    vr_properties['domain'] = "ec2.us-west-1.amazonaws.com"
                             else:
-                                vr_properties['domain'] = "ec2.us-west-1.amazonaws.com"
-                        else:
-                            vr_properties['domain'] = "ec2.us-east-1.amazonaws.com"
+                                vr_properties['domain'] = "ec2.us-east-1.amazonaws.com"
 
-                        # Add a ethernet port to the VM properties for every "component_link" (target and source) of
-                        # of every "component" linked to the requirement
-                        for graph_service_link in SwitchAppGraphServiceLink.objects.filter(
-                                source__component=requirement).all():
-                            # Add a ethernet port for every component link to the requirement
-                            for graph_component_link in SwitchAppGraphComponentLink.objects.filter(
-                                    source__graph_component=graph_service_link.target).all():
-                                ethernet_port = {
-                                    "name": graph_component_link.source.title,
-                                    "connection_name": str(graph_component_link.component.uuid) + ".source"
-                                }
-                                vr_properties.setdefault('ethernet_port', []).append(ethernet_port)
-                            for graph_component_link in SwitchAppGraphComponentLink.objects.filter(
-                                    target__graph_component=graph_service_link.target).all():
-                                ethernet_port = {
-                                    "name": graph_component_link.target.title,
-                                    "connection_name": str(graph_component_link.component.uuid) + ".target"
-                                }
-                                vr_properties.setdefault('ethernet_port', []).append(ethernet_port)
+                            # Add a ethernet port to the VM properties for every "component_link" (target and source) of
+                            # of every "component" linked to the requirement
+                            for graph_service_link in SwitchAppGraphServiceLink.objects.filter(source__component=requirement).all():
+                                # Add a ethernet port for every component link to the requirement
+                                for graph_component_link in SwitchAppGraphComponentLink.objects.filter(source__graph_component=graph_service_link.target).all():
+                                    ethernet_port = {
+                                        "name": graph_component_link.source.title,
+                                        "connection_name": str(graph_component_link.component.uuid) + ".source"
+                                    }
+                                    vr_properties.setdefault('ethernet_port', []).append(ethernet_port)
+                                for graph_component_link in SwitchAppGraphComponentLink.objects.filter(target__graph_component=graph_service_link.target).all():
+                                    ethernet_port = {
+                                        "name": graph_component_link.target.title,
+                                        "connection_name": str(graph_component_link.component.uuid) + ".target"
+                                    }
+                                    vr_properties.setdefault('ethernet_port', []).append(ethernet_port)
 
-                        virtual_machine.properties = yaml.dump(vr_properties, Dumper=YamlDumper,
-                                                               default_flow_style=False)
+                            virtual_machine.properties = yaml.dump(vr_properties, Dumper=YamlDumper, default_flow_style=False)
 
-                        virtual_machine.save()
+                            virtual_machine.save()
 
-                        # Create a graph_virtual_machine element
-                        graph_req = SwitchAppGraphBase.objects.get(component=requirement)
-                        graph_vm = SwitchAppGraphService.objects.create(component=virtual_machine,
-                                                                        type='switch.VirtualResource',
-                                                                        last_x=graph_req.last_x,
-                                                                        last_y=graph_req.last_y + 80)
-                        graph_vm.save()
+                            #Create a graph_virtual_machine element
+                            graph_req= SwitchAppGraphBase.objects.get(component=requirement)
+                            graph_vm = SwitchAppGraphService.objects.create(component=virtual_machine,type='switch.VirtualResource',
+                                                                            last_x=graph_req.last_x, last_y=graph_req.last_y + 80)
+                            graph_vm.save()
 
-                        # Create a service_link between the new vm and the requirement
-                        graph_service_link_vm_req = SwitchAppGraphServiceLink.objects.create(source=graph_vm,
-                                                                                             target=graph_req)
-                        graph_service_link_vm_req.save()
-                else:
-                    result = 'error'
-                    message = 'planification of virtual infrastructure has failed'
+                            # Create a service_link between the new vm and the requirement
+                            graph_service_link_vm_req= SwitchAppGraphServiceLink.objects.create(source=graph_vm,target=graph_req)
+                            graph_service_link_vm_req.save()
+                    else:
+                        result = 'error'
+                        details.append('planification of virtual infrastructure has failed')
 
-        plan_result = {
-            'plan': {
-                'result': result,
-                'message': message
-            }
+        planning_vi_result = {
+            'result': result,
+            'details': details
         }
 
-        return JsonResponse(plan_result)
+        return JsonResponse(planning_vi_result)
 
     @detail_route(methods=['get'], permission_classes=[])
     def provisionVirtualInfrastructure(self, request, pk=None, *args, **kwargs):
         # TODO: implement the provision of the virtual infrastructure
         result = ''
-        message = ''
+        details = []
 
         app = SwitchApp.objects.get(id=pk)
         if app.status < 1:
             result = 'error'
-            message = 'virtual infrastructure has not been planned yet'
-        if app.status >= 2:
+            details.append('virtual infrastructure has not been planned yet')
+        elif app.status >= 2:
             result = 'error'
-            message = 'application has already a provisioned infrastructure'
+            details.append('application has already a provisioned infrastructure')
         else:
-            # get the tosca file of the application
-            app_tosca_json = json.loads(self.tosca(request=request, pk=pk).content)
-
-            uuid = str(app.uuid)
-            with open(os.path.join(settings.BASE_DIR, 'external_tools', 'provisioner', uuid + '.yml'), 'w') as f:
-                credentials = {
-                    'publicKeyPath': os.path.join(settings.BASE_DIR, 'external_tools', 'provisioner', 'id_rsa.pub'),
-                    'userName': "fran"
-                }
-                yaml.dump(credentials, f, Dumper=YamlDumper, default_flow_style=False)
-
-                if len(app_tosca_json['data']['virtual_resources']['virtual_machines']) > 0:
-                    components = {'components': []}
-                    for vm in app_tosca_json['data']['virtual_resources']['virtual_machines']:
-                        component = vm.values()[0]
-                        component['name'] = vm.keys()[0]
-                        components['components'].append(component)
-                    yaml.dump(components, f, Dumper=YamlDumper, default_flow_style=False)
-
-                if len(app_tosca_json['data']['connections']['components_connections']) > 0:
-                    connections = {'connections': []}
-                    for component_connection in app_tosca_json['data']['connections']['components_connections']:
-                        connection = component_connection.values()[0]
-                        connection['name'] = component_connection.keys()[0]
-                        # Adapt it to provisioner format
-                        for vm in app_tosca_json['data']['virtual_resources']['virtual_machines']:
-                            vm_properties = vm.values()[0]
-                            vm_key = vm.keys()[0]
-                            for ethernet_port in vm_properties['ethernet_port']:
-                                if ethernet_port['connection_name'] == connection['name'] + '.target':
-                                    connection['target']['component_name'] = vm_key
-
-                        connection['target']['port_name'] = connection['target']['port']
-                        connection['target']['netmask'] = connection['netmask']
-                        connection['target']['address'] = connection['target_address']
-                        del connection['target']['id']
-                        del connection['target']['port']
-
-                        # connection['source']['component_name'] = connection['source']['id']
-                        for vm in app_tosca_json['data']['virtual_resources']['virtual_machines']:
-                            vm_properties = vm.values()[0]
-                            vm_key = vm.keys()[0]
-                            for ethernet_port in vm_properties['ethernet_port']:
-                                if ethernet_port['connection_name'] == connection['name'] + '.source':
-                                    connection['source']['component_name'] = vm_key
-
-                        connection['source']['port_name'] = connection['source']['port']
-                        connection['source']['netmask'] = connection['netmask']
-                        connection['source']['address'] = connection['source_address']
-
-                        del connection['source']['id']
-                        del connection['source']['port']
-
-                        del connection['netmask']
-                        del connection['target_address']
-                        del connection['source_address']
-
-                        connections['connections'].append(connection)
-                    yaml.dump(connections, f, Dumper=YamlDumper, default_flow_style=False)
-
-            return_code = subprocess.call(['java', '-jar',
-                                           os.path.join(settings.BASE_DIR, 'external_tools', 'provisioner',
-                                                        'EC2Provision_test.jar'),
-                                           os.path.join(settings.BASE_DIR, 'external_tools', 'provisioner',
-                                                        'rootkey.csv'),
-                                           os.path.join(settings.BASE_DIR, 'external_tools', 'provisioner',
-                                                        uuid + '.yml')],
-                                          cwd=os.path.join(settings.BASE_DIR, 'external_tools', 'provisioner'))
-
-            if return_code == 0:
-                result = 'ok'
-                message = 'provision done correctly'
-
-                with open(os.path.join(settings.BASE_DIR, 'external_tools', 'provisioner', uuid + '_provisioned.yml'),
-                          'r') as f:
-                    tosca_provisioned_infrastructure = yaml.load(f.read())
-
-                for vm_provisioned in tosca_provisioned_infrastructure['components']:
-                    vm_component = SwitchComponent.objects.get(uuid=vm_provisioned['name'])
-                    vm_component.title += ' (' + vm_provisioned['public_address'] + ')'
-                    vm_component.properties = yaml.dump(vm_provisioned, Dumper=YamlDumper, default_flow_style=False)
-                    vm_component.save()
-
-                app.status = 2
-                app.save()
-            else:
+            validation_result = json.loads(self.validate(request=request, pk=pk).content)
+            if validation_result['result'] == "error":
                 result = 'error'
-                message = 'provision has failed'
+                details.append('Please make sure that the application is valid before to provision the virtual infrastructure')
+            else:
+                # get the tosca file of the application
+                app_tosca_json = json.loads(self.tosca(request=request, pk=pk).content)
+
+                uuid = str(app.uuid)
+                with open(os.path.join(settings.MEDIA_ROOT, 'documents', str(request.user.id), uuid + '.yml'), 'w') as f:
+                    credentials = {
+                        'publicKeyPath': os.path.join(settings.MEDIA_ROOT, 'documents', str(request.user.id),'id_rsa.pub'),
+                        'userName': app.user.username
+                    }
+                    yaml.dump(credentials, f, Dumper=YamlDumper, default_flow_style=False)
+
+                    if len(app_tosca_json['data']['virtual_resources']['virtual_machines']) > 0:
+                        components={'components': []}
+                        for vm in app_tosca_json['data']['virtual_resources']['virtual_machines']:
+                            component= vm.values()[0]
+                            component['name']=vm.keys()[0]
+                            components['components'].append(component)
+                        yaml.dump(components, f, Dumper=YamlDumper, default_flow_style=False)
+
+                    if len(app_tosca_json['data']['connections']['components_connections'])>0:
+                        connections = {'connections': []}
+                        for component_connection in app_tosca_json['data']['connections']['components_connections']:
+                            connection = component_connection.values()[0]
+                            connection['name'] = component_connection.keys()[0]
+                            # Adapt it to provisioner format
+                            for vm in app_tosca_json['data']['virtual_resources']['virtual_machines']:
+                                vm_properties = vm.values()[0]
+                                vm_key = vm.keys()[0]
+                                for ethernet_port in vm_properties['ethernet_port']:
+                                    if ethernet_port['connection_name'] == connection['name'] + '.target':
+                                        connection['target']['component_name'] = vm_key
+
+                            connection['target']['port_name'] = connection['target']['port']
+                            connection['target']['netmask'] = connection['netmask']
+                            connection['target']['address'] = connection['target_address']
+                            del connection['target']['id']
+                            del connection['target']['port']
+
+                            #connection['source']['component_name'] = connection['source']['id']
+                            for vm in app_tosca_json['data']['virtual_resources']['virtual_machines']:
+                                vm_properties = vm.values()[0]
+                                vm_key = vm.keys()[0]
+                                for ethernet_port in vm_properties['ethernet_port']:
+                                    if ethernet_port['connection_name'] == connection['name'] + '.source':
+                                        connection['source']['component_name'] = vm_key
+
+                            connection['source']['port_name'] = connection['source']['port']
+                            connection['source']['netmask'] = connection['netmask']
+                            connection['source']['address'] = connection['source_address']
+
+                            del connection['source']['id']
+                            del connection['source']['port']
+
+                            del connection['netmask']
+                            del connection['target_address']
+                            del connection['source_address']
+
+                            connections['connections'].append(connection)
+                        yaml.dump(connections, f, Dumper=YamlDumper, default_flow_style=False)
+
+                confFile = os.path.join(settings.MEDIA_ROOT, 'documents', str(request.user.id), 'rootkey.csv')
+                toscaFile = os.path.join(settings.MEDIA_ROOT, 'documents', str(request.user.id), uuid + '.yml')
+                certsFolder = os.path.join(settings.MEDIA_ROOT, 'documents', str(request.user.id))
+                return_code = subprocess.call(['java', '-jar',
+                                               os.path.join(settings.BASE_DIR, 'external_tools', 'provisioner', 'EC2Provision_test.jar'),
+                                               confFile, toscaFile, certsFolder],
+                                              cwd=os.path.join(settings.BASE_DIR, 'external_tools', 'provisioner'))
+
+                if return_code == 0:
+                    result = 'ok'
+                    details.append('provision done correctly')
+
+                    with open(os.path.join(settings.MEDIA_ROOT, 'documents', str(request.user.id), uuid + '_provisioned.yml'), 'r') as f:
+                        tosca_provisioned_infrastructure = yaml.load(f.read())
+
+                    for vm_provisioned in tosca_provisioned_infrastructure['components']:
+                        vm_component = SwitchComponent.objects.get(uuid=vm_provisioned['name'])
+                        vm_component.title += ' (' + vm_provisioned['public_address'] + ')'
+                        vm_component.properties = yaml.dump(vm_provisioned, Dumper=YamlDumper, default_flow_style=False)
+                        vm_component.save()
+
+                    app.status = 2
+                    app.save()
+                else:
+                    result = 'error'
+                    details.append('provision has failed')
 
         # Delete files input and output files used by the provisioner
-        if os.path.isfile(os.path.join(settings.BASE_DIR, 'external_tools', 'provisioner', uuid + '.yml')):
-            os.remove(os.path.join(settings.BASE_DIR, 'external_tools', 'provisioner', uuid + '.yml'))
-        if os.path.isfile(os.path.join(settings.BASE_DIR, 'external_tools', 'provisioner', uuid + '_provisioned.yml')):
-            os.remove(os.path.join(settings.BASE_DIR, 'external_tools', 'provisioner', uuid + '_provisioned.yml'))
+        if os.path.isfile(os.path.join(settings.MEDIA_ROOT, 'documents', str(request.user.id), uuid + '.yml')):
+            os.remove(os.path.join(settings.MEDIA_ROOT, 'documents', str(request.user.id), uuid + '.yml'))
+        if os.path.isfile(os.path.join(settings.MEDIA_ROOT, 'documents', str(request.user.id), uuid + '_provisioned.yml')):
+            os.remove(os.path.join(settings.MEDIA_ROOT, 'documents', str(request.user.id), uuid + '_provisioned.yml'))
 
-        provision_result = {
-            'provision': {
-                'result': result,
-                'message': message
-            }
+        provision_vi_result = {
+            'result': result,
+            'details': details
         }
 
-        return JsonResponse(provision_result)
+        return JsonResponse(provision_vi_result)
 
 
 class SwitchAppGraphViewSet(viewsets.ModelViewSet):
@@ -741,21 +773,21 @@ class SwitchAppGraphViewSet(viewsets.ModelViewSet):
         suffixes_next = ['third', 'second']
         uuid = str(graph.app.uuid)
 
-        if os.path.isfile(os.path.join(settings.BASE_DIR, 'graphs', uuid + '_third.json')):
-            os.remove(os.path.join(settings.BASE_DIR, 'graphs', uuid + '_third.json'))
+        if os.path.isfile(os.path.join(settings.MEDIA_ROOT, 'graphs', uuid + '_third.json')):
+            os.remove(os.path.join(settings.MEDIA_ROOT, 'graphs', uuid + '_third.json'))
 
         for suffix in suffixes:
-            for filename in os.listdir(os.path.join(settings.BASE_DIR, 'graphs')):
+            for filename in os.listdir(os.path.join(settings.MEDIA_ROOT, 'graphs')):
                 if filename.startswith(uuid):
                     if filename.endswith(suffix + '.json'):
                         new_name = "%s_%s.json" % (uuid, suffixes_next[suffixes.index(suffix)])
-                        os.rename(os.path.join(settings.BASE_DIR, 'graphs', filename),
-                                  os.path.join(settings.BASE_DIR, 'graphs', new_name))
+                        os.rename(os.path.join(settings.MEDIA_ROOT, 'graphs', filename),
+                                  os.path.join(settings.MEDIA_ROOT, 'graphs', new_name))
 
-        for filename in os.listdir(os.path.join(settings.BASE_DIR, 'graphs')):
+        for filename in os.listdir(os.path.join(settings.MEDIA_ROOT, 'graphs')):
             if filename == uuid + '.json':
-                os.rename(os.path.join(settings.BASE_DIR, 'graphs', filename),
-                          os.path.join(settings.BASE_DIR, 'graphs', uuid + '_first.json'))
+                os.rename(os.path.join(settings.MEDIA_ROOT, 'graphs', filename),
+                          os.path.join(settings.MEDIA_ROOT, 'graphs', uuid + '_first.json'))
 
         graph.file.save(uuid + '.json', ContentFile(json.dumps(json_data)))
         graph.file.close()
@@ -908,7 +940,6 @@ class SwitchAppGraphViewSet(viewsets.ModelViewSet):
                         component=component, source=source_obj, target=target_obj,
                         type='switch.ComponentLink')
 
-                    # print graph_obj
         except Exception as e:
             print e.message
 
@@ -953,4 +984,52 @@ class SwitchComponentViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         app = SwitchApp.objects.filter(id=self.request.data['app_id']).first()
         switch_type = SwitchComponentType.objects.get(title=self.request.data['type'])
-        serializer.save(app=app, switch_type=switch_type)
+        if switch_type.title == "Requirement" and self.request.data['properties']=="data: enter metadata as YAML":
+            properties = {}
+            properties['machine_type'] = "SET_ITS_VALUE"
+            properties['location'] = "SET_ITS_VALUE"
+            self.request.data['properties'] = yaml.dump(properties, Dumper=YamlDumper, default_flow_style=False)
+        elif switch_type.title == "ComponentLink" and self.request.data['properties']=="data: enter metadata as YAML":
+            properties = {}
+            properties['netmask'] = "SET_ITS_VALUE"
+            properties['source_address'] = "SET_ITS_VALUE"
+            properties['target_address'] = "SET_ITS_VALUE"
+            properties['bandwidth'] = "SET_ITS_VALUE"
+            properties['latency'] = "SET_ITS_VALUE"
+            self.request.data['properties'] = yaml.dump(properties, Dumper=YamlDumper, default_flow_style=False)
+        serializer.save(app=app, switch_type=switch_type,properties=self.request.data['properties'])
+
+
+class SwitchDocumentViewSet(viewsets.ModelViewSet):
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (IsAuthenticated, AppBelongsToUser,)
+    serializer_class = SwitchDocumentSerializer
+    queryset = SwitchDocument.objects.all()
+    parser_classes = (JSONParser,)
+
+    def list(self, request, **kwargs):
+        documents = SwitchDocument.objects.filter()
+        serializer = self.get_serializer(documents, many=True)
+        return Response(serializer.data)
+
+    def get_queryset(self):
+        return SwitchDocument.objects.filter()
+
+    def perform_create(self, serializer):
+        document = serializer.save(user=self.request.user)
+
+
+# @login_required()
+def model_form_upload(request):
+    if request.method == 'POST':
+        form = SwitchDocumentForm(request.POST, request.FILES)
+        if form.is_valid():
+            credentialform = form.save(commit=False)
+            credentialform.user = request.user
+            credentialform.save()
+            return JsonResponse({"success": "File uploaded successfully."}, status=201)
+    else:
+        form = SwitchDocumentForm()
+    return render(request, 'api/model_form_upload.html', {
+        'form': form
+    })
