@@ -266,7 +266,7 @@ class SwitchAppViewSet(viewsets.ModelViewSet):
                         # Temporary simulate the planner
                         # For each hw requirement in the app create a vm and link it to the requirement
                         for requirement in SwitchComponent.objects.filter(app_id=pk,switch_type__title='Requirement').all():
-                            #Create virtual machine that satisfies the requirement, storing it in the db
+                            # Create virtual machine that satisfies the requirement, storing it in the db
                             virtual_machine = SwitchComponent.objects.create(app_id=pk, uuid = uuid.uuid4(),
                                     title = 'VM_' + requirement.title, mode = 'single', type='Virtual Machine')
                             virtual_machine.switch_type = SwitchComponentType.objects.get(title='Virtual Machine')
@@ -768,26 +768,7 @@ class SwitchAppGraphViewSet(viewsets.ModelViewSet):
     def put(self, request, switchapps_pk=None, **kwargs):
         json_data = request.data
         graph = self.queryset.filter(app_id=switchapps_pk).latest('updated_at')
-
-        suffixes = ['second', 'first']
-        suffixes_next = ['third', 'second']
         uuid = str(graph.app.uuid)
-
-        if os.path.isfile(os.path.join(settings.MEDIA_ROOT, 'graphs', uuid + '_third.json')):
-            os.remove(os.path.join(settings.MEDIA_ROOT, 'graphs', uuid + '_third.json'))
-
-        for suffix in suffixes:
-            for filename in os.listdir(os.path.join(settings.MEDIA_ROOT, 'graphs')):
-                if filename.startswith(uuid):
-                    if filename.endswith(suffix + '.json'):
-                        new_name = "%s_%s.json" % (uuid, suffixes_next[suffixes.index(suffix)])
-                        os.rename(os.path.join(settings.MEDIA_ROOT, 'graphs', filename),
-                                  os.path.join(settings.MEDIA_ROOT, 'graphs', new_name))
-
-        for filename in os.listdir(os.path.join(settings.MEDIA_ROOT, 'graphs')):
-            if filename == uuid + '.json':
-                os.rename(os.path.join(settings.MEDIA_ROOT, 'graphs', filename),
-                          os.path.join(settings.MEDIA_ROOT, 'graphs', uuid + '_first.json'))
 
         graph.file.save(uuid + '.json', ContentFile(json.dumps(json_data)))
         graph.file.close()
