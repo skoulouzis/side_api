@@ -9,3 +9,4 @@ drf-nested-routers
 djangorestframework-xml
 PyYAML===3.11
 django-cleanup===0.4.2
+django-model-utils==2.6

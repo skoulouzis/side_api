@@ -14,7 +14,7 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='SwitchApp',
+            name='Application',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('title', models.CharField(max_length=512)),
@@ -27,28 +27,23 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.CreateModel(
-            name='SwitchAppGraph',
+            name='Component',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
+                ('title', models.CharField(max_length=512, null=True)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
-                ('file', models.FileField(upload_to='graphs')),
-                ('app', models.ForeignKey(related_name='graphs', to='api.SwitchApp')),
             ],
         ),
         migrations.CreateModel(
-            name='SwitchAppGraphBase',
+            name='ComponentClass',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('type', models.CharField(max_length=512, null=True)),
-                ('last_x', models.IntegerField(default=0, null=True)),
-                ('last_y', models.IntegerField(default=0, null=True)),
+                ('title', models.CharField(max_length=512, null=True)),
             ],
         ),
         migrations.CreateModel(
-            name='SwitchAppGraphPort',
+            name='ComponentPort',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('type', models.CharField(max_length=512, null=True)),
@@ -57,105 +52,112 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.CreateModel(
-            name='SwitchAppGraphServiceLink',
-            fields=[
-                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
-            ],
-        ),
-        migrations.CreateModel(
-            name='SwitchComponent',
-            fields=[
-                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('uuid', models.UUIDField()),
-                ('title', models.CharField(max_length=512, null=True)),
-                ('mode', models.CharField(max_length=512, null=True)),
-                ('type', models.CharField(max_length=512, null=True)),
-                ('properties', models.TextField(null=True)),
-                ('app', models.ForeignKey(related_name='components', to='api.SwitchApp')),
-            ],
-        ),
-        migrations.CreateModel(
-            name='SwitchComponentClass',
-            fields=[
-                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
-                ('title', models.CharField(max_length=512, null=True)),
-            ],
-        ),
-        migrations.CreateModel(
-            name='SwitchComponentType',
+            name='ComponentType',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('title', models.CharField(max_length=512, null=True)),
                 ('primary_colour', models.CharField(max_length=512, null=True)),
                 ('secondary_colour', models.CharField(max_length=512, null=True)),
+                ('icon_name', models.CharField(max_length=1024, null=True)),
+                ('icon_style', models.CharField(max_length=1024, null=True)),
+                ('icon_class', models.CharField(max_length=1024, null=True)),
                 ('icon_svg', models.CharField(max_length=1024, null=True)),
                 ('icon_code', models.CharField(max_length=512, null=True)),
                 ('icon_colour', models.CharField(max_length=512, null=True)),
-                ('switch_class', models.ForeignKey(related_name='types', to='api.SwitchComponentClass')),
+                ('switch_class', models.ForeignKey(related_name='types', to='api.ComponentClass')),
             ],
         ),
         migrations.CreateModel(
-            name='SwitchAppGraphComponent',
+            name='Instance',
             fields=[
-                ('switchappgraphbase_ptr', models.OneToOneField(parent_link=True, auto_created=True, primary_key=True, serialize=False, to='api.SwitchAppGraphBase')),
-                ('parent', models.ForeignKey(related_name='children', blank=True, to='api.SwitchAppGraphComponent', null=True)),
+                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
+                ('uuid', models.UUIDField()),
+                ('title', models.CharField(max_length=512, null=True)),
+                ('mode', models.CharField(max_length=512, null=True)),
+                ('properties', models.TextField(null=True)),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('updated_at', models.DateTimeField(auto_now=True)),
+                ('last_x', models.IntegerField(default=0, null=True)),
+                ('last_y', models.IntegerField(default=0, null=True)),
             ],
-            bases=('api.switchappgraphbase',),
         ),
         migrations.CreateModel(
-            name='SwitchAppGraphComponentLink',
+            name='ServiceLink',
             fields=[
-                ('switchappgraphbase_ptr', models.OneToOneField(parent_link=True, auto_created=True, primary_key=True, serialize=False, to='api.SwitchAppGraphBase')),
+                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
+                ('app', models.ForeignKey(related_name='service_links', to='api.Application')),
             ],
-            bases=('api.switchappgraphbase',),
         ),
         migrations.CreateModel(
-            name='SwitchAppGraphService',
+            name='ComponentLink',
             fields=[
-                ('switchappgraphbase_ptr', models.OneToOneField(parent_link=True, auto_created=True, primary_key=True, serialize=False, to='api.SwitchAppGraphBase')),
+                ('instance_ptr', models.OneToOneField(parent_link=True, auto_created=True, primary_key=True, serialize=False, to='api.Instance')),
             ],
-            bases=('api.switchappgraphbase',),
+            bases=('api.instance',),
+        ),
+        migrations.CreateModel(
+            name='NestedComponent',
+            fields=[
+                ('instance_ptr', models.OneToOneField(parent_link=True, auto_created=True, primary_key=True, serialize=False, to='api.Instance')),
+                ('parent', models.ForeignKey(related_name='children', blank=True, to='api.NestedComponent', null=True)),
+            ],
+            bases=('api.instance',),
+        ),
+        migrations.CreateModel(
+            name='ServiceComponent',
+            fields=[
+                ('instance_ptr', models.OneToOneField(parent_link=True, auto_created=True, primary_key=True, serialize=False, to='api.Instance')),
+            ],
+            bases=('api.instance',),
         ),
         migrations.AddField(
-            model_name='switchcomponent',
-            name='switch_type',
-            field=models.ForeignKey(related_name='components', to='api.SwitchComponentType', null=True),
-        ),
-        migrations.AddField(
-            model_name='switchappgraphservicelink',
+            model_name='servicelink',
             name='source',
-            field=models.ForeignKey(related_name='sources', to='api.SwitchAppGraphBase'),
+            field=models.ForeignKey(related_name='sources', to='api.Instance'),
         ),
         migrations.AddField(
-            model_name='switchappgraphservicelink',
+            model_name='servicelink',
             name='target',
-            field=models.ForeignKey(related_name='targets', to='api.SwitchAppGraphBase'),
+            field=models.ForeignKey(related_name='targets', to='api.Instance'),
         ),
         migrations.AddField(
-            model_name='switchappgraphbase',
+            model_name='instance',
+            name='app',
+            field=models.ForeignKey(related_name='instances', to='api.Application'),
+        ),
+        migrations.AddField(
+            model_name='instance',
             name='component',
-            field=models.ForeignKey(related_name='graph_component', to='api.SwitchComponent'),
+            field=models.ForeignKey(related_name='instances', to='api.Component'),
         ),
         migrations.AddField(
-            model_name='switchappgraphbase',
-            name='components',
-            field=models.ManyToManyField(to='api.SwitchAppGraphBase', through='api.SwitchAppGraphServiceLink'),
+            model_name='instance',
+            name='neighbors',
+            field=models.ManyToManyField(to='api.Instance', through='api.ServiceLink'),
         ),
         migrations.AddField(
-            model_name='switchappgraphport',
-            name='graph_component',
-            field=models.ForeignKey(related_name='ports', to='api.SwitchAppGraphComponent'),
+            model_name='component',
+            name='type',
+            field=models.ForeignKey(related_name='components', to='api.ComponentType', null=True),
         ),
         migrations.AddField(
-            model_name='switchappgraphcomponentlink',
+            model_name='component',
+            name='user',
+            field=models.ForeignKey(default=None, blank=True, to=settings.AUTH_USER_MODEL, null=True),
+        ),
+        migrations.AddField(
+            model_name='componentport',
+            name='instance',
+            field=models.ForeignKey(related_name='ports', to='api.NestedComponent'),
+        ),
+        migrations.AddField(
+            model_name='componentlink',
             name='source',
-            field=models.ForeignKey(related_name='targets', to='api.SwitchAppGraphPort'),
+            field=models.ForeignKey(related_name='targets', blank=True, to='api.ComponentPort', null=True),
         ),
         migrations.AddField(
-            model_name='switchappgraphcomponentlink',
+            model_name='componentlink',
             name='target',
-            field=models.ForeignKey(related_name='sources', to='api.SwitchAppGraphPort'),
+            field=models.ForeignKey(related_name='sources', blank=True, to='api.ComponentPort', null=True),
         ),
     ]
