@@ -35,12 +35,16 @@ class ApplicationSerializer(serializers.ModelSerializer):
 class ComponentSerializer(serializers.ModelSerializer):
     type = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
     belongs_to_user = serializers.SerializerMethodField(read_only=True, required=False)
+    editable = serializers.SerializerMethodField(read_only=True, required=False)
 
     class Meta:
         model = Component
-        fields = ('id', 'title', 'type', 'belongs_to_user')
+        fields = ('id', 'title', 'type', 'editable', 'belongs_to_user', 'is_core_component', 'is_template_component')
 
     def get_belongs_to_user(self, obj):
+        return self.context['request'].user == obj.user
+
+    def get_editable(self, obj):
         return self.context['request'].user == obj.user
 
 
@@ -61,23 +65,23 @@ class ComponentTypeSerializer(serializers.ModelSerializer):
 
 
 class InstanceSerializer(serializers.ModelSerializer):
-    app = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
+    graph = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
     component = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
     editable = serializers.SerializerMethodField(read_only=True, required=False)
     properties = serializers.CharField(allow_null=True)
 
     class Meta:
         model = Instance
-        fields = ('id', 'uuid', 'title', 'mode', 'properties', 'app', 'editable', 'component', 'last_x', 'last_y')
+        fields = ('id', 'uuid', 'title', 'mode', 'properties', 'graph', 'editable', 'component', 'last_x', 'last_y')
 
     def get_editable(self, obj):
-        return self.context['request'].user == obj.app.user
+        return self.context['request'].user == obj.graph.user
 
     def create(self, validated_data):
         uuid = validated_data.get('uuid', None)
-        app = validated_data.get('app', None)
+        graph = validated_data.get('graph', None)
         if uuid is not None:
-            instance = Instance.objects.filter(uuid=uuid, app=app).first()
+            instance = Instance.objects.filter(uuid=uuid, graph=graph).first()
             if instance is not None:
                 return instance
 

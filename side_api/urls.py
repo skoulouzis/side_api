@@ -18,7 +18,7 @@ from rest_framework_nested import routers
 from rest_framework.authtoken.views import obtain_auth_token
 
 import views
-from api.views import UserViewSet, ApplicationViewSet, ComponentViewSet, ComponentTypeViewSet, InstanceViewSet, GraphView
+from api.views import UserViewSet, ApplicationViewSet, ComponentViewSet, ComponentTypeViewSet, InstanceViewSet, ApplicationGraphView, ComponentGraphView
 
 router = routers.DefaultRouter(trailing_slash=False)
 router.register("users", UserViewSet, base_name="user")
@@ -33,5 +33,6 @@ urlpatterns = [
     url(r'^api/', include(router.urls)),
     url(r'^api-auth-token/', obtain_auth_token),
     url(r'^api-register/', views.register),
-    url(r'^api/switchapps/(?P<pk>[^/.]+)/graph', GraphView.as_view()),
+    url(r'^api/switchapps/(?P<pk>[^/.]+)/graph', ApplicationGraphView.as_view()),
+    url(r'^api/switchcomponents/(?P<pk>[^/.]+)/graph', ComponentGraphView.as_view()),
 ]

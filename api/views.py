@@ -316,7 +316,27 @@ class ApplicationViewSet(viewsets.ModelViewSet):
         return JsonResponse(provision_result)
 
 
-class GraphView(APIView):
+class ComponentGraphView(APIView):
+    """
+    API endpoint that allows SwitchApps to be CRUDed.
+    """
+    serializer_class = ComponentSerializer
+    authentication_classes = (TokenAuthentication,)
+    # permission_classes = (IsAuthenticated, BelongsToUser,)
+    permission_classes = (IsAuthenticated,)
+    parser_classes = (JSONParser,)
+
+    def get(self, request, pk=None):
+        component = Component.objects.filter(id=pk).first()
+        return Response(component.get_graph())
+
+    def post(self, request, pk=None):
+        component = Component.objects.filter(id=pk).first()
+        component.put_graph(request.data)
+        return Response(component.get_graph())
+
+
+class ApplicationGraphView(APIView):
     """
     API endpoint that allows SwitchApps to be CRUDed.
     """
@@ -328,103 +348,11 @@ class GraphView(APIView):
 
     def get(self, request, pk=None):
         app = Application.objects.filter(id=pk).first()
-
         return Response(app.get_graph())
 
     def post(self, request, pk=None):
         app = Application.objects.filter(id=pk).first()
-
-        json_data = request.data
-        service_links = []
-        component_links = []
-
-        try:
-            for obj in app.service_links.all():
-                obj.delete()
-
-            for cell in json_data['cells']:#
-                # Do these two last to ensure all linked to components exist...
-                if cell['type'] == 'switch.ServiceLink':
-                    service_links.append(cell)
-                elif cell['type'] == 'switch.ComponentLink':
-                    component_links.append(cell)
-                else:
-                    instance = Instance.objects.filter(uuid=cell['id'], app=app).select_subclasses().first()
-                    instance.type = cell['type']
-                    instance.last_x = cell['position']['x']
-                    instance.last_y = cell['position']['y']
-
-                    if instance.component.type.switch_class.title == 'switch.Component':
-                        port_objs = []
-
-                        if 'parent' in cell:
-                            parent_obj, created = NestedComponent.objects.get_or_create(uuid=cell['parent'], app=app)
-                            instance.parent = parent_obj
-
-                        if 'inPorts' in cell:
-                            for port in cell['inPorts']:
-                                port_obj, created = ComponentPort.objects.get_or_create(instance=instance, uuid=port['id'], type='in')
-                                port_obj.title = port['label']
-                                port_obj.save()
-                                port_objs.append(port_obj)
-
-                            instance.ports = port_objs
-
-                        if 'outPorts' in cell:
-                            for port in cell['outPorts']:
-                                port_obj, created = ComponentPort.objects.get_or_create(instance=instance, uuid=port['id'], type='out')
-                                port_obj.title = port['label']
-                                port_obj.save()
-                                port_objs.append(port_obj)
-
-                            instance.ports = port_objs
-
-                        old_port_objs = ComponentPort.objects.filter(instance=instance)
-
-                        for old_port in old_port_objs:
-                            if old_port not in port_objs:
-                                old_port.delete()
-
-                    instance.save()
-
-            for instance in service_links:
-                source_obj = None
-                target_obj = None
-
-                if 'source' in instance:
-                    source = instance['source']
-                    source_obj = Instance.objects.filter(uuid=source['id'], app=app).first()
-
-                if 'target' in instance:
-                    target = instance['target']
-                    target_obj = Instance.objects.filter(uuid=target['id'], app=app).first()
-
-                if source_obj is not None and target_obj is not None:
-                    ServiceLink.objects.get_or_create(source=source_obj, target=target_obj, app=app)
-
-            for instance in component_links:
-                source_obj = None
-                target_obj = None
-
-                if 'source' in instance:
-                    source = instance['source']
-                    if 'port' in source:
-                        source_obj = ComponentPort.objects.filter(uuid=str(source['port']), type='out').first()
-
-                if 'target' in instance:
-                    target = instance['target']
-                    if 'port' in target:
-                        target_obj = ComponentPort.objects.filter(uuid=str(target['port']), type='in').first()
-
-                if source_obj is not None and target_obj is not None:
-                    link, created = ComponentLink.objects.get_or_create(uuid=instance['id'], app=app)
-                    link.source = source_obj
-                    link.target = target_obj
-                    link.save()
-
-        except Exception as e:
-            print e.message
-
+        app.put_graph(request.data)
         return Response(app.get_graph())
 
 
@@ -448,18 +376,35 @@ class UserViewSet(viewsets.ModelViewSet):
 class ComponentViewSet(viewsets.ModelViewSet):
     serializer_class = ComponentSerializer
 
-    def list(self, request, **kwargs):
-        apps = Component.objects.filter()
-        # apps = SwitchApp.objects.filter(user=self.request.user)
-        serializer = self.get_serializer(apps, many=True)
-        return Response(serializer.data)
-
     def get_queryset(self):
-        return Component.objects.filter()
+        is_core_component = self.request.query_params.get('is_core_component', None)
+        is_template_component = self.request.query_params.get('is_template_component', None)
+        queryset = Component.objects.filter()
+
+        if is_core_component is not None:
+            queryset = queryset.filter(type__switch_class__is_core_component=is_core_component)
+        elif is_template_component is not None:
+            queryset = queryset.filter(type__switch_class__is_template_component=is_template_component)
+
+        return queryset
 
     def perform_create(self, serializer):
         switch_type = ComponentType.objects.get(id=self.request.data['type']['id'])
-        serializer.save(type=switch_type, user=self.request.user)
+        component = serializer.save(type=switch_type, user=self.request.user)
+
+        instance = Instance.objects.create(graph=component, component=component, title=component.title, last_x=400, last_y=200, mode='single')
+
+        if component.type.switch_class.title == 'switch.Component' or component.type.switch_class.title == 'switch.Group':
+            nested_component = NestedComponent(instance_ptr=instance)
+            nested_component.save_base(raw=True)
+
+        elif component.type.switch_class.title == 'switch.VirtualResource' or component.type.switch_class.title == 'switch.Attribute':
+            service_component = ServiceComponent(instance_ptr=instance)
+            service_component.save_base(raw=True)
+
+        elif component.type.switch_class.title == 'switch.ComponentLink':
+            component_link = ComponentLink(instance_ptr=instance)
+            component_link.save_base(raw=True)
 
 
 class ComponentTypeViewSet(viewsets.ModelViewSet):
@@ -474,35 +419,93 @@ class InstanceViewSet(viewsets.ModelViewSet):
     serializer_class = InstanceSerializer
 
     def get_queryset(self):
-        app_id = self.request.query_params.get('app_id', None)
+        graph_id = self.request.query_params.get('graph_id', None)
         uuid = self.request.query_params.get('uuid', None)
-        if app_id is not None:
-            queryset = Instance.objects.filter(app_id=app_id)
+        if graph_id is not None:
+            queryset = Instance.objects.filter(graph_id=graph_id)
             if uuid is not None:
-                queryset = Instance.objects.filter(app_id=app_id, uuid=uuid)
+                queryset = Instance.objects.filter(graph_id=graph_id, uuid=uuid)
         else:
-            queryset = Instance.objects.filter(app__user=self.request.user)
+            queryset = Instance.objects.filter(graph__user=self.request.user)
         return queryset
 
     def perform_create(self, serializer):
-        app = Application.objects.filter(id=self.request.data['app_id']).first()
+        if self.request.data['graph_type'] == 'app':
+            graph = Application.objects.filter(id=self.request.data['graph_id']).first()
+        else:
+            graph = Component.objects.filter(id=self.request.data['graph_id']).first()
+
         component = Component.objects.filter(id=self.request.data['component_id']).first()
 
-        instance = serializer.save(app=app, component=component)
+        instance = serializer.save(graph=graph, component=component)
         instance.save()
+
+        nested_component = None
 
         if component.type.switch_class.title == 'switch.Component' or component.type.switch_class.title == 'switch.Group':
             nested_component = NestedComponent(instance_ptr=instance)
             nested_component.save_base(raw=True)
 
-        elif component.type.switch_class.title == 'switch.VirtualResource' or  component.type.switch_class.title == 'switch.Attribute':
-            service_component = ServiceComponent(instance_ptr=instance)
-            service_component.save_base(raw=True)
-
-        elif component.type.switch_class.title == 'switch.VirtualResource' or  component.type.switch_class.title == 'switch.Attribute':
+        elif component.type.switch_class.title == 'switch.VirtualResource' or component.type.switch_class.title == 'switch.Attribute':
             service_component = ServiceComponent(instance_ptr=instance)
             service_component.save_base(raw=True)
 
         elif component.type.switch_class.title == 'switch.ComponentLink':
-            service_component = ComponentLink(instance_ptr=instance)
-            service_component.save_base(raw=True)
+            component_link = ComponentLink(instance_ptr=instance)
+            component_link.save_base(raw=True)
+
+        base_instance = component.get_base_instance()
+        x_change = base_instance.last_x - instance.last_x
+        y_change = base_instance.last_y - instance.last_y
+
+        instance_translations = {}
+        port_translations = {}
+
+        try:
+            # clone any supporting components
+            instances = component.get_instances()
+            for template_instance in instances:
+                # if it's not the main component, clone it!
+                old_pk = template_instance.pk
+
+                if template_instance != base_instance:
+                    template_instance.pk = None
+                    template_instance.id = None
+                    template_instance.graph = graph
+                    template_instance.last_x = template_instance.last_x - x_change
+                    template_instance.last_y = template_instance.last_y - y_change
+                    template_instance.uuid = uuid.uuid4()
+                    template_instance.save()
+                    new_pk = template_instance.pk
+
+                    instance_translations[old_pk] = new_pk
+                elif nested_component is not None:
+                    template_instance = nested_component
+                    instance_translations[old_pk] = instance.pk
+
+                for port in ComponentPort.objects.filter(instance_id=old_pk).all():
+                    old_pk = port.pk
+                    port.instance = template_instance
+                    port.pk = None
+                    port.id = None
+                    port.uuid = uuid.uuid4()
+                    port.save()
+                    new_pk = port.pk
+
+                    port_translations[old_pk] = new_pk
+
+            for component_link in ComponentLink.objects.filter(graph=component).all():
+                component_link.source_id = port_translations[component_link.source_id]
+                component_link.target_id = port_translations[component_link.target_id]
+                component_link.save()
+
+            for service_link in ServiceLink.objects.filter(graph=component).all():
+                service_link.pk = None
+                service_link.id = None
+                service_link.graph = graph
+                service_link.source_id = instance_translations[service_link.source_id]
+                service_link.target_id = instance_translations[service_link.target_id]
+                service_link.save()
+
+        except Exception as e:
+            print e.message

@@ -1,10 +1,10 @@
-- fields: {title: switch.Component}
+- fields: {title: switch.Component, is_core_component: true, is_template_component: true}
   model: api.componentclass
   pk: 1
 - fields: {title: switch.Group}
   model: api.componentclass
   pk: 2
-- fields: {title: switch.Attribute}
+- fields: {title: switch.Attribute, is_template_component: true}
   model: api.componentclass
   pk: 3
 - fields: {title: switch.VirtualResource}
@@ -148,9 +148,13 @@
       70, 218)', switch_class: 4, title: Virtual Network}
   model: api.componenttype
   pk: 13
-- fields: {type: 1, title: 'Default Component Link', created_at: '2016-11-17 00:00:00.000000', updated_at: '2016-11-17 00:00:00.000000', user: null}
-  model: api.component
+- fields: {title: 'Default Component Link', created_at: '2016-11-17 00:00:00.000000', updated_at: '2016-11-17 00:00:00.000000', user: null}
+  model: api.graphbase
   pk: 1
-- fields: {type: 2, title: 'Default Component Group', created_at: '2016-11-17 00:00:00.000000', updated_at: '2016-11-17 00:00:00.000000', user: null}
-  model: api.component
+- fields: {title: 'Default Component Group', created_at: '2016-11-17 00:00:00.000000', updated_at: '2016-11-17 00:00:00.000000', user: null}
+  model: api.graphbase
   pk: 2
+- fields: {type: 1, graphbase_ptr: 1}
+  model: api.component
+- fields: {type: 2, graphbase_ptr: 2}
+  model: api.component

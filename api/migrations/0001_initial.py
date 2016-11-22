@@ -14,28 +14,6 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='Application',
-            fields=[
-                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
-                ('title', models.CharField(max_length=512)),
-                ('uuid', models.UUIDField(default=uuid.uuid4, editable=False)),
-                ('description', models.CharField(max_length=1024, null=True)),
-                ('public_view', models.BooleanField(default=False)),
-                ('public_editable', models.BooleanField(default=False)),
-                ('status', models.IntegerField(default=0)),
-                ('user', models.ForeignKey(to=settings.AUTH_USER_MODEL)),
-            ],
-        ),
-        migrations.CreateModel(
-            name='Component',
-            fields=[
-                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
-                ('title', models.CharField(max_length=512, null=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-            ],
-        ),
-        migrations.CreateModel(
             name='ComponentClass',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
@@ -68,6 +46,15 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.CreateModel(
+            name='GraphBase',
+            fields=[
+                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
+                ('title', models.CharField(max_length=512)),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('updated_at', models.DateTimeField(auto_now=True)),
+            ],
+        ),
+        migrations.CreateModel(
             name='Instance',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
@@ -79,14 +66,34 @@ class Migration(migrations.Migration):
                 ('updated_at', models.DateTimeField(auto_now=True)),
                 ('last_x', models.IntegerField(default=0, null=True)),
                 ('last_y', models.IntegerField(default=0, null=True)),
+                ('template', models.BooleanField(default=False)),
             ],
         ),
         migrations.CreateModel(
             name='ServiceLink',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
-                ('app', models.ForeignKey(related_name='service_links', to='api.Application')),
             ],
+        ),
+        migrations.CreateModel(
+            name='Application',
+            fields=[
+                ('graphbase_ptr', models.OneToOneField(parent_link=True, auto_created=True, primary_key=True, serialize=False, to='api.GraphBase')),
+                ('uuid', models.UUIDField(default=uuid.uuid4, editable=False)),
+                ('description', models.CharField(max_length=1024, null=True)),
+                ('public_view', models.BooleanField(default=False)),
+                ('public_editable', models.BooleanField(default=False)),
+                ('status', models.IntegerField(default=0)),
+            ],
+            bases=('api.graphbase',),
+        ),
+        migrations.CreateModel(
+            name='Component',
+            fields=[
+                ('graphbase_ptr', models.OneToOneField(parent_link=True, auto_created=True, primary_key=True, serialize=False, to='api.GraphBase')),
+                ('type', models.ForeignKey(related_name='components', to='api.ComponentType', null=True)),
+            ],
+            bases=('api.graphbase',),
         ),
         migrations.CreateModel(
             name='ComponentLink',
@@ -112,6 +119,11 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name='servicelink',
+            name='graph',
+            field=models.ForeignKey(related_name='service_links', to='api.GraphBase'),
+        ),
+        migrations.AddField(
+            model_name='servicelink',
             name='source',
             field=models.ForeignKey(related_name='sources', to='api.Instance'),
         ),
@@ -122,13 +134,8 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name='instance',
-            name='app',
-            field=models.ForeignKey(related_name='instances', to='api.Application'),
-        ),
-        migrations.AddField(
-            model_name='instance',
-            name='component',
-            field=models.ForeignKey(related_name='instances', to='api.Component'),
+            name='graph',
+            field=models.ForeignKey(related_name='instances', to='api.GraphBase'),
         ),
         migrations.AddField(
             model_name='instance',
@@ -136,14 +143,14 @@ class Migration(migrations.Migration):
             field=models.ManyToManyField(to='api.Instance', through='api.ServiceLink'),
         ),
         migrations.AddField(
-            model_name='component',
-            name='type',
-            field=models.ForeignKey(related_name='components', to='api.ComponentType', null=True),
+            model_name='graphbase',
+            name='user',
+            field=models.ForeignKey(to=settings.AUTH_USER_MODEL),
         ),
         migrations.AddField(
-            model_name='component',
-            name='user',
-            field=models.ForeignKey(default=None, blank=True, to=settings.AUTH_USER_MODEL, null=True),
+            model_name='instance',
+            name='component',
+            field=models.ForeignKey(related_name='child_instances', to='api.Component'),
         ),
         migrations.AddField(
             model_name='componentport',

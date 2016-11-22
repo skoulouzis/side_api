@@ -16,29 +16,30 @@ class YamlDumper(Dumper):
     def increase_indent(self, flow=False, indentless=False):
         return super(YamlDumper, self).increase_indent(flow, False)
 
+
 YamlDumper.add_representer(str, SafeRepresenter.represent_str)
 YamlDumper.add_representer(unicode, SafeRepresenter.represent_unicode)
 
 
-class Application(models.Model):
-    user = models.ForeignKey(User)
+class GraphBase(models.Model):
+    user = models.ForeignKey(User, null=True, blank=True, default = None)
     title = models.CharField(max_length=512)
-    uuid = models.UUIDField(default=uuid.uuid4, editable=False)
-    description = models.CharField(max_length=1024, null=True)
-    public_view = models.BooleanField(default=False)
-    public_editable = models.BooleanField(default=False)
-    # Status: 0 no plan virtual infrastructure; 1 planned; 2 provisioned; 3 deployed
-    status = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class JSONAPIMeta:
-        resource_name = "switchapps"
+        def __init__(self):
+            pass
 
-    def __unicode__(self):
-        return 'SwitchApp: ' + self.title + ' by ' + self.user.username
+        resource_name = "switchgraphs"
+        abstract = True
+
+    def get_instances(self):
+        return Instance.objects.filter(graph=self).select_subclasses()
 
     def get_graph(self):
         response_cells = []
-        instances = Instance.objects.filter(app=self).select_subclasses()
+        instances = Instance.objects.filter(graph=self).select_subclasses()
 
         for instance in instances:
             try:
@@ -66,6 +67,115 @@ class Application(models.Model):
             }
         }
 
+    def put_graph(self, json_data):
+
+        service_links = []
+        component_links = []
+
+        try:
+            for obj in self.service_links.all():
+                obj.delete()
+
+            for cell in json_data['cells']:  #
+                # Do these two last to ensure all linked to components exist...
+                if cell['type'] == 'switch.ServiceLink':
+                    service_links.append(cell)
+                elif cell['type'] == 'switch.ComponentLink':
+                    component_links.append(cell)
+                else:
+                    instance = Instance.objects.filter(uuid=cell['id'], graph=self).select_subclasses().first()
+                    instance.type = cell['type']
+                    instance.last_x = cell['position']['x']
+                    instance.last_y = cell['position']['y']
+
+                    if instance.component.type.switch_class.title == 'switch.Component':
+                        port_objs = []
+
+                        if 'parent' in cell and cell['parent'] is not None:
+                            parent_obj, created = NestedComponent.objects.get_or_create(uuid=cell['parent'], graph=self)
+                            instance.parent = parent_obj
+
+                        if 'inPorts' in cell:
+                            for port in cell['inPorts']:
+                                port_obj, created = ComponentPort.objects.get_or_create(instance=instance,
+                                                                                        uuid=port['id'], type='in')
+                                port_obj.title = port['label']
+                                port_obj.save()
+                                port_objs.append(port_obj)
+
+                            instance.ports = port_objs
+
+                        if 'outPorts' in cell:
+                            for port in cell['outPorts']:
+                                port_obj, created = ComponentPort.objects.get_or_create(instance=instance,
+                                                                                        uuid=port['id'], type='out')
+                                port_obj.title = port['label']
+                                port_obj.save()
+                                port_objs.append(port_obj)
+
+                            instance.ports = port_objs
+
+                        old_port_objs = ComponentPort.objects.filter(instance=instance)
+
+                        for old_port in old_port_objs:
+                            if old_port not in port_objs:
+                                old_port.delete()
+
+                    instance.save()
+
+            for instance in service_links:
+                source_obj = None
+                target_obj = None
+
+                if 'source' in instance:
+                    source = instance['source']
+                    source_obj = Instance.objects.filter(uuid=source['id'], graph=self).first()
+
+                if 'target' in instance:
+                    target = instance['target']
+                    target_obj = Instance.objects.filter(uuid=target['id'], graph=self).first()
+
+                if source_obj is not None and target_obj is not None:
+                    ServiceLink.objects.get_or_create(source=source_obj, target=target_obj, graph=self)
+
+            for instance in component_links:
+                source_obj = None
+                target_obj = None
+
+                if 'source' in instance:
+                    source = instance['source']
+                    if 'port' in source:
+                        source_obj = ComponentPort.objects.filter(uuid=str(source['port']), type='out').first()
+
+                if 'target' in instance:
+                    target = instance['target']
+                    if 'port' in target:
+                        target_obj = ComponentPort.objects.filter(uuid=str(target['port']), type='in').first()
+
+                if source_obj is not None and target_obj is not None:
+                    link, created = ComponentLink.objects.get_or_create(uuid=instance['id'], graph=self)
+                    link.source = source_obj
+                    link.target = target_obj
+                    link.save()
+
+        except Exception as e:
+            print e.message
+
+
+class Application(GraphBase):
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False)
+    description = models.CharField(max_length=1024, null=True)
+    public_view = models.BooleanField(default=False)
+    public_editable = models.BooleanField(default=False)
+    # Status: 0 no plan virtual infrastructure; 1 planned; 2 provisioned; 3 deployed
+    status = models.IntegerField(default=0)
+
+    class JSONAPIMeta:
+        resource_name = "switchapps"
+
+    def __unicode__(self):
+        return 'SwitchApp: ' + self.title + ' by ' + self.user.username
+
     def get_tosca(self):
         components = []
         external = []
@@ -77,7 +187,7 @@ class Application(models.Model):
         virtual_machines = []
         virtual_networks = []
 
-        instances = Instance.objects.filter(app=self).select_subclasses()
+        instances = Instance.objects.filter(graph=self).select_subclasses()
 
         for instance in instances:
             try:
@@ -152,6 +262,8 @@ class Application(models.Model):
 
 class ComponentClass(models.Model):
     title = models.CharField(max_length=512, null=True)
+    is_core_component = models.BooleanField(default=False)
+    is_template_component = models.BooleanField(default=False)
 
     class JSONAPIMeta:
         resource_name = "switchcomponentclass"
@@ -179,25 +291,27 @@ class ComponentType(models.Model):
         return self.title
 
 
-class Component(models.Model):
-    user = models.ForeignKey(User, null=True, blank=True, default = None)
-    title = models.CharField(max_length=512, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+class Component(GraphBase):
     type = models.ForeignKey(ComponentType, related_name='components', null=True)
 
     class JSONAPIMeta:
         resource_name = "switchcomponents"
 
-    def __unicode__(self):
-        return 'SwitchApp: ' + self.title + '(' + str(self.uuid) + ') in ' + self.app.title
+    def get_base_instance(self):
+        return Instance.objects.filter(graph=self, component=self).select_subclasses().first()
+
+    def is_core_component(self):
+        return self.type.switch_class.title == 'switch.Component'
+
+    def is_template_component(self):
+        return self.type.switch_class.title == 'switch.Component' or self.type.switch_class.title != 'switch.Attribute'
 
 
 class Instance(models.Model):
     objects = InheritanceManager()
-    uuid = models.UUIDField(editable=True)
-    app = models.ForeignKey(Application, related_name='instances')
-    component = models.ForeignKey(Component, related_name='instances')
+    uuid = models.UUIDField(default=uuid.uuid4, editable=True)
+    graph = models.ForeignKey(GraphBase, related_name='instances')
+    component = models.ForeignKey(Component, related_name='child_instances')
     neighbors = models.ManyToManyField('self', through='ServiceLink', symmetrical=False)
     title = models.CharField(max_length=512, null=True)
     mode = models.CharField(max_length=512, null=True)
@@ -247,7 +361,7 @@ class Instance(models.Model):
                 }
             }
         }
-        
+
         if self.component.type is not None:
             graph_obj['attrs']['.icon'] = {
                 "d": self.component.type.icon_svg,
@@ -348,7 +462,7 @@ class NestedComponent(Instance):
                         'port': {'type': 'out', 'id': str(port.uuid), 'name': port.title}}
 
             height = len(in_ports) if len(in_ports) > len(out_ports) else len(out_ports)
-            
+
             if height < 2:
                 height = 30
             else:
@@ -356,6 +470,8 @@ class NestedComponent(Instance):
 
             if self.parent is not None:
                 graph_obj['parent'] = self.parent.uuid
+            else:
+                graph_obj['parent'] = None
 
             graph_obj['size'] = {"width": 100, "height": height}
 
@@ -428,7 +544,7 @@ class ComponentLink(Instance):
 
         graph_obj['attrs'][label + 'PortObj'] = {
             'id': component_port.id,
-            'name': component_port.title, 
+            'name': component_port.title,
             'type': type}
 
         text, fill = component_port.instance.get_mode_labels()
@@ -454,16 +570,16 @@ class ComponentLink(Instance):
 
 
 class ServiceLink(models.Model):
-    app = models.ForeignKey(Application, related_name='service_links')
+    graph = models.ForeignKey(GraphBase, related_name='service_links')
     source = models.ForeignKey(Instance, related_name='sources')
     target = models.ForeignKey(Instance, related_name='targets')
 
     class JSONAPIMeta:
         resource_name = "graph_connections"
-        
+
     def get_graph(self):
         graph_obj = {
-            'type': 'switch.ServiceLink', 
+            'type': 'switch.ServiceLink',
             'attrs': {
                 '.marker-target': {
                     'stroke': '#4b4a67',
@@ -518,17 +634,17 @@ class ServiceComponent(Instance):
 
     def get_graph(self):
         graph_obj = super(ServiceComponent, self).get_graph()
-        
+
         graph_obj['attrs']['.body'] = {
             "fill": self.component.type.primary_colour,
             "stroke": self.component.type.secondary_colour,
             "stroke-width": 2,
             "fill-opacity": ".95"
         }
-        
-        if self.type == 'switch.Attribute':
+
+        if self.component.type.switch_class.title == 'switch.Attribute':
             graph_obj['size'] = {"width": 30, "height": 30}
-        elif self.type == 'switch.VirtualResource':
+        elif self.component.type.switch_class.title == 'switch.VirtualResource':
             graph_obj['size'] = {"width": 35, "height": 35}
 
         return graph_obj
@@ -545,9 +661,9 @@ class SwitchComponentAdmin(admin.ModelAdmin):
     fields = ('title', 'uuid', 'app_title')
 
 
-# class SwitchComponentClassAdmin(admin.ModelAdmin):
-#     fields = ('title')
-#
-#
-# class SwitchComponentTypeAdmin(admin.ModelAdmin):
-#     fields = ('title', 'switch_class', 'primary_colour', 'secondary_colour', 'icon_colour', 'icon_svg', 'icon_code')
+    # class SwitchComponentClassAdmin(admin.ModelAdmin):
+    #     fields = ('title')
+    #
+    #
+    # class SwitchComponentTypeAdmin(admin.ModelAdmin):
+    #     fields = ('title', 'switch_class', 'primary_colour', 'secondary_colour', 'icon_colour', 'icon_svg', 'icon_code')
