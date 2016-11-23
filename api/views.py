@@ -424,7 +424,7 @@ class SwitchAppViewSet(viewsets.ModelViewSet):
                 return_code = subprocess.call(['java', '-jar',
                                                os.path.join(settings.BASE_DIR, 'external_tools', 'provisioner', 'EC2Provision_test.jar'),
                                                confFile, toscaFile, certsFolder],
-                                              cwd=os.path.join(settings.BASE_DIR, 'external_tools', 'provisioner'))
+                                              cwd=os.path.join(settings.MEDIA_ROOT, 'documents', str(request.user.id)))
 
                 if return_code == 0:
                     result = 'ok'
