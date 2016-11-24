@@ -16,6 +16,7 @@ from rest_framework.filters import DjangoFilterBackend, SearchFilter
 from rest_framework import views
 from rest_framework.views import APIView
 from rest_framework_xml.parsers import XMLParser
+from rest_framework_extensions.mixins import PaginateByMaxMixin
 
 from api.permissions import BelongsToUser, AppBelongsToUser
 from models import *
@@ -43,7 +44,7 @@ YamlDumper.add_representer(str, SafeRepresenter.represent_str)
 YamlDumper.add_representer(unicode, SafeRepresenter.represent_unicode)
 
 
-class ApplicationViewSet(viewsets.ModelViewSet):
+class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     """
     API endpoint that allows SwitchApps to be CRUDed.
     """
@@ -351,7 +352,7 @@ class ApplicationViewSet(viewsets.ModelViewSet):
         return JsonResponse(provision_vi_result)
 
 
-class ComponentGraphView(APIView):
+class ComponentGraphView(PaginateByMaxMixin, APIView):
     """
     API endpoint that allows SwitchApps to be CRUDed.
     """
@@ -371,7 +372,7 @@ class ComponentGraphView(APIView):
         return Response(component.get_graph())
 
 
-class ApplicationGraphView(APIView):
+class ApplicationGraphView(PaginateByMaxMixin, APIView):
     """
     API endpoint that allows SwitchApps to be CRUDed.
     """
@@ -391,7 +392,7 @@ class ApplicationGraphView(APIView):
         return Response(app.get_graph())
 
 
-class UserViewSet(viewsets.ModelViewSet):
+class UserViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     serializer_class = UserSerializer
     authentication_classes = (TokenAuthentication,)
     User = get_user_model()
@@ -408,7 +409,7 @@ class UserViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-class ComponentViewSet(viewsets.ModelViewSet):
+class ComponentViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     serializer_class = ComponentSerializer
 
     def get_queryset(self):
@@ -442,7 +443,7 @@ class ComponentViewSet(viewsets.ModelViewSet):
             component_link.save_base(raw=True)
 
 
-class ComponentTypeViewSet(viewsets.ModelViewSet):
+class ComponentTypeViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     serializer_class = ComponentTypeSerializer
     authentication_classes = (TokenAuthentication,)
     permission_classes = (IsAuthenticated,)
@@ -450,7 +451,7 @@ class ComponentTypeViewSet(viewsets.ModelViewSet):
     parser_classes = (JSONParser,)
 
 
-class InstanceViewSet(viewsets.ModelViewSet):
+class InstanceViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     serializer_class = InstanceSerializer
 
     def get_queryset(self):
@@ -560,7 +561,7 @@ class InstanceViewSet(viewsets.ModelViewSet):
             print e.message
 
 
-class SwitchDocumentViewSet(viewsets.ModelViewSet):
+class SwitchDocumentViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     authentication_classes = (TokenAuthentication,)
     permission_classes = (IsAuthenticated, AppBelongsToUser,)
     serializer_class = SwitchDocumentSerializer
