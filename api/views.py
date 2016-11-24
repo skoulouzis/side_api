@@ -8,12 +8,13 @@ from django.core.files.base import ContentFile
 from django.http import JsonResponse, HttpResponse, StreamingHttpResponse, FileResponse, HttpResponseRedirect
 from django.template.defaultfilters import safe
 from rest_framework import viewsets
-from rest_framework.decorators import list_route, detail_route
+from rest_framework.decorators import list_route, detail_route, parser_classes
 from rest_framework.generics import get_object_or_404
-from rest_framework.parsers import FileUploadParser, JSONParser
+from rest_framework.parsers import FileUploadParser, JSONParser, FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.filters import DjangoFilterBackend, SearchFilter
 from rest_framework import views
+from rest_framework.views import APIView
 from rest_framework_xml.parsers import XMLParser
 
 from api.permissions import BelongsToUser, AppBelongsToUser
@@ -38,35 +39,30 @@ class YamlDumper(Dumper):
     def increase_indent(self, flow=False, indentless=False):
         return super(YamlDumper, self).increase_indent(flow, False)
 
-
-YamlDumper.add_representer(str,
-                           SafeRepresenter.represent_str)
-
-YamlDumper.add_representer(unicode,
-                           SafeRepresenter.represent_unicode)
+YamlDumper.add_representer(str, SafeRepresenter.represent_str)
+YamlDumper.add_representer(unicode, SafeRepresenter.represent_unicode)
 
 
-class SwitchAppViewSet(viewsets.ModelViewSet):
+class ApplicationViewSet(viewsets.ModelViewSet):
     """
     API endpoint that allows SwitchApps to be CRUDed.
     """
-    serializer_class = SwitchAppSerializer
+    serializer_class = ApplicationSerializer
     authentication_classes = (TokenAuthentication,)
     # permission_classes = (IsAuthenticated, BelongsToUser,)
     permission_classes = (IsAuthenticated,)
 
     def list(self, request, **kwargs):
-        apps = SwitchApp.objects.filter()
+        apps = Application.objects.filter()
         # apps = SwitchApp.objects.filter(user=self.request.user)
         serializer = self.get_serializer(apps, many=True)
         return Response(serializer.data)
 
     def get_queryset(self):
-        return SwitchApp.objects.filter()
+        return Application.objects.filter()
 
     def perform_create(self, serializer):
         app = serializer.save(user=self.request.user)
-        SwitchAppGraph.objects.create(app_id=app.id)
 
     @detail_route(methods=['get'], permission_classes=[])
     def kb_classes(self, request, pk=None, *args, **kwargs):
@@ -101,122 +97,15 @@ class SwitchAppViewSet(viewsets.ModelViewSet):
 
     @detail_route(methods=['get'], permission_classes=[])
     def tosca(self, request, pk=None, *args, **kwargs):
-        components = []
-        external = []
-        network = []
-        attributes = []
-        groups = []
-        components_connections = []
-        services_connections = []
-        virtual_machines = []
-        virtual_networks = []
 
-        for component in SwitchComponent.objects.filter(app_id=pk).all():
-            data_obj = {}
-            properties = {}
-            properties['title'] = component.title
-            if 'enter metadata as YAML' not in component.properties:
-                metadata = yaml.load(str(component.properties).replace("\t", "    "))
-                properties.update(metadata)
+        app = Application.objects.filter(id=pk).first()
 
-            if component.switch_type.switch_class.title == 'switch.Component':
-                properties['scaling_mode'] = component.mode
-
-                for port in SwitchAppGraphComponent(component.graph_component).ports.all():
-                    properties.setdefault(port.type + 'Ports', []).append(port.title)
-
-                if SwitchAppGraphComponent(component.graph_component).parent is not None:
-                    properties['group'] = str(SwitchAppGraphComponent(component.graph_component).parent.component.uuid)
-
-                data_obj[str(component.uuid)] = properties
-
-                # The shape in joint.js "component" can be a "component", a "external component" or a "network"
-                if component.switch_type.title == 'Component':
-                    components.append(data_obj)
-                elif component.switch_type.title == 'Network':
-                    network.append(data_obj)
-                elif component.switch_type.title == 'External Component':
-                    external.append(data_obj)
-
-            if component.switch_type.switch_class.title == 'switch.VirtualResource':
-                properties['class'] = component.switch_type.title
-
-                data_obj[str(component.uuid)] = properties
-
-                # The shape in joint.js "VirtualResource" can be a "Virtual Machine" or a "Virtual Network"
-                if component.switch_type.title == 'Virtual Machine':
-                    virtual_machines.append(data_obj)
-                elif component.switch_type.title == 'Virtual Network':
-                    virtual_networks.append(data_obj)
-
-            if component.switch_type.switch_class.title == 'switch.Attribute':
-                # The shape in joint.js "attribute" can be a "monitoring agent", "event listener", "message passer"
-                # "constraint", "adaptation profile" or a "requirement"
-                properties['class'] = component.switch_type.title
-
-                data_obj[str(component.uuid)] = properties
-                attributes.append(data_obj)
-
-            if component.switch_type.switch_class.title == 'switch.Group':
-                for child in SwitchAppGraphComponent(component.graph_component).children.all():
-                    properties.setdefault('members', []).append(str(child.component.uuid))
-
-                data_obj[str(component.uuid)] = properties
-                groups.append(data_obj)
-
-            if component.switch_type.switch_class.title == 'switch.ComponentLink':
-                # SwitchAppGraphComponentLink(component.graph_component)
-                graph_component_link = SwitchAppGraphComponentLink.objects.get(component=component)
-                target = {}
-                target['id'] = str(graph_component_link.target.graph_component.component.uuid)
-                target['port'] = graph_component_link.target.title
-                properties['target'] = target;
-                source = {}
-                source['id'] = str(graph_component_link.source.graph_component.component.uuid)
-                source['port'] = graph_component_link.source.title
-                properties['source'] = source
-
-                data_obj[str(component.uuid)] = properties
-                components_connections.append(data_obj)
-
-        for serviceLink in SwitchAppGraphServiceLink.objects.filter(source__component__app_id=pk).all():
-            data_obj = {}
-            properties = {}
-            target = {}
-            target['id'] = str(serviceLink.target.component.uuid)
-            properties['target'] = target;
-            source = {}
-            source['id'] = str(serviceLink.source.component.uuid)
-            properties['source'] = source
-
-            data_obj[
-                str(serviceLink.source.component.uuid) + '--' + str(serviceLink.target.component.uuid)] = properties
-            services_connections.append(data_obj)
-
-        data = {
-            'data': {
-                'components': components,
-                'external_components': external,
-                'network_components': network,
-                'attributes': attributes,
-                'groups': groups,
-                'connections': {
-                    'components_connections': components_connections,
-                    'services_connections': services_connections
-                },
-                'virtual_resources': {
-                    'virtual_machines': virtual_machines,
-                    'virtual_networks': virtual_networks
-                }
-            }
-        }
-
-        return JsonResponse(data)
+        return JsonResponse(app.get_tosca())
 
     @detail_route(methods=['get'], permission_classes=[])
     def validate(self, request, pk=None, *args, **kwargs):
         details = []
-        for component in SwitchComponent.objects.filter(app_id=pk).all():
+        for component in Component.objects.filter(app_id=pk).all():
             component_properties = yaml.load(str(component.properties).replace("\t", "    "))
             for name,value in component_properties.items():
                 if value == "SET_ITS_VALUE":
@@ -240,12 +129,12 @@ class SwitchAppViewSet(viewsets.ModelViewSet):
         # TODO: implement the planning of the virtual infrastructure
         result = ''
         details = []
-        app = SwitchApp.objects.get(id=pk)
+        app = Application.objects.get(id=pk)
         if app.status >= 1:
             result = 'error'
             details.append('application has already a planned infrastructure')
         else:
-            num_hw_req = SwitchComponent.objects.filter(app_id=pk, switch_type__title='Requirement').count()
+            num_hw_req = Component.objects.filter(app_id=pk, switch_type__title='Requirement').count()
             if num_hw_req == 0:
                 result = 'error'
                 details.append('no hardware requirements defined')
@@ -265,11 +154,11 @@ class SwitchAppViewSet(viewsets.ModelViewSet):
 
                         # Temporary simulate the planner
                         # For each hw requirement in the app create a vm and link it to the requirement
-                        for requirement in SwitchComponent.objects.filter(app_id=pk,switch_type__title='Requirement').all():
+                        for requirement in Component.objects.filter(app_id=pk,switch_type__title='Requirement').all():
                             # Create virtual machine that satisfies the requirement, storing it in the db
-                            virtual_machine = SwitchComponent.objects.create(app_id=pk, uuid = uuid.uuid4(),
+                            virtual_machine = Component.objects.create(app_id=pk, uuid = uuid.uuid4(),
                                     title = 'VM_' + requirement.title, mode = 'single', type='Virtual Machine')
-                            virtual_machine.switch_type = SwitchComponentType.objects.get(title='Virtual Machine')
+                            virtual_machine.switch_type = ComponentType.objects.get(title='Virtual Machine')
                             vr_properties = {
                                 "type": "switch/compute",
                                 "OStype": "Ubuntu 14.04",
@@ -300,15 +189,15 @@ class SwitchAppViewSet(viewsets.ModelViewSet):
 
                             # Add a ethernet port to the VM properties for every "component_link" (target and source) of
                             # of every "component" linked to the requirement
-                            for graph_service_link in SwitchAppGraphServiceLink.objects.filter(source__component=requirement).all():
+                            for graph_service_link in ServiceLink.objects.filter(source__component=requirement).all():
                                 # Add a ethernet port for every component link to the requirement
-                                for graph_component_link in SwitchAppGraphComponentLink.objects.filter(source__graph_component=graph_service_link.target).all():
+                                for graph_component_link in ComponentLink.objects.filter(source__graph_component=graph_service_link.target).all():
                                     ethernet_port = {
                                         "name": graph_component_link.source.title,
                                         "connection_name": str(graph_component_link.component.uuid) + ".source"
                                     }
                                     vr_properties.setdefault('ethernet_port', []).append(ethernet_port)
-                                for graph_component_link in SwitchAppGraphComponentLink.objects.filter(target__graph_component=graph_service_link.target).all():
+                                for graph_component_link in ComponentLink.objects.filter(target__graph_component=graph_service_link.target).all():
                                     ethernet_port = {
                                         "name": graph_component_link.target.title,
                                         "connection_name": str(graph_component_link.component.uuid) + ".target"
@@ -319,18 +208,21 @@ class SwitchAppViewSet(viewsets.ModelViewSet):
 
                             virtual_machine.save()
 
-                            #Create a graph_virtual_machine element
-                            graph_req= SwitchAppGraphBase.objects.get(component=requirement)
-                            graph_vm = SwitchAppGraphService.objects.create(component=virtual_machine,type='switch.VirtualResource',
-                                                                            last_x=graph_req.last_x, last_y=graph_req.last_y + 80)
-                            graph_vm.save()
+                        # Create a graph_virtual_machine element
+                        graph_req = Instance.objects.get(component=requirement)
+                        graph_vm = ServiceComponent.objects.create(component=virtual_machine,
+                                                                   type='switch.VirtualResource',
+                                                                   last_x=graph_req.last_x,
+                                                                   last_y=graph_req.last_y + 80)
+                        graph_vm.save()
 
-                            # Create a service_link between the new vm and the requirement
-                            graph_service_link_vm_req= SwitchAppGraphServiceLink.objects.create(source=graph_vm,target=graph_req)
-                            graph_service_link_vm_req.save()
-                    else:
-                        result = 'error'
-                        details.append('planification of virtual infrastructure has failed')
+                        # Create a service_link between the new vm and the requirement
+                        graph_service_link_vm_req = ServiceLink.objects.create(source=graph_vm,
+                                                                               target=graph_req)
+                        graph_service_link_vm_req.save()
+                else:
+                    result = 'error'
+                    details.append('planification of virtual infrastructure has failed')
 
         planning_vi_result = {
             'result': result,
@@ -345,7 +237,7 @@ class SwitchAppViewSet(viewsets.ModelViewSet):
         result = ''
         details = []
 
-        app = SwitchApp.objects.get(id=pk)
+        app = Application.objects.get(id=pk)
         if app.status < 1:
             result = 'error'
             details.append('virtual infrastructure has not been planned yet')
@@ -433,11 +325,11 @@ class SwitchAppViewSet(viewsets.ModelViewSet):
                     with open(os.path.join(settings.MEDIA_ROOT, 'documents', str(request.user.id), uuid + '_provisioned.yml'), 'r') as f:
                         tosca_provisioned_infrastructure = yaml.load(f.read())
 
-                    for vm_provisioned in tosca_provisioned_infrastructure['components']:
-                        vm_component = SwitchComponent.objects.get(uuid=vm_provisioned['name'])
-                        vm_component.title += ' (' + vm_provisioned['public_address'] + ')'
-                        vm_component.properties = yaml.dump(vm_provisioned, Dumper=YamlDumper, default_flow_style=False)
-                        vm_component.save()
+                for vm_provisioned in tosca_provisioned_infrastructure['components']:
+                    vm_component = Component.objects.get(uuid=vm_provisioned['name'])
+                    vm_component.title += ' (' + vm_provisioned['public_address'] + ')'
+                    vm_component.properties = yaml.dump(vm_provisioned, Dumper=YamlDumper, default_flow_style=False)
+                    vm_component.save()
 
                     app.status = 2
                     app.save()
@@ -459,473 +351,44 @@ class SwitchAppViewSet(viewsets.ModelViewSet):
         return JsonResponse(provision_vi_result)
 
 
-class SwitchAppGraphViewSet(viewsets.ModelViewSet):
+class ComponentGraphView(APIView):
+    """
+    API endpoint that allows SwitchApps to be CRUDed.
+    """
+    serializer_class = ComponentSerializer
     authentication_classes = (TokenAuthentication,)
-    permission_classes = (IsAuthenticated, AppBelongsToUser,)
-    serializer_class = SwitchAppGraphSerializer
-    queryset = SwitchAppGraph.objects.all()
+    # permission_classes = (IsAuthenticated, BelongsToUser,)
+    permission_classes = (IsAuthenticated,)
     parser_classes = (JSONParser,)
 
-    def list(self, request, switchapps_pk=None, **kwargs):
-        graphs = self.queryset.filter(app_id=switchapps_pk)
-        serializer = self.get_serializer(graphs, many=True)
-        return Response(serializer.data)
+    def get(self, request, pk=None):
+        component = Component.objects.filter(id=pk).first()
+        return Response(component.get_graph())
 
-    def retrieve(self, request, pk=None, switchapps_pk=None):
-        graph = self.queryset.get(id=pk, app_id=switchapps_pk)
-        serializer = self.get_serializer(graph)
-        return Response(serializer.data)
+    def post(self, request, pk=None):
+        component = Component.objects.filter(id=pk).first()
+        component.put_graph(request.data)
+        return Response(component.get_graph())
 
-    @list_route(permission_classes=[])
-    def generated(self, request, switchapps_pk=None, *args, **kwargs):
-        components = SwitchAppGraphBase.objects.filter(component__app_id=switchapps_pk).all()
 
-        response_cells = []
+class ApplicationGraphView(APIView):
+    """
+    API endpoint that allows SwitchApps to be CRUDed.
+    """
+    serializer_class = ApplicationSerializer
+    authentication_classes = (TokenAuthentication,)
+    # permission_classes = (IsAuthenticated, BelongsToUser,)
+    permission_classes = (IsAuthenticated,)
+    parser_classes = (JSONParser,)
 
-        for cell in components:
-            try:
-                graph_obj = {'type': cell.type,
-                             'position': {},
-                             'attrs': {},
-                             'inPorts': [],
-                             'outPorts': []}
-                graph_obj['position']['x'] = cell.last_x
-                graph_obj['position']['y'] = cell.last_y
+    def get(self, request, pk=None):
+        app = Application.objects.filter(id=pk).first()
+        return Response(app.get_graph())
 
-                component = cell.component
-                graph_obj['id'] = component.uuid
-                graph_obj['attrs']['switch'] = {'class': component.type, 'title': component.title,
-                                                'type': component.title}
-                graph_obj['attrs']['.label'] = {"html": component.title, "fill": "#333"}
-
-                if component.switch_type is None:
-                    switch_type = SwitchComponentType.objects.filter(title=component.type).first()
-                    if switch_type is not None:
-                        component.switch_type = switch_type
-                        component.save()
-
-                if component.switch_type is not None:
-                    graph_obj['attrs']['.icon'] = {"d": component.switch_type.icon_svg,
-                                                   "fill": component.switch_type.icon_colour}
-
-                    if cell.type == 'switch.Component':
-                        inPorts = SwitchAppGraphPort.objects.filter(graph_component=cell, type='in').all()
-                        outPorts = SwitchAppGraphPort.objects.filter(graph_component=cell, type='out').all()
-                        stroke_opacity = ".0"
-                        fill_opacity = ".0"
-
-                        if component.mode != 'single':
-                            stroke_opacity = "1"
-                            fill_opacity = ".95"
-
-                        graph_obj['attrs']['.body'] = {
-                            "fill": component.switch_type.primary_colour,
-                            "stroke-width": 1,
-                            "rx": 4,
-                            "ry": 4,
-                            "fill-opacity": "1"
-                        }
-                        graph_obj['attrs']['.multi'] = {
-                            "stroke-opacity": stroke_opacity,
-                            "fill-opacity": fill_opacity,
-                            "rx": 4,
-                            "ry": 4,
-                            "stroke-width": 1,
-                            "fill": component.switch_type.secondary_colour
-                        }
-                        graph_obj['attrs']['.multi2'] = {
-                            "stroke-opacity": stroke_opacity,
-                            "fill-opacity": fill_opacity,
-                            "rx": 4,
-                            "ry": 4,
-                            "stroke-width": 1,
-                            "fill": component.switch_type.secondary_colour
-                        }
-
-                        if len(inPorts) > 0:
-                            gap = 100 / (len(inPorts) * 2)
-                            portlen = 0
-
-                            for port in inPorts:
-                                graph_obj['inPorts'].append({'type': 'in', 'id': str(port.uuid), 'label': port.title})
-                                key = '.inPorts>.port%s' % str(portlen)
-                                ref_y = (portlen * 2 * gap) + gap
-                                portlen += 1
-                                graph_obj['attrs'][key] = {'ref': '.body', 'ref-y': ref_y}
-                                graph_obj['attrs'][key + '>.port-label'] = {'text': port.title}
-                                graph_obj['attrs'][key + '>.port-body'] = {
-                                    'port': {'type': 'in', 'id': str(port.uuid), 'name': port.title}}
-
-                        if len(outPorts) > 0:
-                            gap = 100 / (len(outPorts) * 2)
-                            portlen = 0
-
-                            for port in outPorts:
-                                graph_obj['outPorts'].append({'type': 'out', 'id': str(port.uuid), 'label': port.title})
-                                key = '.outPorts>.port%s' % str(portlen)
-                                ref_y = (portlen * 2 * gap) + gap
-                                portlen += 1
-                                graph_obj['attrs'][key] = {'ref': '.body', 'ref-dx': 0, 'ref-y': ref_y}
-                                graph_obj['attrs'][key + '>.port-label'] = {'text': port.title}
-                                graph_obj['attrs'][key + '>.port-body'] = {
-                                    'port': {'type': 'out', 'id': str(port.uuid), 'name': port.title}}
-
-                        height = len(inPorts) if len(inPorts) > len(outPorts) else len(outPorts)
-                        if height < 2:
-                            height = 30
-                        else:
-                            height *= 25
-
-                        graph_component = SwitchAppGraphComponent.objects.filter(id=cell.id).first()
-
-                        if graph_component.parent is not None:
-                            graph_obj['parent'] = graph_component.parent.component.uuid
-
-                        graph_obj['size'] = {"width": 100, "height": height}
-                        response_cells.append(graph_obj)
-                    elif cell.type == 'switch.Group':
-                        graph_obj['embeds'] = []
-
-                        graph_component = SwitchAppGraphComponent.objects.filter(id=cell.id).first()
-
-                        for child in graph_component.children.all():
-                            graph_obj['embeds'].append(child.component.uuid)
-
-                        response_cells.append(graph_obj)
-                    elif cell.type == 'switch.Attribute':
-                        graph_obj['attrs']['.body'] = {
-                            "fill": component.switch_type.primary_colour,
-                            "stroke": component.switch_type.secondary_colour,
-                            "stroke-width": 2,
-                            "fill-opacity": ".95"
-                        }
-                        graph_obj['size'] = {"width": 30, "height": 30}
-                        response_cells.append(graph_obj)
-                    elif cell.type == 'switch.VirtualResource':
-                        graph_obj['attrs']['.body'] = {
-                            "fill": component.switch_type.primary_colour,
-                            "stroke": component.switch_type.secondary_colour,
-                            "stroke-width": 2,
-                            "fill-opacity": ".95"
-                        }
-                        graph_obj['size'] = {"width": 35, "height": 35}
-                        response_cells.append(graph_obj)
-
-                if cell.type == 'switch.ComponentLink':
-                    graph_component = SwitchAppGraphComponentLink.objects.filter(id=cell.id).first()
-                    graph_obj['target'] = {
-                        "port": graph_component.target.uuid,
-                        "id": graph_component.target.graph_component.component.uuid
-                    }
-                    graph_obj['attrs']['targetPortObj'] = {"id": graph_component.target.id,
-                                                           "name": graph_component.target.title, "type": 'in'}
-                    graph_obj['source'] = {
-                        "port": graph_component.source.uuid,
-                        "id": graph_component.source.graph_component.component.uuid
-                    }
-                    graph_obj['attrs']['sourcePortObj'] = {"id": graph_component.source.id,
-                                                           "name": graph_component.source.title, "type": 'out'}
-
-                    if graph_component.source.graph_component.component.mode == 'onetomany':
-                        source_text = '1..*'
-                        source_rect = 'white'
-                    elif graph_component.source.graph_component.component.mode == 'zerotomany':
-                        source_text = '0..*'
-                        source_rect = 'white'
-                    else:
-                        source_text = ''
-                        source_rect = 'none'
-
-                    if graph_component.target.graph_component.component.mode == 'onetomany':
-                        target_text = '1..*'
-                        target_rect = 'white'
-                    elif graph_component.target.graph_component.component.mode == 'zerotomany':
-                        target_text = '0..*'
-                        target_rect = 'white'
-                    else:
-                        target_text = ''
-                        target_rect = 'none'
-
-                    graph_obj['labels'] = [
-                        {
-                            "position": 0.2,
-                            "attrs": {
-                                "text": {
-                                    "text": source_text,
-                                    "fill": "black"
-                                },
-                                "rect": {
-                                    "fill": source_rect
-                                }
-                            }
-                        },
-                        {
-                            "position": 0.8,
-                            "attrs": {
-                                "text": {
-                                    "text": target_text,
-                                    "fill": "black"
-                                },
-                                "rect": {
-                                    "fill": target_rect
-                                }
-                            }
-                        },
-                        {
-                            "position": 0.5,
-                            "attrs": {
-                                "text": {
-                                    "text": graph_component.component.title,
-                                    "fill": "black"
-                                },
-                                "rect": {
-                                    "fill": "white"
-                                }
-                            }
-                        }
-                    ]
-                    response_cells.append(graph_obj)
-
-            except Exception as e:
-                print e.message
-
-        service_links = SwitchAppGraphServiceLink.objects.filter(source__component__app_id=switchapps_pk).all()
-        for cell in service_links:
-            try:
-                graph_obj = {'type': 'switch.ServiceLink', 'attrs': {
-                    ".marker-target": {
-                        "stroke": "#4b4a67",
-                        "d": "M 10 0 L 0 5 L 10 10 z",
-                        "fill": "#4b4a67"
-                    }
-                }, 'target': {
-                    "id": cell.target.component.uuid
-                }, 'source': {
-                    "id": cell.source.component.uuid
-                }}
-
-                if cell.target.component.mode == 'onetomany':
-                    target_text = '1..*'
-                    target_rect = 'white'
-                elif cell.target.component.mode == 'zerotomany':
-                    target_text = '0..*'
-                    target_rect = 'white'
-                else:
-                    target_text = ''
-                    target_rect = 'none'
-
-                graph_obj['labels'] = [
-                    {
-                        "position": 0.2,
-                        "attrs": {
-                            "text": {
-                                "text": "",
-                                "fill": "black"
-                            },
-                            "rect": {
-                                "fill": "none"
-                            }
-                        }
-                    },
-                    {
-                        "position": 0.8,
-                        "attrs": {
-                            "text": {
-                                "text": target_text,
-                                "fill": "black"
-                            },
-                            "rect": {
-                                "fill": target_rect
-                            }
-                        }
-                    }
-                ]
-
-                response_cells.append(graph_obj)
-
-            except Exception as e:
-                print e.message
-
-        return Response({
-            'type': 'graphs',
-            'id': str(switchapps_pk),
-            'attributes': {
-                'graph': {
-                    'cells': response_cells
-                }
-            }
-        })
-
-    @list_route(permission_classes=[])
-    def latest(self, request, switchapps_pk=None, *args, **kwargs):
-        graph = self.queryset.filter(app_id=switchapps_pk).latest('updated_at')
-        if (graph.file):
-            serializer = self.get_serializer(graph)
-            return Response(serializer.data)
-        else:
-            return Response("No graph file for the application has been found")
-
-    def put(self, request, switchapps_pk=None, **kwargs):
-        json_data = request.data
-        graph = self.queryset.filter(app_id=switchapps_pk).latest('updated_at')
-        uuid = str(graph.app.uuid)
-
-        graph.file.save(uuid + '.json', ContentFile(json.dumps(json_data)))
-        graph.file.close()
-
-        try:
-            graph_components = []
-            graph_groups = []
-            graph_service_links = []
-            graph_component_links = []
-            graph_attributes = []
-            graph_virtual_resource = []
-
-            for cell in json_data['cells']:
-                if cell['type'] == 'switch.Component':
-                    graph_components.append(cell)
-                elif cell['type'] == 'switch.Group':
-                    graph_groups.append(cell)
-                elif cell['type'] == 'switch.Attribute':
-                    graph_attributes.append(cell)
-                elif cell['type'] == 'switch.VirtualResource':
-                    graph_virtual_resource.append(cell)
-                elif cell['type'] == 'switch.ServiceLink':
-                    graph_service_links.append(cell)
-                elif cell['type'] == 'switch.ComponentLink':
-                    graph_component_links.append(cell)
-
-            for cell in graph_groups:
-                component = SwitchComponent.objects.filter(uuid=cell['id'], app_id=switchapps_pk).first()
-                if component is not None:
-                    graph_obj, created = SwitchAppGraphComponent.objects.get_or_create(component=component,
-                                                                                       type='switch.Group')
-                    graph_obj.last_x = cell['position']['x']
-                    graph_obj.last_y = cell['position']['y']
-                    graph_obj.save()
-
-            for cell in graph_attributes:
-                component = SwitchComponent.objects.filter(uuid=cell['id'], app_id=switchapps_pk).first()
-                if component is not None:
-                    graph_obj, created = SwitchAppGraphService.objects.get_or_create(component=component,
-                                                                                     type='switch.Attribute')
-                    graph_obj.last_x = cell['position']['x']
-                    graph_obj.last_y = cell['position']['y']
-                    graph_obj.save()
-
-            for cell in graph_virtual_resource:
-                component = SwitchComponent.objects.filter(uuid=cell['id'], app_id=switchapps_pk).first()
-                if component is not None:
-                    graph_obj, created = SwitchAppGraphService.objects.get_or_create(component=component,
-                                                                                     type='switch.VirtualResource')
-                    graph_obj.last_x = cell['position']['x']
-                    graph_obj.last_y = cell['position']['y']
-                    graph_obj.save()
-
-            for cell in graph_components:
-                component = SwitchComponent.objects.filter(uuid=cell['id'], app_id=switchapps_pk).first()
-                if component is not None:
-                    graph_obj, created = SwitchAppGraphComponent.objects.get_or_create(component=component,
-                                                                                       type='switch.Component')
-                    graph_obj.last_x = cell['position']['x']
-                    graph_obj.last_y = cell['position']['y']
-                    graph_obj.save()
-
-                    port_objs = []
-
-                    if 'parent' in cell:
-                        parent = SwitchComponent.objects.filter(uuid=cell['parent'], app_id=switchapps_pk).first()
-                        parent_obj, created = SwitchAppGraphComponent.objects.get_or_create(component=parent)
-                        graph_obj.parent = parent_obj
-
-                    if 'inPorts' in cell:
-                        for port in cell['inPorts']:
-                            port_obj, created = SwitchAppGraphPort.objects.get_or_create(graph_component=graph_obj,
-                                                                                         uuid=port['id'],
-                                                                                         type='in')
-                            port_obj.title = port['label']
-                            port_obj.save()
-                            port_objs.append(port_obj)
-
-                        graph_obj.ports = port_objs
-
-                    if 'outPorts' in cell:
-                        for port in cell['outPorts']:
-                            port_obj, created = SwitchAppGraphPort.objects.get_or_create(graph_component=graph_obj,
-                                                                                         uuid=port['id'],
-                                                                                         type='out')
-                            port_obj.title = port['label']
-                            port_obj.save()
-                            port_objs.append(port_obj)
-
-                        graph_obj.ports = port_objs
-
-                    old_port_objs = SwitchAppGraphPort.objects.filter(graph_component=graph_obj)
-                    for old_port in old_port_objs:
-                        if old_port not in port_objs:
-                            old_port.delete()
-
-                    graph_obj.save()
-
-            for obj in SwitchAppGraphServiceLink.objects.filter(source__component__app_id=switchapps_pk).all():
-                obj.delete()
-
-            for cell in graph_service_links:
-                graph_obj = None
-                source_obj = None
-                target_obj = None
-
-                if 'source' in cell:
-                    source = cell['source']
-                    component = SwitchComponent.objects.filter(uuid=source['id'], app_id=switchapps_pk).first()
-                    if component is not None:
-                        source_obj, created = SwitchAppGraphBase.objects.get_or_create(component=component)
-
-                if 'target' in cell:
-                    target = cell['target']
-                    component = SwitchComponent.objects.filter(uuid=target['id'], app_id=switchapps_pk).first()
-                    if component is not None:
-                        target_obj, created = SwitchAppGraphBase.objects.get_or_create(component=component)
-
-                graph_obj, created = SwitchAppGraphServiceLink.objects.get_or_create(source=source_obj,
-                                                                                     target=target_obj)
-
-            for cell in graph_component_links:
-                graph_obj = None
-                source_obj = None
-                target_obj = None
-
-                if 'source' in cell:
-                    source = cell['source']
-                    component = SwitchComponent.objects.filter(uuid=source['id'], app_id=switchapps_pk).first()
-                    if component is not None:
-                        if 'port' in source:
-                            source_obj = SwitchAppGraphPort.objects.filter(uuid=str(source['port']), type='out').first()
-
-                if 'target' in cell:
-                    target = cell['target']
-                    component = SwitchComponent.objects.filter(uuid=target['id'], app_id=switchapps_pk).first()
-                    if component is not None:
-                        if 'port' in target:
-                            target_obj = SwitchAppGraphPort.objects.filter(uuid=str(target['port']), type='in').first()
-
-                component, created = SwitchComponent.objects.get_or_create(uuid=cell['id'],
-                                                                           app_id=switchapps_pk)
-                if created:
-                    component.title = 'connection'
-                    component.switch_type = SwitchComponentType.objects.get(title='ComponentLink')
-                    component.save()
-
-                if component is not None:
-                    graph_obj, created = SwitchAppGraphComponentLink.objects.get_or_create(
-                        component=component, source=source_obj, target=target_obj,
-                        type='switch.ComponentLink')
-
-        except Exception as e:
-            print e.message
-
-        serializer = self.get_serializer(graph)
-        return Response(serializer.data)
+    def post(self, request, pk=None):
+        app = Application.objects.filter(id=pk).first()
+        app.put_graph(request.data)
+        return Response(app.get_graph())
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -945,32 +408,78 @@ class UserViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-class SwitchComponentViewSet(viewsets.ModelViewSet):
-    """
-    API endpoint that allows TodoItems to be CRUDed.
-    """
-    serializer_class = SwitchComponentSerializer
+class ComponentViewSet(viewsets.ModelViewSet):
+    serializer_class = ComponentSerializer
 
     def get_queryset(self):
-        app_id = self.request.query_params.get('app_id', None)
-        uuid = self.request.query_params.get('uuid', None)
-        if app_id is not None:
-            queryset = SwitchComponent.objects.filter(app_id=app_id)
-            if uuid is not None:
-                queryset = SwitchComponent.objects.filter(app_id=app_id, uuid=uuid)
-        else:
-            queryset = SwitchComponent.objects.filter(app__user=self.request.user)
+        is_core_component = self.request.query_params.get('is_core_component', None)
+        is_template_component = self.request.query_params.get('is_template_component', None)
+        queryset = Component.objects.filter()
+
+        if is_core_component is not None:
+            queryset = queryset.filter(type__switch_class__is_core_component=is_core_component)
+        elif is_template_component is not None:
+            queryset = queryset.filter(type__switch_class__is_template_component=is_template_component)
+
         return queryset
 
     def perform_create(self, serializer):
-        app = SwitchApp.objects.filter(id=self.request.data['app_id']).first()
-        switch_type = SwitchComponentType.objects.get(title=self.request.data['type'])
-        if switch_type.title == "Requirement" and self.request.data['properties']=="data: enter metadata as YAML":
+        switch_type = ComponentType.objects.get(id=self.request.data['type']['id'])
+        component = serializer.save(type=switch_type, user=self.request.user)
+
+        instance = Instance.objects.create(graph=component, component=component, title=component.title, last_x=400, last_y=200, mode='single')
+
+        if component.type.switch_class.title == 'switch.Component' or component.type.switch_class.title == 'switch.Group':
+            nested_component = NestedComponent(instance_ptr=instance)
+            nested_component.save_base(raw=True)
+
+        elif component.type.switch_class.title == 'switch.VirtualResource' or component.type.switch_class.title == 'switch.Attribute':
+            service_component = ServiceComponent(instance_ptr=instance)
+            service_component.save_base(raw=True)
+
+        elif component.type.switch_class.title == 'switch.ComponentLink':
+            component_link = ComponentLink(instance_ptr=instance)
+            component_link.save_base(raw=True)
+
+
+class ComponentTypeViewSet(viewsets.ModelViewSet):
+    serializer_class = ComponentTypeSerializer
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+    queryset = ComponentType.objects.all()
+    parser_classes = (JSONParser,)
+
+
+class InstanceViewSet(viewsets.ModelViewSet):
+    serializer_class = InstanceSerializer
+
+    def get_queryset(self):
+        graph_id = self.request.query_params.get('graph_id', None)
+        uuid = self.request.query_params.get('uuid', None)
+        if graph_id is not None:
+            queryset = Instance.objects.filter(graph_id=graph_id)
+            if uuid is not None:
+                queryset = Instance.objects.filter(graph_id=graph_id, uuid=uuid)
+        else:
+            queryset = Instance.objects.filter(graph__user=self.request.user)
+        return queryset
+
+    def perform_create(self, serializer):
+        if self.request.data['graph_type'] == 'app':
+            graph = Application.objects.filter(id=self.request.data['graph_id']).first()
+        else:
+            graph = Component.objects.filter(id=self.request.data['graph_id']).first()
+
+        component = Component.objects.filter(id=self.request.data['component_id']).first()
+
+        # Fran's merge. Check it is ok
+        switch_type = ComponentType.objects.get(title=self.request.data['type'])
+        if switch_type.title == "Requirement" and self.request.data['properties'] == "data: enter metadata as YAML":
             properties = {}
             properties['machine_type'] = "SET_ITS_VALUE"
             properties['location'] = "SET_ITS_VALUE"
             self.request.data['properties'] = yaml.dump(properties, Dumper=YamlDumper, default_flow_style=False)
-        elif switch_type.title == "ComponentLink" and self.request.data['properties']=="data: enter metadata as YAML":
+        elif switch_type.title == "ComponentLink" and self.request.data['properties'] == "data: enter metadata as YAML":
             properties = {}
             properties['netmask'] = "SET_ITS_VALUE"
             properties['source_address'] = "SET_ITS_VALUE"
@@ -978,7 +487,80 @@ class SwitchComponentViewSet(viewsets.ModelViewSet):
             properties['bandwidth'] = "SET_ITS_VALUE"
             properties['latency'] = "SET_ITS_VALUE"
             self.request.data['properties'] = yaml.dump(properties, Dumper=YamlDumper, default_flow_style=False)
-        serializer.save(app=app, switch_type=switch_type,properties=self.request.data['properties'])
+
+        instance = serializer.save(app=app, switch_type=switch_type, properties=self.request.data['properties'])
+        #instance = serializer.save(graph=graph, component=component)
+        instance.save()
+
+        nested_component = None
+
+        if component.type.switch_class.title == 'switch.Component' or component.type.switch_class.title == 'switch.Group':
+            nested_component = NestedComponent(instance_ptr=instance)
+            nested_component.save_base(raw=True)
+
+        elif component.type.switch_class.title == 'switch.VirtualResource' or component.type.switch_class.title == 'switch.Attribute':
+            service_component = ServiceComponent(instance_ptr=instance)
+            service_component.save_base(raw=True)
+
+        elif component.type.switch_class.title == 'switch.ComponentLink':
+            component_link = ComponentLink(instance_ptr=instance)
+            component_link.save_base(raw=True)
+
+        base_instance = component.get_base_instance()
+        x_change = base_instance.last_x - instance.last_x
+        y_change = base_instance.last_y - instance.last_y
+
+        instance_translations = {}
+        port_translations = {}
+
+        try:
+            # clone any supporting components
+            instances = component.get_instances()
+            for template_instance in instances:
+                # if it's not the main component, clone it!
+                old_pk = template_instance.pk
+
+                if template_instance != base_instance:
+                    template_instance.pk = None
+                    template_instance.id = None
+                    template_instance.graph = graph
+                    template_instance.last_x = template_instance.last_x - x_change
+                    template_instance.last_y = template_instance.last_y - y_change
+                    template_instance.uuid = uuid.uuid4()
+                    template_instance.save()
+                    new_pk = template_instance.pk
+
+                    instance_translations[old_pk] = new_pk
+                elif nested_component is not None:
+                    template_instance = nested_component
+                    instance_translations[old_pk] = instance.pk
+
+                for port in ComponentPort.objects.filter(instance_id=old_pk).all():
+                    old_pk = port.pk
+                    port.instance = template_instance
+                    port.pk = None
+                    port.id = None
+                    port.uuid = uuid.uuid4()
+                    port.save()
+                    new_pk = port.pk
+
+                    port_translations[old_pk] = new_pk
+
+            for component_link in ComponentLink.objects.filter(graph=component).all():
+                component_link.source_id = port_translations[component_link.source_id]
+                component_link.target_id = port_translations[component_link.target_id]
+                component_link.save()
+
+            for service_link in ServiceLink.objects.filter(graph=component).all():
+                service_link.pk = None
+                service_link.id = None
+                service_link.graph = graph
+                service_link.source_id = instance_translations[service_link.source_id]
+                service_link.target_id = instance_translations[service_link.target_id]
+                service_link.save()
+
+        except Exception as e:
+            print e.message
 
 
 class SwitchDocumentViewSet(viewsets.ModelViewSet):
