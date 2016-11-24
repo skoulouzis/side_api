@@ -17,6 +17,7 @@ You will need the following things properly installed on your computer.
 * `pip install -r requirements.txt`
 * `python manage.py makemigrations`
 * `python manage.py migrate`
+* `python manage.py loaddata api/fixtures/data_classes.yaml`
 
 ## Running / Development
 

@@ -297,6 +297,9 @@ class Component(GraphBase):
     class JSONAPIMeta:
         resource_name = "switchcomponents"
 
+    def __unicode__(self):
+        return 'Component: ' + self.title + ' (' + str(self.type.title) + ')'
+
     def get_base_instance(self):
         return Instance.objects.filter(graph=self, component=self).select_subclasses().first()
 
@@ -630,7 +633,7 @@ class ServiceComponent(Instance):
         resource_name = "graph_services"
 
     def __unicode__(self):
-        return 'Service: ' + self.title + '(' + str(self.type) + ')'
+        return 'Service: ' + self.title + ' (' + str(self.component.type.title) + ')'
 
     def get_graph(self):
         graph_obj = super(ServiceComponent, self).get_graph()

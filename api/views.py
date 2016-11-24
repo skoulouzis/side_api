@@ -220,9 +220,9 @@ class ApplicationViewSet(viewsets.ModelViewSet):
                         graph_service_link_vm_req = ServiceLink.objects.create(source=graph_vm,
                                                                                target=graph_req)
                         graph_service_link_vm_req.save()
-                else:
-                    result = 'error'
-                    details.append('planification of virtual infrastructure has failed')
+                    else:
+                        result = 'error'
+                        details.append('planification of virtual infrastructure has failed')
 
         planning_vi_result = {
             'result': result,
@@ -472,14 +472,12 @@ class InstanceViewSet(viewsets.ModelViewSet):
 
         component = Component.objects.filter(id=self.request.data['component_id']).first()
 
-        # Fran's merge. Check it is ok
-        switch_type = ComponentType.objects.get(title=self.request.data['type'])
-        if switch_type.title == "Requirement" and self.request.data['properties'] == "data: enter metadata as YAML":
+        if component.type.title == "Requirement" and self.request.data['properties'] == "data: enter metadata as YAML":
             properties = {}
             properties['machine_type'] = "SET_ITS_VALUE"
             properties['location'] = "SET_ITS_VALUE"
             self.request.data['properties'] = yaml.dump(properties, Dumper=YamlDumper, default_flow_style=False)
-        elif switch_type.title == "ComponentLink" and self.request.data['properties'] == "data: enter metadata as YAML":
+        elif component.type.title == "ComponentLink" and self.request.data['properties'] == "data: enter metadata as YAML":
             properties = {}
             properties['netmask'] = "SET_ITS_VALUE"
             properties['source_address'] = "SET_ITS_VALUE"
@@ -488,8 +486,7 @@ class InstanceViewSet(viewsets.ModelViewSet):
             properties['latency'] = "SET_ITS_VALUE"
             self.request.data['properties'] = yaml.dump(properties, Dumper=YamlDumper, default_flow_style=False)
 
-        instance = serializer.save(app=app, switch_type=switch_type, properties=self.request.data['properties'])
-        #instance = serializer.save(graph=graph, component=component)
+        instance = serializer.save(graph=graph, component=component, properties=self.request.data['properties'])
         instance.save()
 
         nested_component = None
