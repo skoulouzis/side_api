@@ -17,6 +17,7 @@ from rest_framework import views
 from rest_framework.views import APIView
 from rest_framework_xml.parsers import XMLParser
 from rest_framework_extensions.mixins import PaginateByMaxMixin
+from toscaparser import properties
 
 from api.permissions import BelongsToUser, AppBelongsToUser
 from models import *
@@ -106,11 +107,13 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     @detail_route(methods=['get'], permission_classes=[])
     def validate(self, request, pk=None, *args, **kwargs):
         details = []
-        for component in Component.objects.filter(app_id=pk).all():
-            component_properties = yaml.load(str(component.properties).replace("\t", "    "))
-            for name,value in component_properties.items():
+        app = Application.objects.filter(id=pk).first()
+
+        for instance in app.get_instances():
+            instance_properties = yaml.load(str(instance.properties).replace("\t", "    "))
+            for name,value in instance_properties.items():
                 if value == "SET_ITS_VALUE":
-                    details.append("Component '"  + component.title + "' needs its property '" + name + "' to be set.")
+                    details.append("Component '"  + instance.title + "' needs its property '" + name + "' to be set.")
 
         if len(details)==0:
             result = 'ok'
@@ -135,7 +138,8 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
             result = 'error'
             details.append('application has already a planned infrastructure')
         else:
-            num_hw_req = Component.objects.filter(app_id=pk, switch_type__title='Requirement').count()
+            #  num_hw_req = Instance.objects.filter(graph__id=app.uuid, component__type__title='Requirement').count()
+            num_hw_req = app.instances.filter(component__type__title='Requirement').count()
             if num_hw_req == 0:
                 result = 'error'
                 details.append('no hardware requirements defined')
@@ -155,21 +159,26 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
 
                         # Temporary simulate the planner
                         # For each hw requirement in the app create a vm and link it to the requirement
-                        for requirement in Component.objects.filter(app_id=pk,switch_type__title='Requirement').all():
-                            # Create virtual machine that satisfies the requirement, storing it in the db
-                            virtual_machine = Component.objects.create(app_id=pk, uuid = uuid.uuid4(),
-                                    title = 'VM_' + requirement.title, mode = 'single', type='Virtual Machine')
-                            virtual_machine.switch_type = ComponentType.objects.get(title='Virtual Machine')
+                        for graph_req in app.instances.filter(component__type__title='Requirement').all():
+                            # Create virtual machine component if it doesn't exist
+                            component_vm, created = Component.objects.get_or_create(user=request.user,
+                                    title='VM', type=ComponentType.objects.get(title='Virtual Machine'))
+
+                            # Create a graph_virtual_machine element that satisfies the requirement, storing it in the db
+                            graph_vm = ServiceComponent.objects.create(component=component_vm, graph=app,
+                                        title='VM_' + graph_req.title, mode=graph_req.mode,
+                                        last_x=graph_req.last_x, last_y=graph_req.last_y + 80)
+
                             vr_properties = {
                                 "type": "switch/compute",
                                 "OStype": "Ubuntu 14.04",
                                 "script": "",
                                 "installation": "",
-                                "public_address": str(virtual_machine.uuid)
+                                "public_address": str(graph_vm.uuid)
                             }
 
                             # Depending on the requirement properties the virtual machine will be different
-                            requirement_properties = yaml.load(str(requirement.properties).replace("\t", "    "))
+                            requirement_properties = yaml.load(str(graph_req.properties).replace("\t", "    "))
                             if 'machine_type' in requirement_properties:
                                 if requirement_properties['machine_type'] == "big":
                                     vr_properties['nodetype'] = "t2.large"
@@ -190,37 +199,27 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
 
                             # Add a ethernet port to the VM properties for every "component_link" (target and source) of
                             # of every "component" linked to the requirement
-                            for graph_service_link in ServiceLink.objects.filter(source__component=requirement).all():
+                            for graph_service_link in ServiceLink.objects.filter(graph=app, source=graph_req).all():
                                 # Add a ethernet port for every component link to the requirement
-                                for graph_component_link in ComponentLink.objects.filter(source__graph_component=graph_service_link.target).all():
+                                for graph_component_link in ComponentLink.objects.filter(source__instance=graph_service_link.target).all():
                                     ethernet_port = {
                                         "name": graph_component_link.source.title,
-                                        "connection_name": str(graph_component_link.component.uuid) + ".source"
+                                        "connection_name": str(graph_component_link.uuid) + ".source"
                                     }
                                     vr_properties.setdefault('ethernet_port', []).append(ethernet_port)
-                                for graph_component_link in ComponentLink.objects.filter(target__graph_component=graph_service_link.target).all():
+                                for graph_component_link in ComponentLink.objects.filter(target__instance=graph_service_link.target).all():
                                     ethernet_port = {
                                         "name": graph_component_link.target.title,
-                                        "connection_name": str(graph_component_link.component.uuid) + ".target"
+                                        "connection_name": str(graph_component_link.uuid) + ".target"
                                     }
                                     vr_properties.setdefault('ethernet_port', []).append(ethernet_port)
 
-                            virtual_machine.properties = yaml.dump(vr_properties, Dumper=YamlDumper, default_flow_style=False)
+                            graph_vm.properties = yaml.dump(vr_properties, Dumper=YamlDumper, default_flow_style=False)
+                            graph_vm.save()
 
-                            virtual_machine.save()
-
-                        # Create a graph_virtual_machine element
-                        graph_req = Instance.objects.get(component=requirement)
-                        graph_vm = ServiceComponent.objects.create(component=virtual_machine,
-                                                                   type='switch.VirtualResource',
-                                                                   last_x=graph_req.last_x,
-                                                                   last_y=graph_req.last_y + 80)
-                        graph_vm.save()
-
-                        # Create a service_link between the new vm and the requirement
-                        graph_service_link_vm_req = ServiceLink.objects.create(source=graph_vm,
-                                                                               target=graph_req)
-                        graph_service_link_vm_req.save()
+                            # Create a service_link between the new vm and the requirement
+                            graph_service_link_vm_req = ServiceLink.objects.create(graph=app, source=graph_vm, target=graph_req)
+                            graph_service_link_vm_req.save()
                     else:
                         result = 'error'
                         details.append('planification of virtual infrastructure has failed')
@@ -262,7 +261,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                     }
                     yaml.dump(credentials, f, Dumper=YamlDumper, default_flow_style=False)
 
-                    if len(app_tosca_json['data']['virtual_resources']['virtual_machines']) > 0:
+                    if 'virtual_machines' in app_tosca_json['data']['virtual_resources'] and len(app_tosca_json['data']['virtual_resources']['virtual_machines']) > 0:
                         components={'components': []}
                         for vm in app_tosca_json['data']['virtual_resources']['virtual_machines']:
                             component= vm.values()[0]
@@ -270,7 +269,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                             components['components'].append(component)
                         yaml.dump(components, f, Dumper=YamlDumper, default_flow_style=False)
 
-                    if len(app_tosca_json['data']['connections']['components_connections'])>0:
+                    if 'components_connections' in app_tosca_json['data']['connections'] and len(app_tosca_json['data']['connections']['components_connections'])>0:
                         connections = {'connections': []}
                         for component_connection in app_tosca_json['data']['connections']['components_connections']:
                             connection = component_connection.values()[0]
@@ -282,8 +281,8 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                                 for ethernet_port in vm_properties['ethernet_port']:
                                     if ethernet_port['connection_name'] == connection['name'] + '.target':
                                         connection['target']['component_name'] = vm_key
+                                        connection['target']['port_name'] = ethernet_port['name']
 
-                            connection['target']['port_name'] = connection['target']['port']
                             connection['target']['netmask'] = connection['netmask']
                             connection['target']['address'] = connection['target_address']
                             del connection['target']['id']
@@ -296,8 +295,8 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                                 for ethernet_port in vm_properties['ethernet_port']:
                                     if ethernet_port['connection_name'] == connection['name'] + '.source':
                                         connection['source']['component_name'] = vm_key
+                                        connection['source']['port_name'] = ethernet_port['name']
 
-                            connection['source']['port_name'] = connection['source']['port']
                             connection['source']['netmask'] = connection['netmask']
                             connection['source']['address'] = connection['source_address']
 
@@ -323,17 +322,18 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                     result = 'ok'
                     details.append('provision done correctly')
 
+                    app.status = 2
+                    app.save()
+
                     with open(os.path.join(settings.MEDIA_ROOT, 'documents', str(request.user.id), uuid + '_provisioned.yml'), 'r') as f:
                         tosca_provisioned_infrastructure = yaml.load(f.read())
 
-                for vm_provisioned in tosca_provisioned_infrastructure['components']:
-                    vm_component = Component.objects.get(uuid=vm_provisioned['name'])
-                    vm_component.title += ' (' + vm_provisioned['public_address'] + ')'
-                    vm_component.properties = yaml.dump(vm_provisioned, Dumper=YamlDumper, default_flow_style=False)
-                    vm_component.save()
+                    for vm_provisioned in tosca_provisioned_infrastructure['components']:
+                        vm_component = Instance.objects.get(uuid=vm_provisioned['name'])
+                        vm_component.title += ' (' + vm_provisioned['public_address'] + ')'
+                        vm_component.properties = yaml.dump(vm_provisioned, Dumper=YamlDumper, default_flow_style=False)
+                        vm_component.save()
 
-                    app.status = 2
-                    app.save()
                 else:
                     result = 'error'
                     details.append('provision has failed')

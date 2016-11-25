@@ -17,7 +17,7 @@
   model: api.componentclass
   pk: 6
 - fields: {icon_name: 'xx', icon_code: xx, icon_colour: 'rgb(255, 255, 255)', icon_svg: xx, primary_colour: 'rgb(255,
-      255, 255)', secondary_colour: 'rgb(255, 255, 255)', switch_class: 5, title: ComponentLink}
+      255, 255)', secondary_colour: 'rgb(255, 255, 255)', switch_class: 5, title: Component Link}
   model: api.componenttype
   pk: 1
 - fields: {icon_name: 'fa-object-group', icon_class: 'btn-default', icon_style: 'border-radius: 0; border: 1px dashed;', icon_code: '&#xf247', icon_colour: 'rgb(51, 51, 51)', icon_svg: M2048 1152h-128v-1024h128v-384h-384v128h-1280v-128h-384v384h128v1024h-128v384h384v-128h1280v128h384v-384zM1792
