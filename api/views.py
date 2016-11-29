@@ -4,20 +4,15 @@ import os
 import subprocess
 import uuid
 
-from django.core.files.base import ContentFile
-from django.http import JsonResponse, HttpResponse, StreamingHttpResponse, FileResponse, HttpResponseRedirect
-from django.template.defaultfilters import safe
+from django.http import JsonResponse
 from rest_framework import viewsets
 from rest_framework.decorators import list_route, detail_route, parser_classes
 from rest_framework.generics import get_object_or_404
-from rest_framework.parsers import FileUploadParser, JSONParser, FormParser, MultiPartParser
+from rest_framework.parsers import JSONParser, FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.filters import DjangoFilterBackend, SearchFilter
-from rest_framework import views
 from rest_framework.views import APIView
-from rest_framework_xml.parsers import XMLParser
 from rest_framework_extensions.mixins import PaginateByMaxMixin
-from toscaparser import properties
 
 from api.permissions import BelongsToUser, AppBelongsToUser
 from models import *
@@ -31,10 +26,6 @@ from services import JenaFusekiService
 
 from yaml.dumper import Dumper
 from yaml.representer import SafeRepresenter
-
-from forms import SwitchDocumentForm
-from django.shortcuts import render, redirect
-from django.contrib.auth.decorators import login_required
 
 
 class YamlDumper(Dumper):
@@ -563,10 +554,11 @@ class InstanceViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
 
 class SwitchDocumentViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     authentication_classes = (TokenAuthentication,)
-    permission_classes = (IsAuthenticated, AppBelongsToUser,)
+    permission_classes = (IsAuthenticated, )
     serializer_class = SwitchDocumentSerializer
     queryset = SwitchDocument.objects.all()
-    parser_classes = (JSONParser,)
+    parser_classes = (JSONParser,FormParser,MultiPartParser,)
+
 
     def list(self, request, **kwargs):
         documents = SwitchDocument.objects.filter()
@@ -578,19 +570,3 @@ class SwitchDocumentViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         document = serializer.save(user=self.request.user)
-
-
-# @login_required()
-def model_form_upload(request):
-    if request.method == 'POST':
-        form = SwitchDocumentForm(request.POST, request.FILES)
-        if form.is_valid():
-            credentialform = form.save(commit=False)
-            credentialform.user = request.user
-            credentialform.save()
-            return JsonResponse({"success": "File uploaded successfully."}, status=201)
-    else:
-        form = SwitchDocumentForm()
-    return render(request, 'api/model_form_upload.html', {
-        'form': form
-    })

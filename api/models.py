@@ -675,4 +675,7 @@ class SwitchDocument(models.Model):
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     class JSONAPIMeta:
-        resource_name = "switchdocument"
+        resource_name = "switchdocuments"
+
+    def __unicode__(self):
+        return 'Document: ' + self.file.name + ' (' + str(self.description) + ')'
