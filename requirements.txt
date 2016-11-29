@@ -2,13 +2,13 @@ anyjson==0.3.3
 Django==1.8.5
 django-cors-headers==1.1.0
 django-filter==1.0.0
-djangorestframework==3.2.4
+djangorestframework==3.5.3
 djangorestframework-jsonapi==2.0.1
 djangorestframework-jwt==1.7.2
-drf-nested-routers
-djangorestframework-xml
+drf-nested-routers==0.11.1
+djangorestframework-xml==1.3.0
 PyYAML===3.11
 django-cleanup===0.4.2
 requests===2.11.1
 django-model-utils==2.6
-drf-extensions
+drf-extensions==0.3.1
