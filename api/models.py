@@ -177,6 +177,79 @@ class Application(GraphBase):
         return 'SwitchApp: ' + self.title + ' by ' + self.user.username
 
     def get_tosca(self):
+        artifact_types = {
+            "tosca.artifacts.Deployment.Image.Container.Docker": {
+                "derived_from": "tosca.artifacts.Deployment.Image"
+            }
+        }
+
+        data_types = {
+            "Switch.datatypes.QoS.AppComponent": {
+                "derived_from": "tosca.datatypes.Root",
+                "properties":{
+                    "response_time":{
+                        "type": "string"
+                    }
+                }
+            },
+            "Switch.datatypes.Application.Connection.EndPoint": {
+                "derived_from": "tosca.datatypes.Root",
+                "properties": {
+                    "address": {
+                        "type": "string"
+                    },
+                    "component_name": {
+                        "type": "string"
+                    },
+                    "netmask": {
+                        "type": "string"
+                    },
+                    "port_name": {
+                        "type": "string"
+                    }
+                }
+            },
+            "Switch.datatypes.Application.Connection.Multicast": {
+                "derived_from": "tosca.datatypes.Root",
+                "properties": {
+                    "multicastAddrIP": {
+                        "type": "string"
+                    },
+                    "multicastAddrPort": {
+                        "type": "integer"
+                    }
+                }
+            },
+            "Switch.datatypes.Network.EndPoint": {
+                "derived_from": "tosca.datatypes.Root",
+                "properties": {
+                    "address": {
+                        "type": "string"
+                    },
+                    "host_name": {
+                        "type": "string"
+                    },
+                    "netmask": {
+                        "type": "string"
+                    },
+                    "port_name": {
+                        "type": "string"
+                    }
+                }
+            },
+            "Switch.datatypes.Network.Multicast": {
+                "derived_from": "tosca.datatypes.Root",
+                "properties": {
+                    "multicastAddrIP": {
+                        "type": "string"
+                    },
+                    "multicastAddrPort": {
+                        "type": "integer"
+                    }
+                }
+            }
+        }
+
         components = []
         external = []
         network = []
@@ -223,36 +296,46 @@ class Application(GraphBase):
             services_connections.append(data_obj)
 
         data = {}
+        data['tosca_definitions_version'] = "tosca_simple_yaml_1_0"
+        data['description'] = self.description
+        data['artifact_types'] = artifact_types
+        data['data_types'] = data_types
+        # TODO: Study how to add node types and repositories
+        # data['node_types'] =
+        # data['repositories'] =
+
+        data['topology_template']={}
+        node_templates = data['topology_template'].setdefault('node_templates', {})
 
         if len(components) > 0:
-            data['components'] = components
+            node_templates['components'] = components
 
         if len(external) > 0:
-            data['external_components'] = external
+            node_templates['external_components'] = external
 
         if len(network) > 0:
-            data['network_components'] = network
+            node_templates['network_components'] = network
 
         if len(attributes) > 0:
-            data['attributes'] = attributes
+            node_templates['attributes'] = attributes
 
         if len(groups) > 0:
-            data['groups'] = groups
+            node_templates['groups']['node_templates'] = groups
 
         if len(components_connections) > 0:
-            connections = data.setdefault('connections', {})
+            connections = node_templates.setdefault('connections', {})
             connections['components_connections'] = components_connections
 
         if len(services_connections) > 0:
-            connections = data.setdefault('connections', {})
+            connections = node_templates.setdefault('connections', {})
             connections['services_connections'] = services_connections
 
         if len(virtual_machines) > 0:
-            connections = data.setdefault('virtual_resources', {})
+            connections = node_templates.setdefault('virtual_resources', {})
             connections['virtual_machines'] = virtual_machines
 
         if len(virtual_networks) > 0:
-            connections = data.setdefault('virtual_resources', {})
+            connections = node_templates.setdefault('virtual_resources', {})
             connections['virtual_networks'] = virtual_networks
 
         return {
@@ -318,7 +401,7 @@ class Instance(models.Model):
     neighbors = models.ManyToManyField('self', through='ServiceLink', symmetrical=False)
     title = models.CharField(max_length=512, null=True)
     mode = models.CharField(max_length=512, null=True)
-    properties = models.TextField(null=True)
+    properties = models.TextField(null=True, default='data: enter metadata as YAML')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     last_x = models.IntegerField(null=True, default=0)
@@ -585,9 +668,12 @@ class ServiceLink(models.Model):
             'type': 'switch.ServiceLink',
             'attrs': {
                 '.marker-target': {
-                    'stroke': '#4b4a67',
+                    'stroke': '#fe854f',
                     'd': 'M 10 0 L 0 5 L 10 10 z',
-                    'fill': '#4b4a67'
+                    'fill': '#7c68fc'
+                },
+                'connection': {
+                    'stroke': '#222138'
                 }
             }, 'target': {
                 'id': self.target.uuid

@@ -158,3 +158,12 @@
   model: api.component
 - fields: {type: 2, graphbase_ptr: 2}
   model: api.component
+
+- fields: {title: 'Default Component Link', graph: 1, component: 1, mode: 'single', created_at: '2016-11-17 00:00:00.000000', updated_at: '2016-11-17 00:00:00.000000',
+    properties: 'bandwidth: SET_ITS_VALUE\nlatency: SET_ITS_VALUE\nnetmask: SET_ITS_VALUE\nsource_address: SET_ITS_VALUE\ntarget_address: SET_ITS_VALUE\n'}
+  model: api.instance
+  pk: 1
+
+- fields: {title: 'Default Component Group', graph: 2, component: 2, mode: 'single', created_at: '2016-11-17 00:00:00.000000', updated_at: '2016-11-17 00:00:00.000000'}
+  model: api.instance
+  pk: 2

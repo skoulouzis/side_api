@@ -154,6 +154,9 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                             # Create virtual machine component if it doesn't exist
                             component_vm, created = Component.objects.get_or_create(user=request.user,
                                     title='VM', type=ComponentType.objects.get(title='Virtual Machine'))
+                            if created:
+                                Instance.objects.create(graph=component_vm, component=component_vm, title=component_vm.title,
+                                                        last_x=400, last_y=200, mode='single')
 
                             # Create a graph_virtual_machine element that satisfies the requirement, storing it in the db
                             graph_vm = ServiceComponent.objects.create(component=component_vm, graph=app,
@@ -243,6 +246,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
             else:
                 # get the tosca file of the application
                 app_tosca_json = json.loads(self.tosca(request=request, pk=pk).content)
+                node_templates = app_tosca_json['data']['topology_template']['node_templates']
 
                 uuid = str(app.uuid)
                 with open(os.path.join(settings.MEDIA_ROOT, 'documents', str(request.user.id), uuid + '.yml'), 'w') as f:
@@ -252,21 +256,21 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                     }
                     yaml.dump(credentials, f, Dumper=YamlDumper, default_flow_style=False)
 
-                    if 'virtual_machines' in app_tosca_json['data']['virtual_resources'] and len(app_tosca_json['data']['virtual_resources']['virtual_machines']) > 0:
+                    if 'virtual_machines' in node_templates['virtual_resources'] and len(node_templates['virtual_resources']['virtual_machines']) > 0:
                         components={'components': []}
-                        for vm in app_tosca_json['data']['virtual_resources']['virtual_machines']:
+                        for vm in node_templates['virtual_resources']['virtual_machines']:
                             component= vm.values()[0]
                             component['name']=vm.keys()[0]
                             components['components'].append(component)
                         yaml.dump(components, f, Dumper=YamlDumper, default_flow_style=False)
 
-                    if 'components_connections' in app_tosca_json['data']['connections'] and len(app_tosca_json['data']['connections']['components_connections'])>0:
+                    if 'components_connections' in node_templates['connections'] and len(node_templates['connections']['components_connections'])>0:
                         connections = {'connections': []}
-                        for component_connection in app_tosca_json['data']['connections']['components_connections']:
+                        for component_connection in node_templates['connections']['components_connections']:
                             connection = component_connection.values()[0]
                             connection['name'] = component_connection.keys()[0]
                             # Adapt it to provisioner format
-                            for vm in app_tosca_json['data']['virtual_resources']['virtual_machines']:
+                            for vm in node_templates['virtual_resources']['virtual_machines']:
                                 vm_properties = vm.values()[0]
                                 vm_key = vm.keys()[0]
                                 for ethernet_port in vm_properties['ethernet_port']:
@@ -280,7 +284,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                             del connection['target']['port']
 
                             #connection['source']['component_name'] = connection['source']['id']
-                            for vm in app_tosca_json['data']['virtual_resources']['virtual_machines']:
+                            for vm in node_templates['virtual_resources']['virtual_machines']:
                                 vm_properties = vm.values()[0]
                                 vm_key = vm.keys()[0]
                                 for ethernet_port in vm_properties['ethernet_port']:
@@ -418,20 +422,7 @@ class ComponentViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     def perform_create(self, serializer):
         switch_type = ComponentType.objects.get(id=self.request.data['type']['id'])
         component = serializer.save(type=switch_type, user=self.request.user)
-
-        instance = Instance.objects.create(graph=component, component=component, title=component.title, last_x=400, last_y=200, mode='single')
-
-        if component.type.switch_class.title == 'switch.Component' or component.type.switch_class.title == 'switch.Group':
-            nested_component = NestedComponent(instance_ptr=instance)
-            nested_component.save_base(raw=True)
-
-        elif component.type.switch_class.title == 'switch.VirtualResource' or component.type.switch_class.title == 'switch.Attribute':
-            service_component = ServiceComponent(instance_ptr=instance)
-            service_component.save_base(raw=True)
-
-        elif component.type.switch_class.title == 'switch.ComponentLink':
-            component_link = ComponentLink(instance_ptr=instance)
-            component_link.save_base(raw=True)
+        create_instance_for_component(component,component, None, self.request.data)
 
 
 class ComponentTypeViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
@@ -457,45 +448,52 @@ class InstanceViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         return queryset
 
     def perform_create(self, serializer):
-        if self.request.data['graph_type'] == 'app':
-            graph = Application.objects.filter(id=self.request.data['graph_id']).first()
-        else:
-            graph = Component.objects.filter(id=self.request.data['graph_id']).first()
-
+        graph = GraphBase.objects.filter(id=self.request.data['graph_id']).first()
         component = Component.objects.filter(id=self.request.data['component_id']).first()
+        create_instance_for_component(graph, component, serializer, self.request.data)
 
-        if component.type.title == "Requirement" and self.request.data['properties'] == "data: enter metadata as YAML":
+
+def create_instance_for_component(graph, component, serializer, request_data):
+    instance = None
+    base_instance = component.get_base_instance()
+    if base_instance is None:
+        if component.type.title == "Requirement":
             properties = {}
             properties['machine_type'] = "SET_ITS_VALUE"
             properties['location'] = "SET_ITS_VALUE"
-            self.request.data['properties'] = yaml.dump(properties, Dumper=YamlDumper, default_flow_style=False)
-        elif component.type.title == "ComponentLink" and self.request.data['properties'] == "data: enter metadata as YAML":
+            properties = yaml.dump(properties, Dumper=YamlDumper, default_flow_style=False)
+        elif component.type.title == "Component Link":
             properties = {}
             properties['netmask'] = "SET_ITS_VALUE"
             properties['source_address'] = "SET_ITS_VALUE"
             properties['target_address'] = "SET_ITS_VALUE"
             properties['bandwidth'] = "SET_ITS_VALUE"
             properties['latency'] = "SET_ITS_VALUE"
-            self.request.data['properties'] = yaml.dump(properties, Dumper=YamlDumper, default_flow_style=False)
+            properties = yaml.dump(properties, Dumper=YamlDumper, default_flow_style=False)
+        else:
+            properties = Instance._meta.get_field_by_name('properties')[0].get_default()
 
-        instance = serializer.save(graph=graph, component=component, properties=self.request.data['properties'])
+        instance = Instance.objects.create(graph=graph, component=component, title=component.title,
+                                           last_x=400, last_y=200, mode='single', properties=properties)
+    else:
+        instance = serializer.save(graph=graph, component=component, properties=base_instance.properties)
         instance.save()
 
-        nested_component = None
+    nested_component = None
 
-        if component.type.switch_class.title == 'switch.Component' or component.type.switch_class.title == 'switch.Group':
-            nested_component = NestedComponent(instance_ptr=instance)
-            nested_component.save_base(raw=True)
+    if component.type.switch_class.title == 'switch.Component' or component.type.switch_class.title == 'switch.Group':
+        nested_component = NestedComponent(instance_ptr=instance)
+        nested_component.save_base(raw=True)
 
-        elif component.type.switch_class.title == 'switch.VirtualResource' or component.type.switch_class.title == 'switch.Attribute':
-            service_component = ServiceComponent(instance_ptr=instance)
-            service_component.save_base(raw=True)
+    elif component.type.switch_class.title == 'switch.VirtualResource' or component.type.switch_class.title == 'switch.Attribute':
+        service_component = ServiceComponent(instance_ptr=instance)
+        service_component.save_base(raw=True)
 
-        elif component.type.switch_class.title == 'switch.ComponentLink':
-            component_link = ComponentLink(instance_ptr=instance)
-            component_link.save_base(raw=True)
+    elif component.type.switch_class.title == 'switch.ComponentLink':
+        component_link = ComponentLink(instance_ptr=instance)
+        component_link.save_base(raw=True)
 
-        base_instance = component.get_base_instance()
+    if base_instance is not None:
         x_change = base_instance.last_x - instance.last_x
         y_change = base_instance.last_y - instance.last_y
 
@@ -535,9 +533,10 @@ class InstanceViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
 
                     port_translations[old_pk] = new_pk
 
-            for component_link in ComponentLink.objects.filter(graph=component).all():
-                component_link.source_id = port_translations[component_link.source_id]
-                component_link.target_id = port_translations[component_link.target_id]
+            for template_component_link in ComponentLink.objects.filter(graph=component).all():
+                component_link = ComponentLink.objects.filter(instance_ptr_id=instance_translations[template_component_link.id]).first()
+                component_link.source_id = port_translations[template_component_link.source_id]
+                component_link.target_id = port_translations[template_component_link.target_id]
                 component_link.save()
 
             for service_link in ServiceLink.objects.filter(graph=component).all():
