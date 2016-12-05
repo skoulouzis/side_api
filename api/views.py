@@ -5,7 +5,7 @@ import subprocess
 import uuid
 
 from django.http import JsonResponse
-from rest_framework import viewsets
+from rest_framework import viewsets, status
 from rest_framework.decorators import list_route, detail_route, parser_classes
 from rest_framework.generics import get_object_or_404
 from rest_framework.parsers import JSONParser, FormParser, MultiPartParser
@@ -57,7 +57,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     def perform_create(self, serializer):
         app = serializer.save(user=self.request.user)
 
-    @detail_route(methods=['get'], permission_classes=[])
+    @list_route(methods=['get'], permission_classes=[])
     def kb_classes(self, request, pk=None, *args, **kwargs):
         kb_service = JenaFusekiService(utils.getPropertyFromConfigFile("ASAP_API", "url"))
         classes = kb_service.getClasses()
@@ -69,13 +69,13 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         component_types = kb_service.getAllApplicationComponentTypes()
         return JsonResponse(component_types, safe= False)
 
-    @detail_route(methods=['get'], permission_classes=[])
+    @list_route(methods=['get'], permission_classes=[])
     def kb_component_type(self, request, pk=None, *args, **kwargs):
         kb_service = JenaFusekiService(utils.getPropertyFromConfigFile("ASAP_API", "url"))
         component_type = kb_service.getApplicationComponentType(request.data)
         return JsonResponse(component_type)
 
-    @detail_route(methods=['get'], permission_classes=[])
+    @list_route(methods=['get'], permission_classes=[])
     def kb_component_profile(self, request, pk=None, *args, **kwargs):
         kb_service = JenaFusekiService(utils.getPropertyFromConfigFile("ASAP_API", "url"))
         component_profile = kb_service.getApplicationComponentProfile()
@@ -86,6 +86,18 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         kb_service = JenaFusekiService(utils.getPropertyFromConfigFile("ASAP_API", "url"))
         virtual_infrastrucutre = kb_service.getVirtualInfrastructure()
         return JsonResponse(virtual_infrastrucutre)
+
+    @detail_route(methods=['post'])
+    def clone(self, request, pk=None, *args, **kwargs):
+        app = Application.objects.filter(id=pk).first()
+        old_app_pk = app.pk
+        app.pk = None
+        app.id = None
+        app.title = "copy of " + app.title
+        app.save()
+
+        clone_instances_in_graph(old_app_pk, app, 0, 0)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
     @detail_route(methods=['get'], permission_classes=[])
@@ -422,7 +434,37 @@ class ComponentViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     def perform_create(self, serializer):
         switch_type = ComponentType.objects.get(id=self.request.data['type']['id'])
         component = serializer.save(type=switch_type, user=self.request.user)
-        create_instance_for_component(component,component, None, self.request.data)
+
+        if component.type.title == "Requirement":
+            properties = {}
+            properties['machine_type'] = "SET_ITS_VALUE"
+            properties['location'] = "SET_ITS_VALUE"
+            properties = yaml.dump(properties, Dumper=YamlDumper, default_flow_style=False)
+        elif component.type.title == "Component Link":
+            properties = {}
+            properties['netmask'] = "SET_ITS_VALUE"
+            properties['source_address'] = "SET_ITS_VALUE"
+            properties['target_address'] = "SET_ITS_VALUE"
+            properties['bandwidth'] = "SET_ITS_VALUE"
+            properties['latency'] = "SET_ITS_VALUE"
+            properties = yaml.dump(properties, Dumper=YamlDumper, default_flow_style=False)
+        else:
+            properties = Instance._meta.get_field_by_name('properties')[0].get_default()
+
+        instance = Instance.objects.create(graph=component, component=component, title=component.title,
+                                           last_x=400, last_y=200, mode='single', properties=properties)
+
+        if component.type.switch_class.title == 'switch.Component' or component.type.switch_class.title == 'switch.Group':
+            nested_component = NestedComponent(instance_ptr=instance)
+            nested_component.save_base(raw=True)
+
+        elif component.type.switch_class.title == 'switch.VirtualResource' or component.type.switch_class.title == 'switch.Attribute':
+            service_component = ServiceComponent(instance_ptr=instance)
+            service_component.save_base(raw=True)
+
+        elif component.type.switch_class.title == 'switch.ComponentLink':
+            component_link = ComponentLink(instance_ptr=instance)
+            component_link.save_base(raw=True)
 
 
 class ComponentTypeViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
@@ -450,105 +492,72 @@ class InstanceViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     def perform_create(self, serializer):
         graph = GraphBase.objects.filter(id=self.request.data['graph_id']).first()
         component = Component.objects.filter(id=self.request.data['component_id']).first()
-        create_instance_for_component(graph, component, serializer, self.request.data)
+
+        base_instance = component.get_base_instance()
+        x_change = base_instance.last_x - serializer.validated_data['last_x']
+        y_change = base_instance.last_y - serializer.validated_data['last_y']
+
+        clone_instances_in_graph(component.id, graph, x_change, y_change)
+
+        new_instance = Instance.objects.filter(graph=graph, component=component).first()
+        serializer.save(graph=graph,component=component,uuid=new_instance.uuid)
 
 
-def create_instance_for_component(graph, component, serializer, request_data):
-    instance = None
-    base_instance = component.get_base_instance()
-    if base_instance is None:
-        if component.type.title == "Requirement":
-            properties = {}
-            properties['machine_type'] = "SET_ITS_VALUE"
-            properties['location'] = "SET_ITS_VALUE"
-            properties = yaml.dump(properties, Dumper=YamlDumper, default_flow_style=False)
-        elif component.type.title == "Component Link":
-            properties = {}
-            properties['netmask'] = "SET_ITS_VALUE"
-            properties['source_address'] = "SET_ITS_VALUE"
-            properties['target_address'] = "SET_ITS_VALUE"
-            properties['bandwidth'] = "SET_ITS_VALUE"
-            properties['latency'] = "SET_ITS_VALUE"
-            properties = yaml.dump(properties, Dumper=YamlDumper, default_flow_style=False)
-        else:
-            properties = Instance._meta.get_field_by_name('properties')[0].get_default()
+def clone_instances_in_graph(old_graph_pk, new_graph, x_change, y_change):
+    instance_translations = {}
+    port_translations = {}
 
-        instance = Instance.objects.create(graph=graph, component=component, title=component.title,
-                                           last_x=400, last_y=200, mode='single', properties=properties)
-    else:
-        instance = serializer.save(graph=graph, component=component, properties=base_instance.properties)
+    for instance in Instance.objects.filter(graph__pk=old_graph_pk).all():
+        old_pk = instance.pk
+        instance.pk = None
+        instance.id = None
+        instance.graph = new_graph
+        instance.uuid = uuid.uuid4()
+        instance.last_x = instance.last_x - x_change
+        instance.last_y = instance.last_y - y_change
         instance.save()
+        instance_translations[old_pk] = instance.pk
 
-    nested_component = None
+        if instance.component.type.switch_class.title == 'switch.Component' or instance.component.type.switch_class.title == 'switch.Group':
+            nested_component = NestedComponent(instance_ptr=instance)
+            nested_component.save_base(raw=True)
 
-    if component.type.switch_class.title == 'switch.Component' or component.type.switch_class.title == 'switch.Group':
-        nested_component = NestedComponent(instance_ptr=instance)
-        nested_component.save_base(raw=True)
+            for port in ComponentPort.objects.filter(instance_id=old_pk).all():
+                old_port_pk = port.pk
+                port.pk = None
+                port.id = None
+                port.instance = nested_component
+                port.uuid = uuid.uuid4()
+                port.save()
+                port_translations[old_port_pk] = port.pk
 
-    elif component.type.switch_class.title == 'switch.VirtualResource' or component.type.switch_class.title == 'switch.Attribute':
-        service_component = ServiceComponent(instance_ptr=instance)
-        service_component.save_base(raw=True)
+        elif instance.component.type.switch_class.title == 'switch.VirtualResource' or instance.component.type.switch_class.title == 'switch.Attribute':
+            service_component = ServiceComponent(instance_ptr=instance)
+            service_component.save_base(raw=True)
 
-    elif component.type.switch_class.title == 'switch.ComponentLink':
-        component_link = ComponentLink(instance_ptr=instance)
-        component_link.save_base(raw=True)
+        elif instance.component.type.switch_class.title == 'switch.ComponentLink':
+            component_link = ComponentLink(instance_ptr=instance)
+            component_link.save_base(raw=True)
 
-    if base_instance is not None:
-        x_change = base_instance.last_x - instance.last_x
-        y_change = base_instance.last_y - instance.last_y
+    for original_nested_component_inside_group in NestedComponent.objects.filter(graph__pk=old_graph_pk, parent__isnull=False):
+        nested_component_inside_group = NestedComponent.objects.filter(id=instance_translations[original_nested_component_inside_group.id]).first()
+        group_nested_component = NestedComponent.objects.filter(id=instance_translations[original_nested_component_inside_group.parent.id]).first()
+        nested_component_inside_group.parent = group_nested_component
+        nested_component_inside_group.save()
 
-        instance_translations = {}
-        port_translations = {}
+    for original_component_link in ComponentLink.objects.filter(graph__pk=old_graph_pk).all():
+        component_link = ComponentLink.objects.filter(instance_ptr_id=instance_translations[original_component_link.id]).first()
+        component_link.source_id = port_translations[original_component_link.source_id]
+        component_link.target_id = port_translations[original_component_link.target_id]
+        component_link.save()
 
-        try:
-            # clone any supporting components
-            instances = component.get_instances()
-            for template_instance in instances:
-                # if it's not the main component, clone it!
-                old_pk = template_instance.pk
-
-                if template_instance != base_instance:
-                    template_instance.pk = None
-                    template_instance.id = None
-                    template_instance.graph = graph
-                    template_instance.last_x = template_instance.last_x - x_change
-                    template_instance.last_y = template_instance.last_y - y_change
-                    template_instance.uuid = uuid.uuid4()
-                    template_instance.save()
-                    new_pk = template_instance.pk
-
-                    instance_translations[old_pk] = new_pk
-                elif nested_component is not None:
-                    template_instance = nested_component
-                    instance_translations[old_pk] = instance.pk
-
-                for port in ComponentPort.objects.filter(instance_id=old_pk).all():
-                    old_pk = port.pk
-                    port.instance = template_instance
-                    port.pk = None
-                    port.id = None
-                    port.uuid = uuid.uuid4()
-                    port.save()
-                    new_pk = port.pk
-
-                    port_translations[old_pk] = new_pk
-
-            for template_component_link in ComponentLink.objects.filter(graph=component).all():
-                component_link = ComponentLink.objects.filter(instance_ptr_id=instance_translations[template_component_link.id]).first()
-                component_link.source_id = port_translations[template_component_link.source_id]
-                component_link.target_id = port_translations[template_component_link.target_id]
-                component_link.save()
-
-            for service_link in ServiceLink.objects.filter(graph=component).all():
-                service_link.pk = None
-                service_link.id = None
-                service_link.graph = graph
-                service_link.source_id = instance_translations[service_link.source_id]
-                service_link.target_id = instance_translations[service_link.target_id]
-                service_link.save()
-
-        except Exception as e:
-            print e.message
+    for service_link in ServiceLink.objects.filter(graph__pk=old_graph_pk).all():
+        service_link.pk = None
+        service_link.id = None
+        service_link.graph = new_graph
+        service_link.source_id = instance_translations[service_link.source_id]
+        service_link.target_id = instance_translations[service_link.target_id]
+        service_link.save()
 
 
 class SwitchDocumentViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
