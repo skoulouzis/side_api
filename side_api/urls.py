@@ -18,7 +18,9 @@ from rest_framework_nested import routers
 from rest_framework.authtoken.views import obtain_auth_token
 
 import views
-from api.views import UserViewSet, ApplicationViewSet, ComponentViewSet, ComponentTypeViewSet, InstanceViewSet, ApplicationGraphView, ComponentGraphView, SwitchDocumentViewSet
+from api.views import ServiceLinkViewSet, UserViewSet, ApplicationViewSet, ComponentViewSet, ComponentTypeViewSet, \
+     InstanceViewSet, ApplicationGraphView, ComponentGraphView, PortViewSet, SwitchDocumentViewSet, \
+     GraphViewSet
 
 router = routers.DefaultRouter(trailing_slash=False)
 router.register("users", UserViewSet, base_name="user")
@@ -26,7 +28,10 @@ router.register("switchapps", ApplicationViewSet, base_name="switchapps")
 router.register("switchcomponents", ComponentViewSet, base_name="switchcomponents")
 router.register("switchcomponenttypes", ComponentTypeViewSet, base_name="switchcomponenttypes")
 router.register("switchcomponentinstances", InstanceViewSet, base_name="switchcomponentinstances")
+router.register("switchcomponentports", PortViewSet, base_name="switchcomponentports")
 router.register("switchdocuments", SwitchDocumentViewSet, base_name="switchdocuments")
+router.register("switchservicelinks", ServiceLinkViewSet, base_name="switchservicelinks")
+router.register("switchgraphs", GraphViewSet, base_name="switchgraphs")
 
 urlpatterns = [
     url(r'^admin/', include(admin.site.urls)),

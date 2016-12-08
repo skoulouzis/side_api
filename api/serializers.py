@@ -1,6 +1,8 @@
 import json
 
 from rest_framework import serializers
+from models import Application, Component, ComponentType, Instance, NestedComponent, ServiceComponent, ComponentPort, \
+    ServiceLink, GraphBase
 from models import Application, Component, ComponentType, Instance, NestedComponent, ServiceComponent, SwitchDocument
 from django.contrib.auth.models import User
 
@@ -67,12 +69,13 @@ class ComponentTypeSerializer(serializers.ModelSerializer):
 class InstanceSerializer(serializers.ModelSerializer):
     graph = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
     component = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
+    ports = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     editable = serializers.SerializerMethodField(read_only=True, required=False)
     properties = serializers.CharField(allow_null=True)
 
     class Meta:
         model = Instance
-        fields = ('id', 'uuid', 'title', 'mode', 'properties', 'graph', 'editable', 'component', 'last_x', 'last_y')
+        fields = ('id', 'uuid', 'title', 'mode', 'properties', 'graph', 'editable', 'component', 'last_x', 'last_y', 'ports')
 
     def get_editable(self, obj):
         return self.context['request'].user == obj.graph.user
@@ -99,3 +102,28 @@ class SwitchDocumentSerializer(serializers.ModelSerializer):
 
     def get_belongs_to_user(self, obj):
         return self.context['request'].user == obj.user
+
+
+class GraphSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = GraphBase
+        fields = ('id', 'title')
+
+
+class PortSerializer(serializers.ModelSerializer):
+    instance = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
+
+    class Meta:
+        model = ComponentPort
+        fields = ('id', 'instance', 'type', 'title', 'uuid')
+
+
+class ServiceLinkSerializer(serializers.ModelSerializer):
+    graph = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
+    source = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
+    target = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
+
+    class Meta:
+        model = ServiceLink
+        fields = ('id', 'graph', 'source', 'target', 'uuid')

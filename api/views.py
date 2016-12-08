@@ -478,6 +478,56 @@ class ComponentTypeViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
 class InstanceViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     serializer_class = InstanceSerializer
 
+    @detail_route(methods=['post'])
+    def link(self, request, pk=None):
+        graph_id = request.data.get('graph_id', None)
+        source_id = request.data.get('source_id', None)
+        target_id = request.data.get('target_id', None)
+        link = ComponentLink.objects.filter(pk=pk).first()
+        source = ComponentPort.objects.filter(uuid=source_id, instance__graph_id=graph_id).first()
+        target = ComponentPort.objects.filter(uuid=target_id, instance__graph_id=graph_id).first()
+        link.source = source
+        link.target = target
+        link.save()
+        serializer = self.get_serializer(link, many=False)
+        return Response(serializer.data)
+
+    @detail_route(methods=['post'])
+    def embed(self, request, pk=None):
+        graph_id = request.data.get('graph_id', None)
+        parent_id = request.data.get('parent_id', None)
+        child = NestedComponent.objects.filter(pk=pk).first()
+        child.parent = NestedComponent.objects.filter(uuid=parent_id, instance__graph_id=graph_id).first()
+        child.save()
+        serializer = self.get_serializer(child, many=False)
+        return Response(serializer.data)
+
+    @detail_route(methods=['post'], parser_classes=(JSONParser,))
+    def ports(self, request, pk=None):
+
+        new_ports = request.data.get('ports', [])
+        instance = Instance.objects.filter(pk=pk).first()
+
+        old_ports = list(ComponentPort.objects.filter(instance=instance).all())
+        for port in old_ports:
+            for new_port in new_ports:
+                if port.uuid == new_port['id']:
+                    port.title = new_port['label']
+                    port.type = new_port['type']
+                    port.save()
+                    new_ports.remove(new_port)
+                    old_ports.remove(port)
+                    break
+
+        for port in old_ports:
+            port.delete()
+
+        for port in new_ports:
+            ComponentPort.objects.create(uuid=port['id'], title=port['label'], type=port['type'], instance=instance)
+
+        serializer = self.get_serializer(instance, many=False)
+        return Response(serializer.data)
+
     def get_queryset(self):
         graph_id = self.request.query_params.get('graph_id', None)
         uuid = self.request.query_params.get('uuid', None)
@@ -488,6 +538,16 @@ class InstanceViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         else:
             queryset = Instance.objects.filter(graph__user=self.request.user)
         return queryset
+
+    def perform_destroy(self, instance):
+        target_links = ServiceLink.objects.filter(target_id=instance.id).all()
+        for link in target_links:
+            source = link.source
+            source_links = ServiceLink.objects.filter(source_id=source.id).all()
+            if source_links.count() <= 1:
+                if source.id is not None:
+                    source.delete()
+        instance.delete()
 
     def perform_create(self, serializer):
         graph = GraphBase.objects.filter(id=self.request.data['graph_id']).first()
@@ -500,7 +560,7 @@ class InstanceViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         clone_instances_in_graph(component.id, graph, x_change, y_change)
 
         new_instance = Instance.objects.filter(graph=graph, component=component).first()
-        serializer.save(graph=graph,component=component,uuid=new_instance.uuid)
+        serializer.save(graph=graph, component=component,  uuid=new_instance.uuid)
 
 
 def clone_instances_in_graph(old_graph_pk, new_graph, x_change, y_change):
@@ -526,7 +586,7 @@ def clone_instances_in_graph(old_graph_pk, new_graph, x_change, y_change):
                 old_port_pk = port.pk
                 port.pk = None
                 port.id = None
-                port.instance = nested_component
+                port.instance = instance
                 port.uuid = uuid.uuid4()
                 port.save()
                 port_translations[old_port_pk] = port.pk
@@ -557,7 +617,52 @@ def clone_instances_in_graph(old_graph_pk, new_graph, x_change, y_change):
         service_link.graph = new_graph
         service_link.source_id = instance_translations[service_link.source_id]
         service_link.target_id = instance_translations[service_link.target_id]
+        service_link.uuid = uuid.uuid4()
         service_link.save()
+
+
+class PortViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
+    serializer_class = PortSerializer
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+    queryset = ComponentPort.objects.all()
+
+    def perform_create(self, serializer):
+        instance = dict(self.request.data.get('instance', None))
+        if 'id' in instance:
+            port = serializer.save(instance_id=instance['id'])
+
+
+class GraphViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
+    serializer_class = GraphSerializer
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+    queryset = GraphBase.objects.all()
+
+
+class ServiceLinkViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
+    serializer_class = ServiceLinkSerializer
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+    queryset = ServiceLink.objects.all()
+
+    def get_queryset(self):
+        graph_id = self.request.query_params.get('graph_id', None)
+        uuid = self.request.query_params.get('uuid', None)
+        if graph_id is not None:
+            queryset = ServiceLink.objects.filter(graph_id=graph_id)
+            if uuid is not None:
+                queryset = ServiceLink.objects.filter(graph_id=graph_id, uuid=uuid)
+        else:
+            queryset = ServiceLink.objects.filter(graph__user=self.request.user)
+        return queryset
+
+    def perform_create(self, serializer):
+        graph = dict(self.request.data.get('graph', None))
+        source = dict(self.request.data.get('source', None))
+        target = dict(self.request.data.get('target', None))
+        if 'id' in graph and 'id' in source and 'id' in target:
+            port = serializer.save(graph_id=graph['id'], source_id=source['id'], target_id=target['id'])
 
 
 class SwitchDocumentViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):

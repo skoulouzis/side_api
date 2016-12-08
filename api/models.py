@@ -54,6 +54,21 @@ class GraphBase(models.Model):
                 graph_obj = service_link.get_graph()
                 response_cells.append(graph_obj)
 
+                add_parent = True
+
+                for cell in response_cells:
+                    if 'id' in cell and cell['id'] == service_link.source.uuid:
+                        if 'parent' in cell:
+                            add_parent = False
+                        else:
+                            cell['parent'] = service_link.target.uuid
+
+                if add_parent:
+                    for cell in response_cells:
+                        if 'id' in cell and cell['id'] == service_link.target.uuid:
+                            cell.setdefault('embeds', [])
+                            cell['embeds'].append(service_link.source.uuid)
+
             except Exception as e:
                 print e.message
 
@@ -67,96 +82,15 @@ class GraphBase(models.Model):
             }
         }
 
+    # this now just updates x/y of any component... nowt else :)
     def put_graph(self, json_data):
-
-        service_links = []
-        component_links = []
-
         try:
-            for obj in self.service_links.all():
-                obj.delete()
-
             for cell in json_data['cells']:  #
-                # Do these two last to ensure all linked to components exist...
-                if cell['type'] == 'switch.ServiceLink':
-                    service_links.append(cell)
-                elif cell['type'] == 'switch.ComponentLink':
-                    component_links.append(cell)
-                else:
-                    instance = Instance.objects.filter(uuid=cell['id'], graph=self).select_subclasses().first()
-                    instance.type = cell['type']
+                instance = Instance.objects.filter(uuid=cell['id'], graph=self).select_subclasses().first()
+                if 'position' in cell and cell['position'] is not None:
                     instance.last_x = cell['position']['x']
                     instance.last_y = cell['position']['y']
-
-                    if instance.component.type.switch_class.title == 'switch.Component':
-                        port_objs = []
-
-                        if 'parent' in cell and cell['parent'] is not None:
-                            parent_obj, created = NestedComponent.objects.get_or_create(uuid=cell['parent'], graph=self)
-                            instance.parent = parent_obj
-
-                        if 'inPorts' in cell:
-                            for port in cell['inPorts']:
-                                port_obj, created = ComponentPort.objects.get_or_create(instance=instance,
-                                                                                        uuid=port['id'], type='in')
-                                port_obj.title = port['label']
-                                port_obj.save()
-                                port_objs.append(port_obj)
-
-                            instance.ports = port_objs
-
-                        if 'outPorts' in cell:
-                            for port in cell['outPorts']:
-                                port_obj, created = ComponentPort.objects.get_or_create(instance=instance,
-                                                                                        uuid=port['id'], type='out')
-                                port_obj.title = port['label']
-                                port_obj.save()
-                                port_objs.append(port_obj)
-
-                            instance.ports = port_objs
-
-                        old_port_objs = ComponentPort.objects.filter(instance=instance)
-
-                        for old_port in old_port_objs:
-                            if old_port not in port_objs:
-                                old_port.delete()
-
                     instance.save()
-
-            for instance in service_links:
-                source_obj = None
-                target_obj = None
-
-                if 'source' in instance:
-                    source = instance['source']
-                    source_obj = Instance.objects.filter(uuid=source['id'], graph=self).first()
-
-                if 'target' in instance:
-                    target = instance['target']
-                    target_obj = Instance.objects.filter(uuid=target['id'], graph=self).first()
-
-                if source_obj is not None and target_obj is not None:
-                    ServiceLink.objects.get_or_create(source=source_obj, target=target_obj, graph=self)
-
-            for instance in component_links:
-                source_obj = None
-                target_obj = None
-
-                if 'source' in instance:
-                    source = instance['source']
-                    if 'port' in source:
-                        source_obj = ComponentPort.objects.filter(uuid=str(source['port']), type='out').first()
-
-                if 'target' in instance:
-                    target = instance['target']
-                    if 'port' in target:
-                        target_obj = ComponentPort.objects.filter(uuid=str(target['port']), type='in').first()
-
-                if source_obj is not None and target_obj is not None:
-                    link, created = ComponentLink.objects.get_or_create(uuid=instance['id'], graph=self)
-                    link.source = source_obj
-                    link.target = target_obj
-                    link.save()
 
         except Exception as e:
             print e.message
@@ -588,13 +522,13 @@ class NestedComponent(Instance):
 
 
 class ComponentPort(models.Model):
-    instance = models.ForeignKey(NestedComponent, related_name='ports')
+    instance = models.ForeignKey(Instance, related_name='ports')
     type = models.CharField(max_length=512, null=True)
     title = models.CharField(max_length=512, null=True)
     uuid = models.CharField(max_length=512, null=True)
 
     class JSONAPIMeta:
-        resource_name = "graph_ports"
+        resource_name = "switchcomponentports"
 
 
 class ComponentLink(Instance):
@@ -656,15 +590,18 @@ class ComponentLink(Instance):
 
 
 class ServiceLink(models.Model):
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False)
     graph = models.ForeignKey(GraphBase, related_name='service_links')
     source = models.ForeignKey(Instance, related_name='sources')
     target = models.ForeignKey(Instance, related_name='targets')
 
     class JSONAPIMeta:
-        resource_name = "graph_connections"
+        resource_name = "switchservicelinks"
 
+    # todo - check if attrs are needed, i don't think so...
     def get_graph(self):
         graph_obj = {
+            'id': self.uuid,
             'type': 'switch.ServiceLink',
             'attrs': {
                 '.marker-target': {
