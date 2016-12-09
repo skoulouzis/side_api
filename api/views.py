@@ -422,12 +422,16 @@ class ComponentViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     def get_queryset(self):
         is_core_component = self.request.query_params.get('is_core_component', None)
         is_template_component = self.request.query_params.get('is_template_component', None)
+        component_id = self.request.query_params.get('component_id', None)
         queryset = Component.objects.filter()
 
         if is_core_component is not None:
             queryset = queryset.filter(type__switch_class__is_core_component=is_core_component)
         elif is_template_component is not None:
             queryset = queryset.filter(type__switch_class__is_template_component=is_template_component)
+
+        if component_id is not None:
+            queryset = queryset.filter().exclude(pk=int(component_id))
 
         return queryset
 

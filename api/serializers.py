@@ -71,14 +71,18 @@ class InstanceSerializer(serializers.ModelSerializer):
     component = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
     ports = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     editable = serializers.SerializerMethodField(read_only=True, required=False)
+    deleteable = serializers.SerializerMethodField(read_only=True, required=False)
     properties = serializers.CharField(allow_null=True)
 
     class Meta:
         model = Instance
-        fields = ('id', 'uuid', 'title', 'mode', 'properties', 'graph', 'editable', 'component', 'last_x', 'last_y', 'ports')
+        fields = ('id', 'uuid', 'title', 'mode', 'properties', 'graph', 'editable', 'deleteable', 'component', 'last_x', 'last_y', 'ports')
 
     def get_editable(self, obj):
         return self.context['request'].user == obj.graph.user
+
+    def get_deleteable(self, obj):
+        return obj.graph.pk != obj.component.pk
 
     def create(self, validated_data):
         uuid = validated_data.get('uuid', None)
