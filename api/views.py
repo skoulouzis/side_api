@@ -554,28 +554,36 @@ class InstanceViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         component = Component.objects.filter(id=self.request.data['component_id']).first()
 
         base_instance = component.get_base_instance()
-        x_change = base_instance.last_x - serializer.validated_data['last_x']
-        y_change = base_instance.last_y - serializer.validated_data['last_y']
 
-        clone_instances_in_graph(component.id, graph, x_change, y_change)
+        new_instance = serializer.save(graph=graph, component=component, properties=base_instance.properties)
+        new_instance.save()
 
-        new_instance = Instance.objects.filter(graph=graph, component=component).first()
-        serializer.save(graph=graph, component=component,  uuid=new_instance.uuid)
+        x_change = base_instance.last_x - new_instance.last_x
+        y_change = base_instance.last_y - new_instance.last_y
+
+        clone_instances_in_graph(component.id, graph, x_change, y_change, new_instance)
 
 
-def clone_instances_in_graph(old_graph_pk, new_graph, x_change, y_change):
+def clone_instances_in_graph(old_graph_pk, new_graph, x_change, y_change, new_instance=None):
     instance_translations = {}
     port_translations = {}
 
     for instance in Instance.objects.filter(graph__pk=old_graph_pk).all():
         old_pk = instance.pk
-        instance.pk = None
-        instance.id = None
-        instance.graph = new_graph
-        instance.uuid = uuid.uuid4()
-        instance.last_x = instance.last_x - x_change
-        instance.last_y = instance.last_y - y_change
-        instance.save()
+
+        # we've already created the a copy of the base_instance via the serializer
+        # done because ComponentLinks was messing up (wrong id was being returned!)
+        if instance.component.pk == old_graph_pk and new_instance is not None:
+            instance = new_instance
+        else:
+            instance.pk = None
+            instance.id = None
+            instance.graph = new_graph
+            instance.uuid = uuid.uuid4()
+            instance.last_x = instance.last_x - x_change
+            instance.last_y = instance.last_y - y_change
+            instance.save()
+
         instance_translations[old_pk] = instance.pk
 
         if instance.component.type.switch_class.title == 'switch.Component' or instance.component.type.switch_class.title == 'switch.Group':
