@@ -53,14 +53,22 @@ class ComponentSerializer(serializers.ModelSerializer):
 class ComponentTypeSerializer(serializers.ModelSerializer):
     switch_class = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
     is_core_component = serializers.SerializerMethodField(read_only=True, required=False)
+    is_template_component = serializers.SerializerMethodField(read_only=True, required=False)
     is_component_group = serializers.SerializerMethodField(read_only=True, required=False)
+    classpath = serializers.SerializerMethodField(read_only=True, required=False)
 
     class Meta:
         model = ComponentType
-        fields = ('id', 'title', 'primary_colour', 'secondary_colour', 'icon_name', 'icon_class', 'icon_style', 'icon_svg', 'icon_code', 'icon_colour', 'switch_class', 'is_core_component', 'is_component_group')
+        fields = ('id', 'title', 'primary_colour', 'secondary_colour', 'icon_name', 'icon_class', 'icon_style', 'icon_svg', 'icon_code', 'icon_colour', 'switch_class', 'is_core_component', 'is_template_component', 'is_component_group', 'classpath')
+
+    def get_classpath(self, obj):
+        return obj.computed_class()
+
+    def get_is_template_component(self, obj):
+        return obj.is_template()
 
     def get_is_core_component(self, obj):
-        return obj.switch_class.title == 'switch.Component'
+        return obj.is_core()
 
     def get_is_component_group(self, obj):
         return obj.switch_class.title == 'switch.Group'

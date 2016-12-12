@@ -478,6 +478,18 @@ class ComponentTypeViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     queryset = ComponentType.objects.all()
     parser_classes = (JSONParser,)
 
+    def get_queryset(self):
+        is_core_component = self.request.query_params.get('is_core', None)
+        is_template_component = self.request.query_params.get('is_template', None)
+        queryset = ComponentType.objects.filter()
+
+        if is_core_component is not None:
+            queryset = queryset.filter(switch_class__is_core_component=is_core_component)
+        elif is_template_component is not None:
+            queryset = queryset.filter(switch_class__is_template_component=is_template_component)
+
+        return queryset
+
 
 class InstanceViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     serializer_class = InstanceSerializer

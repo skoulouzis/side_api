@@ -279,6 +279,7 @@ class Application(GraphBase):
 
 class ComponentClass(models.Model):
     title = models.CharField(max_length=512, null=True)
+    classpath = models.CharField(max_length=512, null=True)
     is_core_component = models.BooleanField(default=False)
     is_template_component = models.BooleanField(default=False)
 
@@ -290,6 +291,7 @@ class ComponentClass(models.Model):
 
 
 class ComponentType(models.Model):
+    parent = models.ForeignKey('self', null=True, blank=True, related_name='children')
     title = models.CharField(max_length=512, null=True)
     switch_class = models.ForeignKey(ComponentClass, related_name='types')
     primary_colour = models.CharField(max_length=512, null=True)
@@ -307,6 +309,32 @@ class ComponentType(models.Model):
     def __unicode__(self):
         return self.title
 
+    def get_base_type(self):
+        if self.parent is not None:
+            return self.parent.get_base_type()
+        else:
+            return self
+
+    def is_core(self):
+        if self.parent is not None:
+            return self.parent.is_template()
+        else:
+            return self.switch_class.is_core_component
+
+    def is_template(self):
+        if self.parent is not None:
+            return self.parent.is_template()
+        else:
+            return self.switch_class.is_template_component
+
+    def computed_class(self):
+        classpath = self.title.title().replace(' ', '')
+        if self.parent is not None:
+            classpath = self.parent.computed_class() + '.' + classpath
+        else:
+            classpath = self.switch_class.title + '.' + classpath
+        return classpath
+
 
 class Component(GraphBase):
     type = models.ForeignKey(ComponentType, related_name='components', null=True)
@@ -321,10 +349,10 @@ class Component(GraphBase):
         return Instance.objects.filter(graph=self, component=self).select_subclasses().first()
 
     def is_core_component(self):
-        return self.type.switch_class.title == 'switch.Component'
+        return self.type.is_core()
 
     def is_template_component(self):
-        return self.type.switch_class.title == 'switch.Component' or self.type.switch_class.title != 'switch.Attribute'
+        return self.type.is_template()
 
 
 class Instance(models.Model):
