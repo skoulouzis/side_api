@@ -569,6 +569,12 @@ class ComponentLink(Instance):
 
         resource_name = "graph_connections"
 
+    def get_label(self):
+        if self.source is not None and self.target is not None:
+            return self.source.instance.title.lower().replace(" ","_") + ":" + self.target.instance.title.lower().replace(" ","_")
+        else:
+            return 'connection'
+
     def put_link_label(self, graph_obj, text, fill, position):
         graph_obj['labels'].append(
             {
@@ -604,7 +610,7 @@ class ComponentLink(Instance):
         graph_obj['labels'] = []
         self.put_link_graph(graph_obj, self.target, 'target', 'in', 0.2)
         self.put_link_graph(graph_obj, self.source, 'source', 'out', 0.8)
-        self.put_link_label(graph_obj, self.title, 'white', 0.5)
+        self.put_link_label(graph_obj, self.get_label(), 'white', 0.5)
 
         return graph_obj
 
@@ -715,14 +721,14 @@ class SwitchComponentAdmin(admin.ModelAdmin):
     fields = ('title', 'uuid', 'app_title')
 
 
-def generate_fileName(instance, filename):
+def generate_file_name(instance, filename):
     return '/'.join(['documents', str(instance.user.id), filename])
 
 
 class SwitchDocument(models.Model):
     user = models.ForeignKey(User)
     description = models.CharField(max_length=255, blank=True)
-    file = models.FileField(upload_to=generate_fileName)
+    file = models.FileField(upload_to=generate_file_name)
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     class JSONAPIMeta:
