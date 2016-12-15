@@ -7,3 +7,4 @@ media/
 graphs/*.json
 api/migrations/0001_initial.py
 graphs/
+switch_deploy.sh
