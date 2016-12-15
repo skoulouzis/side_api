@@ -1,7 +1,9 @@
 .idea/
-db.sqlite3
+*.sqlite3
 api/*.pyc
 api/migrations/*.pyc
 side_api/*.pyc
 media/
 graphs/*.json
+api/migrations/0001_initial.py
+graphs/
