@@ -3,6 +3,7 @@ import yaml
 import os
 import subprocess
 import uuid
+import xml.etree.ElementTree as ET
 
 from django.http import JsonResponse
 from rest_framework import viewsets, status
@@ -22,7 +23,7 @@ from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth import get_user_model
 
 from side_api import settings, utils
-from services import JenaFusekiService
+from services import JenaFusekiService, DripManagerService
 
 from yaml.dumper import Dumper
 from yaml.representer import SafeRepresenter
@@ -152,9 +153,22 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                     result = 'error'
                     details.append('Please make sure that the application is valid before to plan the virtual infrastructure')
                 else:
-                    app_tosca_json = json.loads(self.tosca(request=request, pk=pk).content)
-                    return_code = subprocess.call(['java', '-jar', os.path.join(settings.BASE_DIR, 'external_tools', 'planner', 'SwitchPlanner_test.jar'), pk])
-                    if return_code == 0:
+                    # app_tosca = json.loads(self.tosca(request=request, pk=pk).content)
+                    path_app_tosca = "/home/fran/Documents/SWITCH/switch_tosca_profile/planner/example_planner_input.yaml"
+
+                    drip_manager_service = DripManagerService(
+                        utils.getPropertyFromConfigFile("DRIP_MANAGER_API", "url"))
+                    drip_manager_response = drip_manager_service.planning_virtual_infrastructure(request.user, path_app_tosca)
+
+
+                    if drip_manager_response.status_code == 200:
+                        root = ET.fromstring(drip_manager_response.text)
+                        tosca_files = root.findall("./file")
+                        for tosca_file in tosca_files:
+                            tosca_level = tosca_file.attrib['level']
+                            tosca_file_name = tosca_file.attrib['name']
+                            toca_content = yaml.load(tosca_file.text.replace("\\n", "\n"))
+
                         result = 'ok'
                         details.append('plan done correctly')
                         app.status = 1
@@ -177,7 +191,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
 
                             vr_properties = {
                                 "type": "switch/compute",
-                                "OStype": "Ubuntu 14.04",
+                                "OStype": "Ubuntu 16.04",
                                 "script": "",
                                 "installation": "",
                                 "public_address": str(graph_vm.uuid)
@@ -263,7 +277,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                 uuid = str(app.uuid)
                 with open(os.path.join(settings.MEDIA_ROOT, 'documents', str(request.user.id), uuid + '.yml'), 'w') as f:
                     credentials = {
-                        'publicKeyPath': os.path.join(settings.MEDIA_ROOT, 'documents', str(request.user.id),'id_rsa.pub'),
+                        'publicKeyPath': 'id_rsa.pub',
                         'userName': app.user.username
                     }
                     yaml.dump(credentials, f, Dumper=YamlDumper, default_flow_style=False)
@@ -320,30 +334,63 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                 confFile = os.path.join(settings.MEDIA_ROOT, 'documents', str(request.user.id), 'rootkey.csv')
                 toscaFile = os.path.join(settings.MEDIA_ROOT, 'documents', str(request.user.id), uuid + '.yml')
                 certsFolder = os.path.join(settings.MEDIA_ROOT, 'documents', str(request.user.id))
-                return_code = subprocess.call(['java', '-jar',
-                                               os.path.join(settings.BASE_DIR, 'external_tools', 'provisioner', 'EC2Provision_test.jar'),
-                                               confFile, toscaFile, certsFolder],
-                                              cwd=os.path.join(settings.MEDIA_ROOT, 'documents', str(request.user.id)))
 
-                if return_code == 0:
-                    result = 'ok'
-                    details.append('provision done correctly')
+                toscaFiles = []
+                toscaFiles.append(toscaFile)
+                with open(os.path.join(settings.MEDIA_ROOT, 'documents', str(request.user.id), uuid + '_all.yml'),
+                          'w') as f:
+                    topologies = []
+                    for topologyFile in toscaFiles:
+                        topology = {
+                            'topology': os.path.splitext(os.path.basename(toscaFile))[0],
+                            'cloudProvider': "EC2"
+                        }
+                        topologies.append(topology)
+                    yaml.dump({'topologies': topologies}, f, Dumper=YamlDumper, default_flow_style=False)
 
-                    app.status = 2
-                    app.save()
+                allTopologyFile = os.path.join(settings.MEDIA_ROOT, 'documents', str(request.user.id), uuid + '_all.yml')
 
-                    with open(os.path.join(settings.MEDIA_ROOT, 'documents', str(request.user.id), uuid + '_provisioned.yml'), 'r') as f:
-                        tosca_provisioned_infrastructure = yaml.load(f.read())
+                drip_manager_service = DripManagerService(utils.getPropertyFromConfigFile("DRIP_MANAGER_API", "url"))
+                drip_manager_response = drip_manager_service.upload_tosca(request.user, allTopologyFile, toscaFiles)
 
-                    for vm_provisioned in tosca_provisioned_infrastructure['components']:
-                        vm_component = Instance.objects.get(uuid=vm_provisioned['name'])
-                        vm_component.title += ' (' + vm_provisioned['public_address'] + ')'
-                        vm_component.properties = yaml.dump(vm_provisioned, Dumper=YamlDumper, default_flow_style=False)
-                        vm_component.save()
+                if drip_manager_response.status_code == 200:
 
-                else:
-                    result = 'error'
-                    details.append('provision has failed')
+                    action_number = drip_manager_response.text[drip_manager_response.text.find('Action number: ')+15:]
+
+                    ssh_key_document = SwitchDocument.objects.filter(user=request.user, description="Public ssh key").first()
+                    drip_manager_response = drip_manager_service.conf_user_key(request.user, ssh_key_document, action_number)
+
+                    if drip_manager_response.status_code == 200:
+                        conf_script_document = SwitchDocument.objects.filter(user=request.user,
+                                                                         description="nodejs web ssh server").first()
+                        drip_manager_response = drip_manager_service.conf_script(request.user, conf_script_document,
+                                                                                 action_number)
+
+                        if drip_manager_response.status_code == 200:
+                            drip_manager_response = drip_manager_service.execute(request.user, action_number)
+                            if drip_manager_response.status_code == 200:
+                                root = ET.fromstring(drip_manager_response.text)
+                                result_tosca = root.findall("./file")[0]
+                                tosca_provisioned_infrastructure = yaml.load(result_tosca.text.replace("\\n","\n"))
+
+                                for vm_provisioned in tosca_provisioned_infrastructure['components']:
+                                    vm_component = Instance.objects.get(uuid=vm_provisioned['name'])
+                                    vm_component.title += ' (' + vm_provisioned['public_address'] + ')'
+                                    vm_component.properties = yaml.dump(vm_provisioned, Dumper=YamlDumper, default_flow_style=False)
+                                    vm_component.save()
+
+                                drip_manager_response = drip_manager_service.setup_docker_orchestrator(request.user, action_number, "kubernetes")
+
+                                if drip_manager_response.status_code == 200:
+                                    result = 'ok'
+                                    details.append('provision done correctly')
+
+                                    app.status = 2
+                                    app.save()
+
+        if drip_manager_response.status_code != 200:
+            result = 'error'
+            details.append('provision has failed')
 
         # Delete files input and output files used by the provisioner
         if os.path.isfile(os.path.join(settings.MEDIA_ROOT, 'documents', str(request.user.id), uuid + '.yml')):
@@ -414,6 +461,31 @@ class UserViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         self.object = get_object_or_404(User, pk=request.user.id)
         serializer = self.get_serializer(self.object)
         return Response(serializer.data)
+
+    @detail_route(methods=['post'], permission_classes=[])
+    def configureEC2account(self, request, pk=None, *args, **kwargs):
+        drip_manager_service = DripManagerService(utils.getPropertyFromConfigFile("DRIP_MANAGER_API", "url"))
+        aws_root_key_document = SwitchDocument.objects.filter(user=request.user, description="amazon root key").first()
+        california_key_document = SwitchDocument.objects.filter(user=request.user, description="California key").first()
+        virginia_key_document = SwitchDocument.objects.filter(user=request.user, description="Virginia key").first()
+        drip_manager_response = drip_manager_service.configure_ec2_account(request.user, aws_root_key_document,
+                                                                         california_key_document, virginia_key_document)
+
+        details = []
+
+        if drip_manager_response.status_code == 200:
+            result = 'ok'
+            details.append(drip_manager_response.text)
+        else:
+            result = 'error'
+            details.append(drip_manager_response.text)
+
+        validation_result = {
+            'result': result,
+            'details': details
+        }
+
+        return JsonResponse(validation_result)
 
 
 class ComponentViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):

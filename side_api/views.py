@@ -7,6 +7,8 @@ from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 
 from side_api.forms import RegistrationForm
+from api.services import DripManagerService
+from side_api import utils
 
 
 def index(request):
@@ -31,6 +33,9 @@ def register(request):
                                         form.cleaned_data["email"],
                                         form.cleaned_data["password"])
         user.save()
+
+        drip_manager_service = DripManagerService(utils.getPropertyFromConfigFile("DRIP_MANAGER_API", "url"))
+        drip_manager_response = drip_manager_service.register(user)
 
         return JsonResponse({"success": "User registered."}, status=201)
 

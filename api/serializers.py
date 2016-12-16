@@ -1,9 +1,7 @@
 import json
 
 from rest_framework import serializers
-from models import Application, Component, ComponentType, Instance, NestedComponent, ServiceComponent, ComponentPort, \
-    ServiceLink, GraphBase
-from models import Application, Component, ComponentType, Instance, NestedComponent, ServiceComponent, SwitchDocument
+from models import Application, Component, ComponentType, Instance, NestedComponent, ServiceComponent, ComponentPort, ServiceLink, GraphBase,SwitchDocument
 from django.contrib.auth.models import User
 
 
@@ -56,10 +54,21 @@ class ComponentTypeSerializer(serializers.ModelSerializer):
     is_template_component = serializers.SerializerMethodField(read_only=True, required=False)
     is_component_group = serializers.SerializerMethodField(read_only=True, required=False)
     classpath = serializers.SerializerMethodField(read_only=True, required=False)
+    parent = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
+    root_type = serializers.SerializerMethodField(read_only=True)
+
+    # primary_colour = serializers.SerializerMethodField(required=False)
+    # secondary_colour = serializers.SerializerMethodField(required=False)
+    # icon_name = serializers.SerializerMethodField(required=False)
+    # icon_style = serializers.SerializerMethodField(required=False)
+    # icon_class = serializers.SerializerMethodField(required=False)
+    # icon_svg = serializers.SerializerMethodField(required=False)
+    # icon_code = serializers.SerializerMethodField(required=False)
+    # icon_colour = serializers.SerializerMethodField(required=False)
 
     class Meta:
         model = ComponentType
-        fields = ('id', 'title', 'primary_colour', 'secondary_colour', 'icon_name', 'icon_class', 'icon_style', 'icon_svg', 'icon_code', 'icon_colour', 'switch_class', 'is_core_component', 'is_template_component', 'is_component_group', 'classpath')
+        fields = ('id', 'title', 'primary_colour', 'secondary_colour', 'icon_name', 'icon_class', 'icon_style', 'icon_svg', 'icon_code', 'icon_colour', 'switch_class', 'is_core_component', 'is_template_component', 'is_component_group', 'classpath', 'parent', 'root_type')
 
     def get_classpath(self, obj):
         return obj.computed_class()
@@ -73,6 +82,14 @@ class ComponentTypeSerializer(serializers.ModelSerializer):
     def get_is_component_group(self, obj):
         return obj.switch_class.title == 'switch.Group'
 
+    def get_root_component_type(self, obj):
+        if obj.parent is None:
+            return obj
+        else:
+            return self.get_root_component_type(obj.parent)
+
+    def get_root_type(self, obj):
+        return self.get_root_component_type(obj).title
 
 class InstanceSerializer(serializers.ModelSerializer):
     graph = serializers.PrimaryKeyRelatedField(many=False, read_only=True)

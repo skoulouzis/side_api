@@ -184,6 +184,47 @@ class Application(GraphBase):
             }
         }
 
+        node_types = {
+          "Switch.nodes.Application.Container.Docker": {
+            "derived_from": "tosca.nodes.Container.Application",
+            "properties": {
+              "QoS": {
+                "type": "Switch.datatypes.QoS.AppComponent"
+              }
+            },
+            "artifacts": {
+              "docker_image": {
+                "type": "tosca.artifacts.Deployment.Image.Container.Docker"
+              }
+            },
+            "interfaces": {
+              "Standard": {
+                "create": {
+                  "inputs": {
+                    "command": {
+                      "type": "string"
+                    },
+                    "exported_ports": {
+                      "type": "list",
+                      "entry_schema": {
+                        "type": "string"
+                      }
+                    },
+                    "port_bindings": {
+                      "type": "list",
+                      "entry_schema": {
+                        "type": "stringg"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        repositories = {}
+
         components = []
         external = []
         network = []
@@ -198,8 +239,12 @@ class Application(GraphBase):
 
         for instance in instances:
             try:
-                graph_obj = instance.get_tosca()
+                tosca_node_type = instance.component.get_base_instance().get_tosca_type()
+                key, value = tosca_node_type.popitem()
+                if key not in node_types:
+                    node_types[key] = value
 
+                graph_obj = instance.get_tosca()
                 if instance.component.type.title == 'Component':
                     components.append(graph_obj)
                 elif instance.component.type.title == 'External Component':
@@ -234,12 +279,12 @@ class Application(GraphBase):
         data['description'] = self.description
         data['artifact_types'] = artifact_types
         data['data_types'] = data_types
-        # TODO: Study how to add node types and repositories
-        # data['node_types'] =
-        # data['repositories'] =
+        data['node_types'] = node_types
+        data['repositories'] = repositories
 
         data['topology_template']={}
         node_templates = data['topology_template'].setdefault('node_templates', {})
+
 
         if len(components) > 0:
             node_templates['components'] = components
@@ -336,6 +381,20 @@ class ComponentType(models.Model):
         return classpath
 
 
+class ComponentTypeProperty(models.Model):
+    name = models.CharField(max_length=512, null=False)
+    type = models.CharField(max_length=512, null=False)
+    default_value = models.CharField(max_length=512, null=True)
+    component_type = models.ForeignKey(ComponentType, related_name='properties')
+
+
+    class JSONAPIMeta:
+        resource_name = "switchcomponenttypeproperties"
+
+    def __unicode__(self):
+        return self.name
+
+
 class Component(GraphBase):
     type = models.ForeignKey(ComponentType, related_name='components', null=True)
 
@@ -429,6 +488,17 @@ class Instance(models.Model):
         properties['title'] = self.title
 
         data_obj[str(self.uuid)] = properties
+
+        return data_obj
+
+    def get_tosca_type(self):
+        data_obj = {}
+        properties = {}
+
+        metadata = yaml.load(str(self.properties).replace("\t", "    "))
+        properties.update(metadata)
+
+        data_obj[self.title] = properties
 
         return data_obj
 
