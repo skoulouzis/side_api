@@ -95,6 +95,70 @@ class GraphBase(models.Model):
         except Exception as e:
             print e.message
 
+    def clone_instances_in_graph(self, new_graph, x_change, y_change, new_instance=None):
+        instance_translations = {}
+        port_translations = {}
+
+        for instance in Instance.objects.filter(graph=self).all():
+            old_pk = instance.pk
+
+            # we've already created the a copy of the base_instance via the serializer
+            # done because ComponentLinks was messing up (wrong id was being returned!)
+            if instance.component.pk == self.pk and new_instance is not None:
+                instance = new_instance
+            else:
+                instance.pk = None
+                instance.id = None
+                instance.graph = new_graph
+                instance.uuid = uuid.uuid4()
+                instance.last_x = instance.last_x - x_change
+                instance.last_y = instance.last_y - y_change
+                instance.save()
+
+            instance_translations[old_pk] = instance.pk
+
+            if instance.component.type.switch_class.title == 'switch.Component' or instance.component.type.switch_class.title == 'switch.Group':
+                nested_component = NestedComponent(instance_ptr=instance)
+                nested_component.save_base(raw=True)
+
+                for port in ComponentPort.objects.filter(instance_id=old_pk).all():
+                    old_port_pk = port.pk
+                    port.pk = None
+                    port.id = None
+                    port.instance = instance
+                    port.uuid = uuid.uuid4()
+                    port.save()
+                    port_translations[old_port_pk] = port.pk
+
+            elif instance.component.type.switch_class.title == 'switch.VirtualResource' or instance.component.type.switch_class.title == 'switch.Attribute':
+                service_component = ServiceComponent(instance_ptr=instance)
+                service_component.save_base(raw=True)
+
+            elif instance.component.type.switch_class.title == 'switch.ComponentLink':
+                component_link = ComponentLink(instance_ptr=instance)
+                component_link.save_base(raw=True)
+
+        for original_nested_component_inside_group in NestedComponent.objects.filter(graph=self, parent__isnull=False):
+            nested_component_inside_group = NestedComponent.objects.filter(id=instance_translations[original_nested_component_inside_group.id]).first()
+            group_nested_component = NestedComponent.objects.filter(id=instance_translations[original_nested_component_inside_group.parent.id]).first()
+            nested_component_inside_group.parent = group_nested_component
+            nested_component_inside_group.save()
+
+        for original_component_link in ComponentLink.objects.filter(graph=self).all():
+            component_link = ComponentLink.objects.filter(instance_ptr_id=instance_translations[original_component_link.id]).first()
+            component_link.source_id = port_translations[original_component_link.source_id]
+            component_link.target_id = port_translations[original_component_link.target_id]
+            component_link.save()
+
+        for service_link in ServiceLink.objects.filter(graph=self).all():
+            service_link.pk = None
+            service_link.id = None
+            service_link.graph = new_graph
+            service_link.source_id = instance_translations[service_link.source_id]
+            service_link.target_id = instance_translations[service_link.target_id]
+            service_link.uuid = uuid.uuid4()
+            service_link.save()
+
 
 class Application(GraphBase):
     uuid = models.UUIDField(default=uuid.uuid4, editable=False)
@@ -213,7 +277,7 @@ class Application(GraphBase):
                     "port_bindings": {
                       "type": "list",
                       "entry_schema": {
-                        "type": "stringg"
+                        "type": "string"
                       }
                     }
                   }
@@ -320,6 +384,82 @@ class Application(GraphBase):
         return {
             'data': data
         }
+
+
+class ApplicationInstance(GraphBase):
+    application = models.ForeignKey(Application, related_name='runs')
+    type = models.IntegerField(default=0)
+    status = models.IntegerField(default=0)
+
+    class JSONAPIMeta:
+        resource_name = "switchappinstances"
+
+    def clone_from_application(self):
+        instance_translations = {}
+        port_translations = {}
+
+        for instance in Instance.objects.filter(graph=self.application).all():
+            clone_instance = False
+
+            old_pk = instance.pk
+            instance.pk = None
+            instance.id = None
+            instance.graph = self
+            instance.uuid = uuid.uuid4()
+
+            if instance.component.type.switch_class.title == 'switch.Component':
+                instance.save()
+
+                nested_component = NestedComponent(instance_ptr=instance)
+                nested_component.save_base(raw=True)
+
+                for port in ComponentPort.objects.filter(instance_id=old_pk).all():
+                    old_port_pk = port.pk
+                    port.pk = None
+                    port.id = None
+                    port.instance = instance
+                    port.uuid = uuid.uuid4()
+                    port.save()
+                    port_translations[old_port_pk] = port.pk
+
+            elif instance.component.type.switch_class.title == 'switch.VirtualResource':
+                instance.component = Component.objects.filter(type__switch_class__title='switch.Host')
+                instance.last_x = 0
+                instance.last_y = 0
+                instance.save()
+
+                nested_component = NestedComponent(instance_ptr=instance)
+                nested_component.save_base(raw=True)
+
+            elif instance.component.type.switch_class.title == 'switch.ComponentLink':
+                instance.save()
+
+                component_link = ComponentLink(instance_ptr=instance)
+                component_link.save_base(raw=True)
+
+            instance_translations[old_pk] = instance.pk
+
+        # for original_nested_component_inside_group in NestedComponent.objects.filter(graph=self, parent__isnull=False):
+        #     nested_component_inside_group = NestedComponent.objects.filter(id=instance_translations[original_nested_component_inside_group.id]).first()
+        #     group_nested_component = NestedComponent.objects.filter(id=instance_translations[original_nested_component_inside_group.parent.id]).first()
+        #     nested_component_inside_group.parent = group_nested_component
+        #     nested_component_inside_group.save()
+
+        for original_component_link in ComponentLink.objects.filter(graph=self.application).all():
+            component_link = ComponentLink.objects.filter(instance_ptr_id=instance_translations[original_component_link.id]).first()
+            component_link.source_id = port_translations[original_component_link.source_id]
+            component_link.target_id = port_translations[original_component_link.target_id]
+            component_link.save()
+
+        for original_service in ServiceComponent.objects.filter(graph=self.application).all():
+            service = NestedComponent.objects.filter(instance_ptr_id=instance_translations[original_service.id]).first()
+            if service is not None:
+                print set(original_service.get_source_components())
+                deployed_host = NestedComponent.objects.filter(instance_ptr_id=instance_translations[original_service.id]).first()
+                for original_component_id in original_service.get_source_components():
+                    component = NestedComponent.objects.filter(instance_ptr_id=instance_translations[original_component_id]).first()
+                    component.parent = deployed_host
+                    component.save()
 
 
 class ComponentClass(models.Model):
@@ -515,7 +655,7 @@ class NestedComponent(Instance):
     def get_graph(self):
         graph_obj = super(NestedComponent, self).get_graph()
 
-        if self.component.type.switch_class.title == 'switch.Group':
+        if self.component.type.switch_class.title in ['switch.Group', 'switch.Host']:
             graph_obj['embeds'] = []
 
             for child in self.children.all():
@@ -785,6 +925,25 @@ class ServiceComponent(Instance):
         properties['class'] = self.component.type.title
 
         return data_obj
+
+    def get_source_components(self, visited=None):
+        components = []
+
+        if visited is None:
+            visited = []
+
+        for link in ServiceLink.objects.filter(source=self).all():
+            if link.id not in visited:
+                visited.append(link.id)
+                target = ServiceComponent.objects.filter(id=link.target_id).first()
+                if target is not None:
+                    components += target.get_source_components(visited)
+                else:
+                    target = NestedComponent.objects.filter(id=link.target_id).first()
+                    if target is not None:
+                        components.append(target.id)
+
+        return components
 
 
 class SwitchComponentAdmin(admin.ModelAdmin):

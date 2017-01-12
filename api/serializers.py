@@ -1,7 +1,8 @@
 import json
 
 from rest_framework import serializers
-from models import Application, Component, ComponentType, Instance, NestedComponent, ServiceComponent, ComponentPort, ServiceLink, GraphBase,SwitchDocument
+from models import Application, Component, ComponentType, Instance, NestedComponent, ServiceComponent, ComponentPort, ServiceLink, GraphBase,SwitchDocument, \
+    ApplicationInstance
 from django.contrib.auth.models import User
 
 
@@ -30,6 +31,17 @@ class ApplicationSerializer(serializers.ModelSerializer):
 
     def get_belongs_to_user(self, obj):
         return self.context['request'].user == obj.user
+
+
+class ApplicationInstanceSerializer(serializers.ModelSerializer):
+    belongs_to_user = serializers.SerializerMethodField(read_only=True, required=False)
+
+    class Meta:
+        model = ApplicationInstance
+        fields = ('id', 'title', 'status', 'belongs_to_user', 'created_at')
+
+    def get_belongs_to_user(self, obj):
+        return self.context['request'].user == obj.application.user
 
 
 class ComponentSerializer(serializers.ModelSerializer):

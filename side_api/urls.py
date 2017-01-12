@@ -18,13 +18,16 @@ from rest_framework_nested import routers
 from rest_framework.authtoken.views import obtain_auth_token
 
 import views
-from api.views import ServiceLinkViewSet, UserViewSet, ApplicationViewSet, ComponentViewSet, ComponentTypeViewSet, \
-     InstanceViewSet, ApplicationGraphView, ComponentGraphView, PortViewSet, SwitchDocumentViewSet, \
-     GraphViewSet
+from api.views.core import UserViewSet, SwitchDocumentViewSet
+from api.views.application import ApplicationViewSet, ApplicationGraphView
+from api.views.instance import ApplicationInstanceViewSet, ApplicationInstanceGraphView
+from api.views.component import ComponentViewSet, ComponentTypeViewSet, ComponentGraphView
+from api.views.graph import GraphViewSet, InstanceViewSet, PortViewSet, ServiceLinkViewSet
 
 router = routers.DefaultRouter(trailing_slash=False)
 router.register("users", UserViewSet, base_name="user")
 router.register("switchapps", ApplicationViewSet, base_name="switchapps")
+router.register("switchappinstances", ApplicationInstanceViewSet, base_name="switchappinstances")
 router.register("switchcomponents", ComponentViewSet, base_name="switchcomponents")
 router.register("switchcomponenttypes", ComponentTypeViewSet, base_name="switchcomponenttypes")
 router.register("switchcomponentinstances", InstanceViewSet, base_name="switchcomponentinstances")
@@ -40,5 +43,6 @@ urlpatterns = [
     url(r'^api-auth-token/', obtain_auth_token),
     url(r'^api-register/', views.register, name='register'),
     url(r'^api/switchapps/(?P<pk>[^/.]+)/graph', ApplicationGraphView.as_view()),
+    url(r'^api/switchappinstances/(?P<pk>[^/.]+)/graph', ApplicationInstanceGraphView.as_view()),
     url(r'^api/switchcomponents/(?P<pk>[^/.]+)/graph', ComponentGraphView.as_view()),
 ]
