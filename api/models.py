@@ -34,6 +34,12 @@ class GraphBase(models.Model):
         resource_name = "switchgraphs"
         abstract = True
 
+    def __unicode__(self):
+        return 'SwitchGraph: ' + self.title
+
+    def get_new_notifications(self):
+        return self.notifications.filter(viewed=False)
+
     def get_instances(self):
         return Instance.objects.filter(graph=self).select_subclasses()
 
@@ -158,6 +164,20 @@ class GraphBase(models.Model):
             service_link.target_id = instance_translations[service_link.target_id]
             service_link.uuid = uuid.uuid4()
             service_link.save()
+
+
+class Notification(models.Model):
+
+    class JSONAPIMeta:
+        resource_name = "switchnotifications"
+
+    graph = models.ForeignKey(GraphBase, related_name='notifications')
+    title = models.CharField(max_length=512)
+    message = models.CharField(max_length=2048)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    severity = models.IntegerField(default=0)
+    viewed = models.BooleanField(default=False)
 
 
 class Application(GraphBase):

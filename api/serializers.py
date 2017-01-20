@@ -2,7 +2,7 @@ import json
 
 from rest_framework import serializers
 from models import Application, Component, ComponentType, Instance, NestedComponent, ServiceComponent, ComponentPort, ServiceLink, GraphBase,SwitchDocument, \
-    ApplicationInstance
+    ApplicationInstance, Notification
 from django.contrib.auth.models import User
 
 
@@ -12,16 +12,24 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ('id', 'username', 'email')
 
 
+class NotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notification
+        fields = ('graph', 'title', 'message', 'created_at', 'severity', 'viewed')
+
+
 class ApplicationSerializer(serializers.ModelSerializer):
     visible = serializers.SerializerMethodField(read_only=True, required=False)
     editable = serializers.SerializerMethodField(read_only=True, required=False)
     belongs_to_user = serializers.SerializerMethodField(read_only=True, required=False)
     user = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
+    notifications = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    unread_notifications = serializers.SerializerMethodField(read_only=True, required=False)
 
     class Meta:
         model = Application
         fields = ('id', 'uuid', 'title', 'description', 'user', 'public_view', 'public_editable',
-                  'status', 'belongs_to_user', 'visible', 'editable')
+                  'status', 'belongs_to_user', 'visible', 'editable', 'notifications', 'unread_notifications')
 
     def get_visible(self, obj):
         return self.context['request'].user == obj.user or obj.public_editable or obj.public_view
@@ -31,6 +39,10 @@ class ApplicationSerializer(serializers.ModelSerializer):
 
     def get_belongs_to_user(self, obj):
         return self.context['request'].user == obj.user
+
+    def get_unread_notifications(self, obj):
+        qs = Notification.objects.filter(graph__id=obj.pk, viewed=False)
+        return len(qs)
 
 
 class ApplicationInstanceSerializer(serializers.ModelSerializer):
