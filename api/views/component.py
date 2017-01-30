@@ -53,24 +53,9 @@ class ComponentViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         switch_type = ComponentType.objects.get(id=self.request.data['type']['id'])
         component = serializer.save(type=switch_type, user=self.request.user)
 
-        if component.type.title == "Requirement":
-            properties = {}
-            properties['machine_type'] = "SET_ITS_VALUE"
-            properties['location'] = "SET_ITS_VALUE"
-            properties = yaml.dump(properties, Dumper=YamlDumper, default_flow_style=False)
-        elif component.type.title == "Component Link":
-            properties = {}
-            properties['netmask'] = "SET_ITS_VALUE"
-            properties['source_address'] = "SET_ITS_VALUE"
-            properties['target_address'] = "SET_ITS_VALUE"
-            properties['bandwidth'] = "SET_ITS_VALUE"
-            properties['latency'] = "SET_ITS_VALUE"
-            properties = yaml.dump(properties, Dumper=YamlDumper, default_flow_style=False)
-        else:
-            properties = Instance._meta.get_field_by_name('properties')[0].get_default()
-
         instance = Instance.objects.create(graph=component, component=component, title=component.title,
-                                           last_x=400, last_y=200, mode='single', properties=properties)
+                                           last_x=400, last_y=200, mode='single', properties=component.get_default_properties_value(),
+                                           artifacts=component.get_default_artifacts_value())
 
         if component.type.switch_class.title == 'switch.Component' or component.type.switch_class.title == 'switch.Group':
             nested_component = NestedComponent(instance_ptr=instance)
@@ -103,4 +88,3 @@ class ComponentGraphView(PaginateByMaxMixin, APIView):
         component = Component.objects.filter(id=pk).first()
         component.put_graph(request.data)
         return Response(component.get_graph())
-

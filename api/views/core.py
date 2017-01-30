@@ -16,17 +16,6 @@ from django.contrib.auth import get_user_model
 from side_api import utils
 from api.services import DripManagerService
 
-from yaml.dumper import Dumper
-from yaml.representer import SafeRepresenter
-
-
-class YamlDumper(Dumper):
-    def increase_indent(self, flow=False, indentless=False):
-        return super(YamlDumper, self).increase_indent(flow, False)
-
-YamlDumper.add_representer(str, SafeRepresenter.represent_str)
-YamlDumper.add_representer(unicode, SafeRepresenter.represent_unicode)
-
 
 class UserViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     serializer_class = UserSerializer
@@ -47,20 +36,26 @@ class UserViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     @detail_route(methods=['post'], permission_classes=[])
     def configureEC2account(self, request, pk=None, *args, **kwargs):
         drip_manager_service = DripManagerService(utils.getPropertyFromConfigFile("DRIP_MANAGER_API", "url"))
-        aws_root_key_document = SwitchDocument.objects.filter(user=request.user, description="amazon root key").first()
-        california_key_document = SwitchDocument.objects.filter(user=request.user, description="California key").first()
-        virginia_key_document = SwitchDocument.objects.filter(user=request.user, description="Virginia key").first()
-        drip_manager_response = drip_manager_service.configure_ec2_account(request.user, aws_root_key_document,
-                                                                         california_key_document, virginia_key_document)
+
+        aws_root_key_document = SwitchDocument.objects.filter(user=request.user, document_type=SwitchDocumentType.objects.get(name="AWS_ROOT_KEY")).first()
+        california_key_document = SwitchDocument.objects.filter(user=request.user, document_type=SwitchDocumentType.objects.get(name="AWS_California_Key")).first()
+        virginia_key_document = SwitchDocument.objects.filter(user=request.user, document_type=SwitchDocumentType.objects.get(name="AWS_Virginia_Key")).first()
 
         details = []
 
-        if drip_manager_response.status_code == 200:
-            result = 'ok'
-            details.append(drip_manager_response.text)
+        if aws_root_key_document and california_key_document and virginia_key_document:
+            drip_manager_response = drip_manager_service.configure_ec2_account(request.user, aws_root_key_document,
+                                                                california_key_document, virginia_key_document)
+            if drip_manager_response.status_code == 200:
+                result = 'ok'
+                details.append(drip_manager_response.text)
+            else:
+                result = 'error'
+                details.append(drip_manager_response.text)
         else:
             result = 'error'
-            details.append(drip_manager_response.text)
+            details.append('Please make sure you to upload files for: AWS root key, california key and virginia key into the system')
+
 
         validation_result = {
             'result': result,
@@ -75,7 +70,7 @@ class SwitchDocumentViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated, )
     serializer_class = SwitchDocumentSerializer
     queryset = SwitchDocument.objects.all()
-    parser_classes = (JSONParser, FormParser, MultiPartParser,)
+    parser_classes = (JSONParser,FormParser,MultiPartParser,)
 
     def list(self, request, **kwargs):
         documents = SwitchDocument.objects.filter()
@@ -86,7 +81,16 @@ class SwitchDocumentViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         return SwitchDocument.objects.filter()
 
     def perform_create(self, serializer):
-        document = serializer.save(user=self.request.user)
+        document_type = SwitchDocumentType.objects.get(pk=self.request.data['document_type_id'])
+        document = serializer.save(user=self.request.user, document_type=document_type)
+
+
+class SwitchDocumentTypeViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
+    serializer_class = SwitchDocumentTypeSerializer
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+    queryset = SwitchDocumentType.objects.all()
+    parser_classes = (JSONParser,)
 
 
 class NotificationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):

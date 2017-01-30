@@ -97,7 +97,8 @@ class InstanceViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
 
         base_instance = component.get_base_instance()
 
-        new_instance = serializer.save(graph=graph, component=component, properties=base_instance.properties)
+        new_instance = serializer.save(graph=graph, component=component, properties=base_instance.properties,
+                                       artifacts=base_instance.artifacts)
         new_instance.save()
 
         x_change = base_instance.last_x - new_instance.last_x

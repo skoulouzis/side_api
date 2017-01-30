@@ -1,5 +1,6 @@
 import json
 import os
+import re
 
 from rest_framework.views import APIView
 from django.http import HttpResponse
@@ -74,7 +75,7 @@ class DripManagerService:
             <user>""" + user.username + """</user>
             <pwd>""" + user.password + """</pwd>
         </register>"""
-        headers = {'Content-Type': 'text/xml'}  # set what your server accepts
+        headers = {'Content-Type': 'text/xml'}
         r = requests.post(self.drip_manager_endpoint + "/account/register", data=xml, headers=headers)
         return r
 
@@ -90,10 +91,10 @@ class DripManagerService:
             <pwd>""" + user.password + """</pwd>
             <keyid>""" + line1.split("=")[1] + """</keyid>
  	        <key>""" + line2.split("=")[1] + """</key>
- 	        <loginKey domain_name="Virginia">""" + vi_key + """</loginKey>
- 	        <loginKey domain_name="California">""" + ca_key + """</loginKey>
+ 	        <loginKey domain_name="Virginia">""" + re.sub(r'\r?\n','\\\\n', vi_key) + """</loginKey>
+ 	        <loginKey domain_name="California">""" + re.sub(r'\r?\n','\\\\n', ca_key) + """</loginKey>
         </configure>"""
-        headers = {'Content-Type': 'text/xml'}  # set what your server accepts
+        headers = {'Content-Type': 'text/xml'}
         r = requests.post(self.drip_manager_endpoint + "/account/configure/ec2", data=xml, headers=headers)
         return r
 
@@ -107,13 +108,10 @@ class DripManagerService:
             <user>""" + user.username + """</user>
             <pwd>""" + user.password + """</pwd>"""
 
-        # with open(path_tosca_file, 'r') as f:
-        #     app_tosca = f.read()
-
-        xml += """<file>"""+ app_tosca + """</file>"""
+        xml += """<file>"""+ re.sub(r'\r?\n','\\\\n', app_tosca) + """</file>"""
         xml += """</plan>"""
 
-        headers = {'Content-Type': 'text/xml'}  # set what your server accepts
+        headers = {'Content-Type': 'text/xml'}
         r = requests.post(self.drip_manager_endpoint + "/plan/planning", data=xml, headers=headers)
         return r
 
@@ -127,14 +125,14 @@ class DripManagerService:
         for path_tosca_file in path_tosca_files:
             with open(path_tosca_file, 'r') as f:
                 tosca_content = f.read()
-            xml += """<file name='""" + os.path.basename(path_tosca_file) + """' level='1'>"""+ tosca_content + """</file>"""
+            xml += """<file name='""" + os.path.basename(path_tosca_file) + """' level='1'>"""+ re.sub(r'\r?\n','\\\\n',tosca_content) + """</file>"""
 
         with open(path_all_topology_file, 'r') as f:
             tosca_content = f.read()
-        xml +="""<file name='""" + os.path.basename(path_all_topology_file) + """' level='0'>"""+ tosca_content + """</file>"""
+        xml +="""<file name='""" + os.path.basename(path_all_topology_file) + """' level='0'>"""+ re.sub(r'\r?\n','\\\\n', tosca_content) + """</file>"""
 
         xml +="""</upload>"""
-        headers = {'Content-Type': 'text/xml'}  # set what your server accepts
+        headers = {'Content-Type': 'text/xml'}
         r = requests.post(self.drip_manager_endpoint + "/provision/upload", data=xml, headers=headers)
         return r
 
@@ -144,25 +142,26 @@ class DripManagerService:
          <confUserKey>
              <user>""" + user.username + """</user>
              <pwd>""" + user.password + """</pwd>
-             <userKey name="id_dsa.pub">""" + user_ssh_document.file.read() + """</loginKey>
+             <userKey name="id_rsa.pub">""" + re.sub(r'\r?\n','\\\\n', user_ssh_document.file.read()) + """</userKey>
              <action>""" + action_number + """</action>
         </confUserKey>"""
-        headers = {'Content-Type': 'text/xml'}  # set what your server accepts
+        headers = {'Content-Type': 'text/xml'}
         r = requests.post(self.drip_manager_endpoint + "/provision/confuserkey", data=xml, headers=headers)
         return r
 
-    def conf_script(self, user, user_ssh_document, action_number):
+    def conf_script(self, user, conf_script_file, action_number):
+        with open(conf_script_file, 'r') as f:
+            script = f.read()
         xml = """<?xml version='1.0' encoding='utf-8'?>
          <confScript>
              <user>""" + user.username + """</user>
              <pwd>""" + user.password + """</pwd>
-             <script">""" + user_ssh_document.file.read() + """</script>
+             <script><![CDATA[""" + re.sub(r'\r?\n','\\\\n',script) + """]]></script>
              <action>""" + action_number + """</action>
         </confScript>"""
-        headers = {'Content-Type': 'text/xml'}  # set what your server accepts
+        headers = {'Content-Type': 'text/xml'}
         r = requests.post(self.drip_manager_endpoint + "/provision/confscript", data=xml, headers=headers)
         return r
-
 
     def execute(self, user, action_number):
         xml = """<?xml version='1.0' encoding='utf-8'?>
@@ -171,7 +170,7 @@ class DripManagerService:
              <pwd>""" + user.password + """</pwd>
              <action>""" + action_number + """</action>
         </execute>"""
-        headers = {'Content-Type': 'text/xml'}  # set what your server accepts
+        headers = {'Content-Type': 'text/xml'}
         r = requests.post(self.drip_manager_endpoint + "/provision/execute", data=xml, headers=headers)
         return r
 
@@ -183,6 +182,6 @@ class DripManagerService:
              <pwd>""" + user.password + """</pwd>
              <action>""" + action_number + """</action>
         </deploy>"""
-        headers = {'Content-Type': 'text/xml'}  # set what your server accepts
-        r = requests.post(self.drip_manager_endpoint + "/provision/deploy/" + docker_orchestrator_type, data=xml, headers=headers)
+        headers = {'Content-Type': 'text/xml'}
+        r = requests.post(self.drip_manager_endpoint + "/deploy/" + docker_orchestrator_type, data=xml, headers=headers)
         return r

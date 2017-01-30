@@ -2,27 +2,17 @@ from __future__ import unicode_literals
 
 import yaml
 import uuid as uuid
+import sys
+import hashlib
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.contrib import admin
 from model_utils.managers import InheritanceManager
-
-from yaml.dumper import Dumper
-from yaml.representer import SafeRepresenter
-
-
-class YamlDumper(Dumper):
-    def increase_indent(self, flow=False, indentless=False):
-        return super(YamlDumper, self).increase_indent(flow, False)
-
-
-YamlDumper.add_representer(str, SafeRepresenter.represent_str)
-YamlDumper.add_representer(unicode, SafeRepresenter.represent_unicode)
-
+from side_api import utils
 
 class GraphBase(models.Model):
-    user = models.ForeignKey(User, null=True, blank=True, default = None)
+    user = models.ForeignKey(User, null=True, blank=True, default=None)
     title = models.CharField(max_length=512)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -97,7 +87,6 @@ class GraphBase(models.Model):
                     instance.last_x = cell['position']['x']
                     instance.last_y = cell['position']['y']
                     instance.save()
-
         except Exception as e:
             print e.message
 
@@ -165,6 +154,29 @@ class GraphBase(models.Model):
             service_link.uuid = uuid.uuid4()
             service_link.save()
 
+    def get_current_graph_dimensions(self):
+        top_x = sys.maxint
+        top_y = sys.maxint
+        bottom_x = 0
+        bottom_y = 0
+        instances = Instance.objects.filter(graph=self).select_subclasses()
+
+        for instance in instances:
+            if instance.last_x < top_x:
+                top_x = instance.last_x
+            if instance.last_y < top_y:
+                top_y = instance.last_y
+            if instance.last_x > bottom_x:
+                bottom_x = instance.last_x
+            if instance.last_y > bottom_y:
+                bottom_y = instance.last_y
+        return {
+            'top_x': top_x,
+            'top_y': top_y,
+            'bottom_x': bottom_x,
+            'bottom_y': bottom_y,
+        }
+
 
 class Notification(models.Model):
 
@@ -182,7 +194,7 @@ class Notification(models.Model):
 
 class Application(GraphBase):
     uuid = models.UUIDField(default=uuid.uuid4, editable=False)
-    description = models.CharField(max_length=1024, null=True)
+    description = models.CharField(max_length=1024, blank=True)
     public_view = models.BooleanField(default=False)
     public_editable = models.BooleanField(default=False)
     # Status: 0 no plan virtual infrastructure; 1 planned; 2 provisioned; 3 deployed
@@ -195,168 +207,21 @@ class Application(GraphBase):
         return 'SwitchApp: ' + self.title + ' by ' + self.user.username
 
     def get_tosca(self):
-        artifact_types = {
-            "tosca.artifacts.Deployment.Image.Container.Docker": {
-                "derived_from": "tosca.artifacts.Deployment.Image"
-            }
-        }
-
-        data_types = {
-            "Switch.datatypes.QoS.AppComponent": {
-                "derived_from": "tosca.datatypes.Root",
-                "properties":{
-                    "response_time":{
-                        "type": "string"
-                    }
-                }
-            },
-            "Switch.datatypes.Application.Connection.EndPoint": {
-                "derived_from": "tosca.datatypes.Root",
-                "properties": {
-                    "address": {
-                        "type": "string"
-                    },
-                    "component_name": {
-                        "type": "string"
-                    },
-                    "netmask": {
-                        "type": "string"
-                    },
-                    "port_name": {
-                        "type": "string"
-                    }
-                }
-            },
-            "Switch.datatypes.Application.Connection.Multicast": {
-                "derived_from": "tosca.datatypes.Root",
-                "properties": {
-                    "multicastAddrIP": {
-                        "type": "string"
-                    },
-                    "multicastAddrPort": {
-                        "type": "integer"
-                    }
-                }
-            },
-            "Switch.datatypes.Network.EndPoint": {
-                "derived_from": "tosca.datatypes.Root",
-                "properties": {
-                    "address": {
-                        "type": "string"
-                    },
-                    "host_name": {
-                        "type": "string"
-                    },
-                    "netmask": {
-                        "type": "string"
-                    },
-                    "port_name": {
-                        "type": "string"
-                    }
-                }
-            },
-            "Switch.datatypes.Network.Multicast": {
-                "derived_from": "tosca.datatypes.Root",
-                "properties": {
-                    "multicastAddrIP": {
-                        "type": "string"
-                    },
-                    "multicastAddrPort": {
-                        "type": "integer"
-                    }
-                }
-            }
-        }
-
-        node_types = {
-          "Switch.nodes.Application.Container.Docker": {
-            "derived_from": "tosca.nodes.Container.Application",
-            "properties": {
-              "QoS": {
-                "type": "Switch.datatypes.QoS.AppComponent"
-              }
-            },
-            "artifacts": {
-              "docker_image": {
-                "type": "tosca.artifacts.Deployment.Image.Container.Docker"
-              }
-            },
-            "interfaces": {
-              "Standard": {
-                "create": {
-                  "inputs": {
-                    "command": {
-                      "type": "string"
-                    },
-                    "exported_ports": {
-                      "type": "list",
-                      "entry_schema": {
-                        "type": "string"
-                      }
-                    },
-                    "port_bindings": {
-                      "type": "list",
-                      "entry_schema": {
-                        "type": "string"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-
         repositories = {}
+        for repository in SwitchRepository.objects.all():
+            repositories.update(repository.get_tosca())
 
-        components = []
-        external = []
-        network = []
-        attributes = []
-        groups = []
-        components_connections = []
-        services_connections = []
-        virtual_machines = []
-        virtual_networks = []
+        artifact_types = {}
+        for tosca_class in ToscaClass.objects.filter(type=ToscaClass.ARTIFACT_TYPE, is_normative=False).all():
+            artifact_types.update(tosca_class.get_tosca())
 
-        instances = Instance.objects.filter(graph=self).select_subclasses()
+        data_types = {}
+        for data_type in DataType.objects.filter(parent__isnull=False).all():
+            data_types.update(data_type.get_tosca())
 
-        for instance in instances:
-            try:
-                tosca_node_type = instance.component.get_base_instance().get_tosca_type()
-                key, value = tosca_node_type.popitem()
-                if key not in node_types:
-                    node_types[key] = value
-
-                graph_obj = instance.get_tosca()
-                if instance.component.type.title == 'Component':
-                    components.append(graph_obj)
-                elif instance.component.type.title == 'External Component':
-                    external.append(graph_obj)
-                elif instance.component.type.title == 'Component Group':
-                    groups.append(graph_obj)
-                elif instance.component.type.title == 'Component Link':
-                    components_connections.append(graph_obj)
-                elif instance.component.type.title == 'Network':
-                    network.append(graph_obj)
-                elif instance.component.type.title == 'Virtual Machine':
-                    virtual_machines.append(graph_obj)
-                elif instance.component.type.title == 'Virtual Network':
-                    virtual_networks.append(graph_obj)
-                elif instance.component.type.switch_class.title == 'switch.Attribute':
-                    attributes.append(graph_obj)
-
-            except Exception as e:
-                print e.message
-
-        for service_link in self.service_links.all():
-            data_obj = {
-                str(service_link.source.uuid) + '--' + str(service_link.target.uuid): {
-                    'target': {'id': str(service_link.target.uuid)},
-                    'source': {'id': str(service_link.source.uuid)}
-                }
-            }
-            services_connections.append(data_obj)
+        node_types = {}
+        for node_type in ComponentType.objects.all():
+            node_types.update(node_type.get_tosca())
 
         data = {}
         data['tosca_definitions_version'] = "tosca_simple_yaml_1_0"
@@ -369,41 +234,195 @@ class Application(GraphBase):
         data['topology_template']={}
         node_templates = data['topology_template'].setdefault('node_templates', {})
 
+        groups = {}
 
-        if len(components) > 0:
-            node_templates['components'] = components
+        instances = Instance.objects.filter(graph=self).select_subclasses()
+        for instance in instances:
+            graph_obj = instance.get_tosca()
+            if instance.component.type.get_base_type().title == 'Component':
+                node_templates.update(graph_obj)
+            # elif instance.component.type.title == 'External Component':
+            #     external.append(graph_obj)
+            elif instance.component.type.get_base_type().title == 'Component Group':
+                 groups.update(graph_obj)
+            elif instance.component.type.get_base_type().title == 'Component Link':
+                node_templates.update(graph_obj)
+            # elif instance.component.type.title == 'Network':
+            #     network.append(graph_obj)
+            elif instance.component.type.get_base_type().title == 'Virtual Machine':
+                node_templates.update(graph_obj)
+            elif instance.component.type.get_base_type().title == 'Virtual Network':
+                 node_templates.update(graph_obj)
+            elif instance.component.type.switch_class.title == 'switch.Attribute':
+                if instance.component.type.title == 'Monitoring Agent':
+                    node_templates.update(graph_obj)
 
-        if len(external) > 0:
-            node_templates['external_components'] = external
-
-        if len(network) > 0:
-            node_templates['network_components'] = network
-
-        if len(attributes) > 0:
-            node_templates['attributes'] = attributes
-
-        if len(groups) > 0:
-            node_templates['groups']['node_templates'] = groups
-
-        if len(components_connections) > 0:
-            connections = node_templates.setdefault('connections', {})
-            connections['components_connections'] = components_connections
-
-        if len(services_connections) > 0:
-            connections = node_templates.setdefault('connections', {})
-            connections['services_connections'] = services_connections
-
-        if len(virtual_machines) > 0:
-            connections = node_templates.setdefault('virtual_resources', {})
-            connections['virtual_machines'] = virtual_machines
-
-        if len(virtual_networks) > 0:
-            connections = node_templates.setdefault('virtual_resources', {})
-            connections['virtual_networks'] = virtual_networks
+        data['groups'] = groups
 
         return {
             'data': data
         }
+
+
+class DataType(models.Model):
+    name = models.CharField(max_length=512)
+    parent = models.ForeignKey('self', null=True, blank=True, related_name='children')
+    default_value = models.TextField(blank=True)
+
+    class JSONAPIMeta:
+        resource_name = "switchdatatypes"
+
+    def __unicode__(self):
+        return self.name
+
+    def get_tosca(self):
+        obj_definition = {}
+        if self.parent is not None:
+            obj_definition['derived_from'] = self.parent.name
+        if self.properties.count() > 0:
+            properties = {}
+            for property in self.properties.all():
+                properties.update(property.get_tosca())
+            obj_definition['properties'] = properties
+        return {self.name:obj_definition}
+
+    def get_default_value(self):
+        if self.default_value:
+            return yaml.load(str(self.default_value).replace("\t", "    "))
+        else:
+            properties = {}
+
+            if self.parent is not None:
+                properties.update(self.parent.get_default_value())
+
+            for data_type_property in self.properties.all():
+                properties[data_type_property.name] = data_type_property.get_default_value()
+
+            return properties
+
+
+class DataTypeProperty(models.Model):
+    name = models.CharField(max_length=512)
+    data_type = models.ForeignKey(DataType)
+    default_value = models.TextField(blank=True)
+    is_collection = models.BooleanField(default=False)
+    parent_data_type = models.ForeignKey(DataType, related_name='properties')
+
+    class Meta:
+        verbose_name_plural = "Data type properties"
+
+    class JSONAPIMeta:
+        resource_name = "switchdatatypeproperties"
+
+    def __unicode__(self):
+        return self.name
+
+    def get_tosca(self):
+        obj_definition = {}
+        if self.is_collection:
+            obj_definition['type'] = 'map'
+            obj_definition['entry_schema'] = {'type':self.data_type.name}
+        else:
+            obj_definition['type'] = self.data_type.name
+        return {self.name: obj_definition}
+
+    def get_default_value(self):
+        if self.default_value:
+            return yaml.load(str(self.default_value).replace("\t", "    "))
+        else:
+            if self.is_collection:
+                map = {}
+                for x in range(0, 3):
+                    map[self.data_type.name.rpartition('.')[2] + '_' + str(x)] = self.data_type.get_default_value()
+                return map
+            else:
+                return self.data_type.get_default_value()
+
+
+class ToscaClass(models.Model):
+    NODE_TYPE = 'N'
+    ARTIFACT_TYPE = 'A'
+    GROUP_TYPE = 'G'
+    TYPE_CHOICES = (
+        (NODE_TYPE, 'Node type'),
+        (ARTIFACT_TYPE, 'Artifact type'),
+        (GROUP_TYPE, 'Group type')
+    )
+
+    name = models.CharField(max_length=512)
+    type = models.CharField(
+        max_length=2,
+        choices=TYPE_CHOICES,
+        default=NODE_TYPE,
+    )
+    parent = models.ForeignKey('self', null=True, blank=True)
+    prefix = models.CharField(max_length=512)
+    is_normative = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name_plural = "Tosca classes"
+
+    class JSONAPIMeta:
+        resource_name = "toscaclass"
+
+    def __unicode__(self):
+        return self.get_full_name()
+
+    def get_full_name(self):
+        return self.prefix + '.' + self.name
+
+    def get_tosca(self):
+        obj_definition = {}
+        if self.parent is not None:
+            obj_definition['derived_from'] = self.parent.get_full_name()
+        return {self.get_full_name(): obj_definition}
+
+
+class SwitchRepository(models.Model):
+    name = models.CharField(max_length=512, unique=True)
+    description = models.CharField(max_length=512, blank=True)
+    url = models.URLField(max_length=512)
+    credential = models.TextField(blank=True)
+
+    class Meta:
+        verbose_name_plural = "Switch repositories"
+
+    class JSONAPIMeta:
+        resource_name = "switchrepository"
+
+    def __unicode__(self):
+        return self.name
+
+    def get_tosca(self):
+        obj_definition = {}
+        if self.description:
+            obj_definition['description'] = self.description
+        obj_definition['url'] = self.url
+        obj_definition['credential'] = yaml.load(str(self.credential).replace("\t", "    "))
+        return {self.name: obj_definition}
+
+
+class SwitchArtifact(models.Model):
+    name = models.CharField(max_length=512, unique=True)
+    type = models.ForeignKey(ToscaClass, limit_choices_to={'type': ToscaClass.ARTIFACT_TYPE})
+    file = models.CharField(max_length=512)
+    repository = models.ForeignKey(SwitchRepository)
+
+    class Meta:
+        verbose_name_plural = "Switch artifacts"
+
+    class JSONAPIMeta:
+        resource_name = "switchartifact"
+
+    def __unicode__(self):
+        return self.name
+
+    def get_tosca(self):
+        obj_definition = {}
+        obj_definition['type'] = self.type.get_full_name()
+        obj_definition['file'] = self.file
+        obj_definition['repository'] = self.repository.name
+        return {self.name: obj_definition}
 
 
 class ApplicationInstance(GraphBase):
@@ -483,10 +502,13 @@ class ApplicationInstance(GraphBase):
 
 
 class ComponentClass(models.Model):
-    title = models.CharField(max_length=512, null=True)
-    classpath = models.CharField(max_length=512, null=True)
+    title = models.CharField(max_length=512)
+    classpath = models.CharField(max_length=512, blank=True)
     is_core_component = models.BooleanField(default=False)
     is_template_component = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name_plural = "Component classes"
 
     class JSONAPIMeta:
         resource_name = "switchcomponentclass"
@@ -497,16 +519,18 @@ class ComponentClass(models.Model):
 
 class ComponentType(models.Model):
     parent = models.ForeignKey('self', null=True, blank=True, related_name='children')
-    title = models.CharField(max_length=512, null=True)
+    title = models.CharField(max_length=512)
     switch_class = models.ForeignKey(ComponentClass, related_name='types')
-    primary_colour = models.CharField(max_length=512, null=True)
-    secondary_colour = models.CharField(max_length=512, null=True)
-    icon_name = models.CharField(max_length=1024, null=True)
-    icon_style = models.CharField(max_length=1024, null=True)
-    icon_class = models.CharField(max_length=1024, null=True)
-    icon_svg = models.CharField(max_length=1024, null=True)
-    icon_code = models.CharField(max_length=512, null=True)
-    icon_colour = models.CharField(max_length=512, null=True)
+    primary_colour = models.CharField(max_length=512, blank=True)
+    secondary_colour = models.CharField(max_length=512, blank=True)
+    icon_name = models.CharField(max_length=1024, blank=True)
+    icon_style = models.CharField(max_length=1024, blank=True)
+    icon_class = models.CharField(max_length=1024, blank=True)
+    icon_svg = models.CharField(max_length=1024, blank=True)
+    icon_code = models.CharField(max_length=512, blank=True)
+    icon_colour = models.CharField(max_length=512, blank=True)
+    tosca_class = models.ForeignKey(ToscaClass)
+    artifacts = models.ManyToManyField(SwitchArtifact, blank=True)
 
     class JSONAPIMeta:
         resource_name = "switchcomponenttypes"
@@ -540,13 +564,77 @@ class ComponentType(models.Model):
             classpath = self.switch_class.title + '.' + classpath
         return classpath
 
+    def get_tosca(self):
+        obj_definition = {}
+
+        if self.tosca_class.parent is not None:
+            obj_definition['derived_from'] = self.tosca_class.parent.get_full_name()
+        if self.properties.count() > 0:
+            properties = {}
+            for property in self.properties.all():
+                properties.update(property.get_tosca())
+            obj_definition['properties'] = properties
+        if self.artifacts.count() > 0:
+            artifacts = {}
+            for artifact in self.artifacts.all():
+                artifacts.update(artifact.get_tosca())
+            obj_definition['artifacts'] = artifacts
+        return {self.tosca_class.get_full_name(): obj_definition}
+
+    def get_default_properties_value(self):
+        properties = {}
+
+        if self.parent is not None:
+            properties.update(self.parent.get_default_properties_value())
+
+        for component_type_property in self.properties.all():
+            properties[component_type_property.name] = component_type_property.get_default_value()
+
+        return properties
+
+    def get_default_artifacts_value(self):
+        artifacts = {}
+
+        if self.parent is not None:
+            artifacts.update(self.parent.get_default_artifacts_value())
+
+        for artifact in self.artifacts.all():
+            artifacts.update(artifact.get_tosca())
+
+        return artifacts
+
+    def save(self, *args, **kwargs):
+        if self.parent:
+            if not self.switch_class:
+                self.switch_class = self.parent.switch_class
+            if not self.primary_colour:
+                self.primary_colour = self.parent.primary_colour
+            if not self.secondary_colour:
+                self.secondary_colour = self.parent.secondary_colour
+            if not self.icon_name:
+                self.icon_name = self.parent.icon_name
+            if not self.icon_style:
+                self.icon_style = self.parent.icon_style
+            if not self.icon_class:
+                self.icon_class = self.parent.icon_class
+            if not self.icon_svg:
+                self.icon_svg = self.parent.icon_svg
+            if not self.icon_code:
+                self.icon_code = self.parent.icon_code
+            if not self.icon_colour:
+                self.icon_colour = self.parent.icon_colour
+        return super(ComponentType, self).save(*args, **kwargs)
+
 
 class ComponentTypeProperty(models.Model):
-    name = models.CharField(max_length=512, null=False)
-    type = models.CharField(max_length=512, null=False)
-    default_value = models.CharField(max_length=512, null=True)
+    name = models.CharField(max_length=512)
+    data_type = models.ForeignKey(DataType)
+    default_value = models.TextField(blank=True)
+    is_collection = models.BooleanField(default=False)
     component_type = models.ForeignKey(ComponentType, related_name='properties')
 
+    class Meta:
+        verbose_name_plural = "Component type properties"
 
     class JSONAPIMeta:
         resource_name = "switchcomponenttypeproperties"
@@ -554,9 +642,32 @@ class ComponentTypeProperty(models.Model):
     def __unicode__(self):
         return self.name
 
+    def get_tosca(self):
+        obj_definition = {}
+        if self.is_collection:
+            obj_definition['type'] = 'map'
+            obj_definition['entry_schema'] = {'type':self.data_type.name}
+        else:
+            obj_definition['type'] = self.data_type.name
+            if self.default_value:
+                obj_definition['default'] = yaml.load(str(self.default_value).replace("\t", "    "))
+        return {self.name: obj_definition}
+
+    def get_default_value(self):
+       if self.default_value:
+            return yaml.load(str(self.default_value).replace("\t", "    "))
+       else:
+           if self.is_collection:
+                map = {}
+                for x in range(0, 3):
+                    map[self.data_type.name.rpartition('.')[2] + '_' + str(x)] = self.data_type.get_default_value()
+                return map
+           else:
+                return self.data_type.get_default_value()
+
 
 class Component(GraphBase):
-    type = models.ForeignKey(ComponentType, related_name='components', null=True)
+    type = models.ForeignKey(ComponentType, related_name='components', null=False)
 
     class JSONAPIMeta:
         resource_name = "switchcomponents"
@@ -573,6 +684,20 @@ class Component(GraphBase):
     def is_template_component(self):
         return self.type.is_template()
 
+    def get_default_properties_value(self):
+        properties = self.type.get_default_properties_value()
+        if properties:
+            return yaml.dump(properties, Dumper=utils.YamlDumper, default_flow_style=False)
+        else:
+            return ""
+
+    def get_default_artifacts_value(self):
+        artifacts = self.type.get_default_artifacts_value()
+        if artifacts:
+            return yaml.dump(artifacts, Dumper=utils.YamlDumper, default_flow_style=False)
+        else:
+            return ""
+
 
 class Instance(models.Model):
     objects = InheritanceManager()
@@ -580,9 +705,10 @@ class Instance(models.Model):
     graph = models.ForeignKey(GraphBase, related_name='instances')
     component = models.ForeignKey(Component, related_name='child_instances')
     neighbors = models.ManyToManyField('self', through='ServiceLink', symmetrical=False)
-    title = models.CharField(max_length=512, null=True)
-    mode = models.CharField(max_length=512, null=True)
-    properties = models.TextField(null=True, default='data: enter metadata as YAML')
+    title = models.CharField(max_length=512)
+    mode = models.CharField(max_length=512, blank=True)
+    properties = models.TextField(blank=True, default='data: enter metadata as YAML')
+    artifacts = models.TextField(blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     last_x = models.IntegerField(null=True, default=0)
@@ -638,29 +764,13 @@ class Instance(models.Model):
         return graph_obj
 
     def get_tosca(self):
-        data_obj = {}
-        properties = {}
-
-        if 'enter metadata as YAML' not in self.properties:
-            metadata = yaml.load(str(self.properties).replace("\t", "    "))
-            properties.update(metadata)
-
-        properties['title'] = self.title
-
-        data_obj[str(self.uuid)] = properties
-
-        return data_obj
-
-    def get_tosca_type(self):
-        data_obj = {}
-        properties = {}
-
-        metadata = yaml.load(str(self.properties).replace("\t", "    "))
-        properties.update(metadata)
-
-        data_obj[self.title] = properties
-
-        return data_obj
+        obj_definition = {}
+        obj_definition['type'] = self.component.type.tosca_class.get_full_name()
+        if self.artifacts:
+            obj_definition['artifacts'] = yaml.load(str(self.artifacts).replace("\t", "    "))
+        if self.properties:
+            obj_definition['properties'] = yaml.load(str(self.properties).replace("\t", "    "))
+        return {str(self.uuid): obj_definition}
 
 
 class NestedComponent(Instance):
@@ -757,11 +867,11 @@ class NestedComponent(Instance):
 
     def get_tosca(self):
         data_obj = super(NestedComponent, self).get_tosca()
-        properties = data_obj[str(self.uuid)]
+        properties = data_obj[str(self.uuid)]['properties']
 
         if self.component.type.title == 'Component Group':
             for child in self.children.all():
-                properties.setdefault('members', []).append(str(child.uuid))
+                data_obj[str(self.uuid)].setdefault('members', []).append(str(child.uuid))
 
         else:
             properties['scaling_mode'] = self.mode
@@ -776,14 +886,36 @@ class NestedComponent(Instance):
             if self.parent is not None:
                 properties['group'] = self.parent.uuid
 
+            requirements = {}
+            for service_link in ServiceLink.objects.filter(target=self).all():
+                if service_link.source.component.type.title == 'Requirement':
+                    service_link_req_vm = ServiceLink.objects.filter(target=service_link.source,
+                                                                          source__component__type__title='Virtual Machine').first()
+                    if service_link_req_vm:
+                        # HW req has a VM link to it
+                        requirements.update({'host': str(service_link_req_vm.source.uuid)})
+                    else:
+                        # HW req hasn't got a VM link to it
+                        tosca_hw_req = service_link.source.get_tosca()
+                        requirements.update({'node_filter': {'capabilities': tosca_hw_req[str(service_link.source.uuid)]['properties']}})
+                if service_link.source.component.type.title == 'Monitoring Agent':
+                    requirements.update({'monitored_by': str(service_link.source.uuid)})
+
+                if service_link.source.component.type.title == 'Constraint':
+                    tosca_constraint = service_link.source.get_tosca()
+                    properties.update(tosca_constraint[str(service_link.source.uuid)]['properties'])
+
+            if requirements:
+                data_obj[str(self.uuid)]['requirements'] = requirements
+
         return data_obj
 
 
 class ComponentPort(models.Model):
     instance = models.ForeignKey(Instance, related_name='ports')
-    type = models.CharField(max_length=512, null=True)
-    title = models.CharField(max_length=512, null=True)
-    uuid = models.CharField(max_length=512, null=True)
+    type = models.CharField(max_length=512)
+    title = models.CharField(max_length=512)
+    uuid = models.CharField(max_length=512)
 
     class JSONAPIMeta:
         resource_name = "switchcomponentports"
@@ -846,9 +978,14 @@ class ComponentLink(Instance):
 
     def get_tosca(self):
         data_obj = super(ComponentLink, self).get_tosca()
-        properties = data_obj[str(self.uuid)]
-        properties['target'] = {'id': str(self.target.instance.uuid), 'port': self.target.uuid}
-        properties['source'] = {'id': str(self.source.instance.uuid), 'port': self.source.uuid}
+        properties = data_obj[str(self.uuid)]['properties']
+        properties['target'] = {'address': properties['target_address'], 'component_name': self.target.instance.uuid,
+                                'netmask': properties['netmask'],'port_name': self.target.uuid}
+        properties['source'] = {'address': properties['source_address'], 'component_name': self.source.instance.uuid,
+                                'netmask': properties['netmask'],'port_name': self.source.uuid}
+        del properties['netmask']
+        del properties['source_address']
+        del properties['target_address']
 
         return data_obj
 
@@ -971,17 +1108,29 @@ class SwitchComponentAdmin(admin.ModelAdmin):
 
 
 def generate_file_name(instance, filename):
-    return '/'.join(['documents', str(instance.user.id), filename])
+    return '/'.join(['documents', hashlib.md5(str(instance.user.username)).hexdigest(), 'files', filename])
+
+
+class SwitchDocumentType(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+    description = models.CharField(max_length=255, blank=True)
+
+    class JSONAPIMeta:
+        resource_name = "switchdocumenttypes"
+
+    def __unicode__(self):
+        return self.name
 
 
 class SwitchDocument(models.Model):
     user = models.ForeignKey(User)
-    description = models.CharField(max_length=255, blank=True)
     file = models.FileField(upload_to=generate_file_name)
+    document_type = models.ForeignKey(SwitchDocumentType)
+    description = models.CharField(max_length=255, blank=True)
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     class JSONAPIMeta:
         resource_name = "switchdocuments"
 
     def __unicode__(self):
-        return 'Document: ' + self.file.name + ' (' + str(self.description) + ')'
+        return str(self.description) + ' (' + self.file.name + ')'

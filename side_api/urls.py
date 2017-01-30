@@ -12,13 +12,14 @@ Class-based views
 Including another URLconf
     1. Add a URL to urlpatterns:  url(r'^blog/', include('blog.urls'))
 """
-from django.conf.urls import include, url
+from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+from django.conf.urls import include, url, patterns
 from django.contrib import admin
 from rest_framework_nested import routers
 from rest_framework.authtoken.views import obtain_auth_token
 
 import views
-from api.views.core import UserViewSet, SwitchDocumentViewSet, NotificationViewSet
+from api.views.core import UserViewSet, SwitchDocumentViewSet, SwitchDocumentTypeViewSet, NotificationViewSet
 from api.views.application import ApplicationViewSet, ApplicationGraphView
 from api.views.instance import ApplicationInstanceViewSet, ApplicationInstanceGraphView
 from api.views.component import ComponentViewSet, ComponentTypeViewSet, ComponentGraphView
@@ -33,11 +34,12 @@ router.register("switchcomponenttypes", ComponentTypeViewSet, base_name="switchc
 router.register("switchcomponentinstances", InstanceViewSet, base_name="switchcomponentinstances")
 router.register("switchcomponentports", PortViewSet, base_name="switchcomponentports")
 router.register("switchdocuments", SwitchDocumentViewSet, base_name="switchdocuments")
+router.register("switchdocumenttypes", SwitchDocumentTypeViewSet, base_name="switchdocumenttypes")
 router.register("switchservicelinks", ServiceLinkViewSet, base_name="switchservicelinks")
 router.register("switchgraphs", GraphViewSet, base_name="switchgraphs")
 router.register("switchnotifications", NotificationViewSet, base_name="switchnotifications")
 
-urlpatterns = [
+urlpatterns = patterns('',
     url(r'^admin/', include(admin.site.urls)),
     url(r'^$', views.index, name='index'),
     url(r'^api/', include(router.urls)),
@@ -45,5 +47,6 @@ urlpatterns = [
     url(r'^api-register/', views.register, name='register'),
     url(r'^api/switchapps/(?P<pk>[^/.]+)/graph', ApplicationGraphView.as_view()),
     url(r'^api/switchappinstances/(?P<pk>[^/.]+)/graph', ApplicationInstanceGraphView.as_view()),
-    url(r'^api/switchcomponents/(?P<pk>[^/.]+)/graph', ComponentGraphView.as_view()),
-]
+    url(r'^api/switchcomponents/(?P<pk>[^/.]+)/graph', ComponentGraphView.as_view())
+    ) + staticfiles_urlpatterns()
+

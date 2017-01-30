@@ -1,195 +1,762 @@
-- fields: {title: switch.Component, is_core_component: true, is_template_component: true}
+- fields: { username: "switch_admin", first_name: "admin", last_name: "admin", is_active: true, is_superuser: true, email: "",
+    password: "pbkdf2_sha256$20000$IvWgdymNczX1$oxlW8+m/K7tom3YV0ey4VERJXq5MY1zlEAfFzn0/suA="},
+  model: auth.user,
+  pk: 1
+- fields: {created_at: !!timestamp '2016-11-17 00:00:00+00:00', title: Default Component
+      Link, updated_at: !!timestamp '2016-11-17 00:00:00+00:00', user: null}
+  model: api.graphbase
+  pk: 1
+- fields: {created_at: !!timestamp '2016-11-17 00:00:00+00:00', title: Default Component
+      Group, updated_at: !!timestamp '2016-11-17 00:00:00+00:00', user: null}
+  model: api.graphbase
+  pk: 2
+- fields: {created_at: !!timestamp '2016-12-20 16:44:50.706674+00:00', title: test,
+    updated_at: !!timestamp '2016-12-20 16:44:50.706929+00:00', user: 16}
+  model: api.graphbase
+  pk: 10
+- fields: {default_value: SET_ITS_VALUE, name: string, parent: null}
+  model: api.datatype
+  pk: 1
+- fields: {default_value: SET_ITS_VALUE, name: integer, parent: null}
+  model: api.datatype
+  pk: 2
+- fields: {default_value: SET_ITS_VALUE, name: float, parent: null}
+  model: api.datatype
+  pk: 3
+- fields: {default_value: SET_ITS_VALUE, name: boolean, parent: null}
+  model: api.datatype
+  pk: 4
+- fields: {default_value: '', name: tosca.datatypes.Root, parent: null}
+  model: api.datatype
+  pk: 5
+- fields: {default_value: '', name: Switch.datatypes.QoS.AppComponent, parent: 5}
+  model: api.datatype
+  pk: 7
+- fields: {default_value: '', name: Switch.datatypes.Application.Connection.EndPoint,
+    parent: 5}
+  model: api.datatype
+  pk: 8
+- fields: {default_value: '', name: Switch.datatypes.Application.Connection.Multicast,
+    parent: 5}
+  model: api.datatype
+  pk: 9
+- fields: {default_value: '', name: Switch.datatypes.Network.Multicast, parent: 5}
+  model: api.datatype
+  pk: 10
+- fields: {default_value: "num_cpus: SET_ITS_VALUE\r\ncpu_frequency: SET_ITS_VALUE\r\
+      \ndisk_size: SET_ITS_VALUE\r\nmem_size: SET_ITS_VALUE", name: Switch.datatypes.hw.host,
+    parent: 5}
+  model: api.datatype
+  pk: 11
+- fields: {default_value: "architecture: x86_64\r\ntype: linux\r\ndistribution: ubuntu\r\
+      \nos_version: 16.04", name: Switch.datatypes.hw.os, parent: 5}
+  model: api.datatype
+  pk: 12
+- fields: {default_value: '', name: Switch.datatypes.monitoring.probe, parent: null}
+  model: api.datatype
+  pk: 13
+- fields: {default_value: '', name: Switch.datatypes.monitoring.metric, parent: 5}
+  model: api.datatype
+  pk: 14
+- fields: {default_value: '', name: Switch.datatypes.monitoring.metric.threshold,
+    parent: 5}
+  model: api.datatype
+  pk: 15
+- fields: {default_value: '', name: Switch.datatypes.port_mapping, parent: null}
+  model: api.datatype
+  pk: 16
+- fields: {data_type: 2, default_value: '', is_collection: false, name: response_time,
+    parent_data_type: 7}
+  model: api.datatypeproperty
+  pk: 2
+- fields: {data_type: 1, default_value: '', is_collection: false, name: address, parent_data_type: 8}
+  model: api.datatypeproperty
+  pk: 3
+- fields: {data_type: 1, default_value: '', is_collection: false, name: component_name,
+    parent_data_type: 8}
+  model: api.datatypeproperty
+  pk: 4
+- fields: {data_type: 1, default_value: '', is_collection: false, name: netmask, parent_data_type: 8}
+  model: api.datatypeproperty
+  pk: 5
+- fields: {data_type: 1, default_value: '', is_collection: false, name: port_name,
+    parent_data_type: 8}
+  model: api.datatypeproperty
+  pk: 6
+- fields: {data_type: 1, default_value: '', is_collection: false, name: multicastAddrIP,
+    parent_data_type: 9}
+  model: api.datatypeproperty
+  pk: 7
+- fields: {data_type: 1, default_value: '', is_collection: false, name: multicastAddrPort,
+    parent_data_type: 9}
+  model: api.datatypeproperty
+  pk: 8
+- fields: {data_type: 1, default_value: '', is_collection: false, name: multicastAddrIP,
+    parent_data_type: 10}
+  model: api.datatypeproperty
+  pk: 9
+- fields: {data_type: 1, default_value: '', is_collection: false, name: multicastAddrPort,
+    parent_data_type: 10}
+  model: api.datatypeproperty
+  pk: 10
+- fields: {data_type: 2, default_value: '', is_collection: false, name: num_cpus,
+    parent_data_type: 11}
+  model: api.datatypeproperty
+  pk: 15
+- fields: {data_type: 3, default_value: '', is_collection: false, name: cpu_frequency,
+    parent_data_type: 11}
+  model: api.datatypeproperty
+  pk: 16
+- fields: {data_type: 2, default_value: '', is_collection: false, name: disk_size,
+    parent_data_type: 11}
+  model: api.datatypeproperty
+  pk: 17
+- fields: {data_type: 2, default_value: '', is_collection: false, name: mem_size,
+    parent_data_type: 11}
+  model: api.datatypeproperty
+  pk: 18
+- fields: {data_type: 1, default_value: '', is_collection: false, name: architecture,
+    parent_data_type: 12}
+  model: api.datatypeproperty
+  pk: 19
+- fields: {data_type: 1, default_value: '', is_collection: false, name: type, parent_data_type: 12}
+  model: api.datatypeproperty
+  pk: 20
+- fields: {data_type: 1, default_value: '', is_collection: false, name: distribution,
+    parent_data_type: 12}
+  model: api.datatypeproperty
+  pk: 21
+- fields: {data_type: 1, default_value: '', is_collection: false, name: os_version,
+    parent_data_type: 12}
+  model: api.datatypeproperty
+  pk: 22
+- fields: {data_type: 1, default_value: '', is_collection: false, name: name, parent_data_type: 13}
+  model: api.datatypeproperty
+  pk: 23
+- fields: {data_type: 1, default_value: '', is_collection: false, name: path, parent_data_type: 13}
+  model: api.datatypeproperty
+  pk: 24
+- fields: {data_type: 4, default_value: '', is_collection: false, name: active, parent_data_type: 13}
+  model: api.datatypeproperty
+  pk: 25
+- fields: {data_type: 1, default_value: '', is_collection: false, name: name, parent_data_type: 14}
+  model: api.datatypeproperty
+  pk: 26
+- fields: {data_type: 1, default_value: '', is_collection: false, name: type, parent_data_type: 14}
+  model: api.datatypeproperty
+  pk: 29
+- fields: {data_type: 1, default_value: '', is_collection: false, name: unit, parent_data_type: 14}
+  model: api.datatypeproperty
+  pk: 30
+- fields: {data_type: 1, default_value: equal, is_collection: false, name: operator,
+    parent_data_type: 15}
+  model: api.datatypeproperty
+  pk: 31
+- fields: {data_type: 1, default_value: '', is_collection: false, name: value, parent_data_type: 15}
+  model: api.datatypeproperty
+  pk: 32
+- fields: {data_type: 15, default_value: '', is_collection: true, name: thresholds,
+    parent_data_type: 14}
+  model: api.datatypeproperty
+  pk: 33
+- fields: {data_type: 4, default_value: 'False', is_collection: false, name: static,
+    parent_data_type: 13}
+  model: api.datatypeproperty
+  pk: 34
+- fields: {data_type: 14, default_value: '', is_collection: true, name: metrics, parent_data_type: 13}
+  model: api.datatypeproperty
+  pk: 35
+- fields: {data_type: 2, default_value: '', is_collection: false, name: host_port,
+    parent_data_type: 16}
+  model: api.datatypeproperty
+  pk: 36
+- fields: {data_type: 2, default_value: '', is_collection: false, name: container_port,
+    parent_data_type: 16}
+  model: api.datatypeproperty
+  pk: 37
+- fields: {is_normative: true, name: root, parent: null, prefix: tosca.nodes, type: N}
+  model: api.toscaclass
+  pk: 1
+- fields: {is_normative: true, name: Compute, parent: 1, prefix: tosca.nodes, type: N}
+  model: api.toscaclass
+  pk: 2
+- fields: {is_normative: false, name: Network, parent: 1, prefix: tosca.nodes.network,
+    type: N}
+  model: api.toscaclass
+  pk: 3
+- fields: {is_normative: false, name: Docker, parent: 1, prefix: Switch.nodes.Application.Container,
+    type: N}
+  model: api.toscaclass
+  pk: 4
+- fields: {is_normative: false, name: Connection, parent: 1, prefix: Switch.nodes.Application,
+    type: N}
+  model: api.toscaclass
+  pk: 5
+- fields: {is_normative: false, name: Connection, parent: 1, prefix: Switch.nodes.Application,
+    type: N}
+  model: api.toscaclass
+  pk: 7
+- fields: {is_normative: false, name: Root, parent: null, prefix: tosca.groups, type: N}
+  model: api.toscaclass
+  pk: 8
+- fields: {is_normative: false, name: Component, parent: 1, prefix: Switch.nodes,
+    type: N}
+  model: api.toscaclass
+  pk: 9
+- fields: {is_normative: false, name: ExternalComponent, parent: 1, prefix: Switch.nodes,
+    type: N}
+  model: api.toscaclass
+  pk: 10
+- fields: {is_normative: false, name: Network, parent: 3, prefix: Switch.nodes, type: N}
+  model: api.toscaclass
+  pk: 11
+- fields: {is_normative: false, name: MonitoringAgent, parent: 1, prefix: Switch.nodes,
+    type: N}
+  model: api.toscaclass
+  pk: 12
+- fields: {is_normative: false, name: EventListener, parent: 1, prefix: Switch.nodes,
+    type: N}
+  model: api.toscaclass
+  pk: 13
+- fields: {is_normative: false, name: MessagePasser, parent: 1, prefix: Switch.nodes,
+    type: N}
+  model: api.toscaclass
+  pk: 14
+- fields: {is_normative: false, name: Constraint, parent: 1, prefix: Switch.nodes,
+    type: N}
+  model: api.toscaclass
+  pk: 15
+- fields: {is_normative: false, name: AdaptationProfile, parent: 1, prefix: Switch.nodes,
+    type: N}
+  model: api.toscaclass
+  pk: 16
+- fields: {is_normative: false, name: Requirement, parent: 1, prefix: Switch.nodes,
+    type: N}
+  model: api.toscaclass
+  pk: 17
+- fields: {is_normative: false, name: VirtualNetwork, parent: 1, prefix: Switch.nodes,
+    type: N}
+  model: api.toscaclass
+  pk: 19
+- fields: {is_normative: true, name: Image, parent: null, prefix: tosca.artifacts.Deployment,
+    type: A}
+  model: api.toscaclass
+  pk: 20
+- fields: {is_normative: false, name: Docker, parent: 20, prefix: tosca.artifacts.Deployment.Image.Container,
+    type: A}
+  model: api.toscaclass
+  pk: 21
+- fields: {is_normative: false, name: MonitoringServer, parent: 4, prefix: Switch.nodes.Application.Container.Docker,
+    type: N}
+  model: api.toscaclass
+  pk: 23
+- fields: {is_normative: false, name: Compute, parent: 2, prefix: Switch.nodes, type: N}
+  model: api.toscaclass
+  pk: 24
+- fields: {credential: "protocol: xauth\r\ntoken_type: X-Auth-Token\r\ntoken: 604bbe45ac7143a79e14f3158df67091",
+    description: switch repository in GitHub, name: SWITCH_docker_hub, url: 'https://github.com/switch-project'}
+  model: api.switchrepository
+  pk: 1
+- fields: {file: salmant/salman_monitoring_server_container_image, name: monitoring_server_image,
+    repository: 1, type: 21}
+  model: api.switchartifact
+  pk: 4
+- fields: {classpath: '', is_core_component: true, is_template_component: true, title: switch.Component}
   model: api.componentclass
   pk: 1
-
-- fields: {title: switch.Group}
+- fields: {classpath: '', is_core_component: false, is_template_component: false,
+    title: switch.Group}
   model: api.componentclass
   pk: 2
-
-- fields: {title: switch.Attribute, is_template_component: true}
+- fields: {classpath: '', is_core_component: false, is_template_component: true, title: switch.Attribute}
   model: api.componentclass
   pk: 3
-
-- fields: {title: switch.VirtualResource}
+- fields: {classpath: '', is_core_component: false, is_template_component: false,
+    title: switch.VirtualResource}
   model: api.componentclass
   pk: 4
-
-- fields: {title: switch.ComponentLink}
+- fields: {classpath: '', is_core_component: false, is_template_component: false,
+    title: switch.ComponentLink}
   model: api.componentclass
   pk: 5
-
-- fields: {title: switch.ServiceLink}
+- fields: {classpath: '', is_core_component: false, is_template_component: false,
+    title: switch.ServiceLink}
   model: api.componentclass
   pk: 6
-
-- fields: {icon_name: 'xx', icon_code: xx, icon_colour: 'rgb(255, 255, 255)', icon_svg: xx, primary_colour: 'rgb(255,
-      255, 255)', secondary_colour: 'rgb(255, 255, 255)', switch_class: 5, title: Component Link}
+- fields:
+    artifacts: []
+    icon_class: xx
+    icon_code: ''
+    icon_colour: rgb(255, 255, 255)
+    icon_name: ''
+    icon_style: ''
+    icon_svg: xx
+    parent: null
+    primary_colour: rgb(255, 255, 255)
+    secondary_colour: rgb(255, 255, 255)
+    switch_class: 5
+    title: Component Link
+    tosca_class: 7
   model: api.componenttype
   pk: 1
-
-- fields: {icon_name: 'fa-object-group', icon_class: 'btn-default', icon_style: 'border-radius: 0; border: 1px dashed;', icon_code: '&#xf247', icon_colour: 'rgb(51, 51, 51)', icon_svg: M2048 1152h-128v-1024h128v-384h-384v128h-1280v-128h-384v384h128v1024h-128v384h384v-128h1280v128h384v-384zM1792
+- fields:
+    artifacts: []
+    icon_class: btn-default
+    icon_code: '&#xf247'
+    icon_colour: rgb(51, 51, 51)
+    icon_name: fa-object-group
+    icon_style: 'border-radius: 0; border: 1px dashed;'
+    icon_svg: M2048 1152h-128v-1024h128v-384h-384v128h-1280v-128h-384v384h128v1024h-128v384h384v-128h1280v128h384v-384zM1792
       1408v-128h128v128h-128zM128 1408v-128h128v128h-128zM256 -128v128h-128v-128h128zM1664
       0v128h128v1024h-128v128h-1280v-128h-128v-1024h128v-128 h1280zM1920 -128v128h-128v-128h128zM1280
-      896h384v-768h-896v256h-384v768h896v-256zM512 512h640v512h-640v-512zM1536 256v512h-256v-384h-384v-128h640z,
-    primary_colour: 'rgb(255, 255, 255)', secondary_colour: 'rgb(255, 255, 255)',
-    switch_class: 2, title: Component Group}
+      896h384v-768h-896v256h-384v768h896v-256zM512 512h640v512h-640v-512zM1536 256v512h-256v-384h-384v-128h640z
+    parent: null
+    primary_colour: rgb(255, 255, 255)
+    secondary_colour: rgb(255, 255, 255)
+    switch_class: 2
+    title: Component Group
+    tosca_class: 8
   model: api.componenttype
   pk: 2
-
-- fields: {icon_name: 'fa-cog', icon_class: 'btn-primary', icon_style: 'border-radius: 0;', icon_code: '&#xf013', icon_colour: 'rgb(255, 255, 255)', icon_svg: M1024
-      640q0 106 -75 181t-181 75t-181 -75t-75 -181t75 -181t181 -75t181 75t75 181zM1536
-      749v-222q0 -12 -8 -23t-20 -13l-185 -28q-19 -54 -39 -91q35 -50 107 -138q10 -12
-      10 -25t-9 -23q-27 -37 -99 -108t-94 -71q-12 0 -26 9l-138 108q-44 -23 -91 -38
-      q-16 -136 -29 -186q-7 -28 -36 -28h-222q-14 0 -24.5 8.5t-11.5 21.5l-28 184q-49
-      16 -90 37l-141 -107q-10 -9 -25 -9q-14 0 -25 11q-126 114 -165 168q-7 10 -7 23q0
-      12 8 23q15 21 51 66.5t54 70.5q-27 50 -41 99l-183 27q-13 2 -21 12.5t-8 23.5v222q0
-      12 8 23t19 13 l186 28q14 46 39 92q-40 57 -107 138q-10 12 -10 24q0 10 9 23q26
-      36 98.5 107.5t94.5 71.5q13 0 26 -10l138 -107q44 23 91 38q16 136 29 186q7 28
-      36 28h222q14 0 24.5 -8.5t11.5 -21.5l28 -184q49 -16 90 -37l142 107q9 9 24 9q13
-      0 25 -10q129 -119 165 -170q7 -8 7 -22 q0 -12 -8 -23q-15 -21 -51 -66.5t-54 -70.5q26
-      -50 41 -98l183 -28q13 -2 21 -12.5t8 -23.5z, primary_colour: 'rgb(51, 122, 183)',
-    secondary_colour: 'rgb(46, 109, 164)', switch_class: 1, title: Component}
+- fields:
+    artifacts: []
+    icon_class: btn-primary
+    icon_code: '&#xf013'
+    icon_colour: rgb(255, 255, 255)
+    icon_name: fa-cog
+    icon_style: 'border-radius: 0;'
+    icon_svg: M1024 640q0 106 -75 181t-181 75t-181 -75t-75 -181t75 -181t181 -75t181
+      75t75 181zM1536 749v-222q0 -12 -8 -23t-20 -13l-185 -28q-19 -54 -39 -91q35 -50
+      107 -138q10 -12 10 -25t-9 -23q-27 -37 -99 -108t-94 -71q-12 0 -26 9l-138 108q-44
+      -23 -91 -38 q-16 -136 -29 -186q-7 -28 -36 -28h-222q-14 0 -24.5 8.5t-11.5 21.5l-28
+      184q-49 16 -90 37l-141 -107q-10 -9 -25 -9q-14 0 -25 11q-126 114 -165 168q-7
+      10 -7 23q0 12 8 23q15 21 51 66.5t54 70.5q-27 50 -41 99l-183 27q-13 2 -21 12.5t-8
+      23.5v222q0 12 8 23t19 13 l186 28q14 46 39 92q-40 57 -107 138q-10 12 -10 24q0
+      10 9 23q26 36 98.5 107.5t94.5 71.5q13 0 26 -10l138 -107q44 23 91 38q16 136 29
+      186q7 28 36 28h222q14 0 24.5 -8.5t11.5 -21.5l28 -184q49 -16 90 -37l142 107q9
+      9 24 9q13 0 25 -10q129 -119 165 -170q7 -8 7 -22 q0 -12 -8 -23q-15 -21 -51 -66.5t-54
+      -70.5q26 -50 41 -98l183 -28q13 -2 21 -12.5t8 -23.5z
+    parent: null
+    primary_colour: rgb(51, 122, 183)
+    secondary_colour: rgb(46, 109, 164)
+    switch_class: 1
+    title: Component
+    tosca_class: 9
   model: api.componenttype
   pk: 3
-
-- fields: {icon_name: 'fa-question-circle-o', icon_class: 'btn-default', icon_style: 'border-radius: 0;', icon_code: '&#xf29c', icon_colour: 'rgb(51, 51, 51)', icon_svg: M880 336v-160q0
-      -14 -9 -23t-23 -9h-160q-14 0 -23 9t-9 23v160q0 14 9 23t23 9h160q14 0 23 -9t9
-      -23zM1136 832q0 -50 -15 -90t-45.5 -69t-52 -44t-59.5 -36q-32 -18 -46.5 -28t-26
-      -24t-11.5 -29v-32q0 -14 -9 -23t-23 -9h-160q-14 0 -23 9t-9 23v68q0 35 10.5 64.5
-      t24 47.5t39 35.5t41 25.5t44.5 21q53 25 75 43t22 49q0 42 -43.5 71.5t-95.5 29.5q-56
-      0 -95 -27q-29 -20 -80 -83q-9 -12 -25 -12q-11 0 -19 6l-108 82q-10 7 -12 20t5
-      23q122 192 349 192q129 0 238.5 -89.5t109.5 -214.5zM768 1280q-130 0 -248.5 -51t-204
-      -136.5 t-136.5 -204t-51 -248.5t51 -248.5t136.5 -204t204 -136.5t248.5 -51t248.5
-      51t204 136.5t136.5 204t51 248.5t-51 248.5t-136.5 204t-204 136.5t-248.5 51zM1536
-      640q0 -209 -103 -385.5t-279.5 -279.5t-385.5 -103t-385.5 103t-279.5 279.5t-103
-      385.5t103 385.5 t279.5 279.5t385.5 103t385.5 -103t279.5 -279.5t103 -385.5z,
-    primary_colour: 'rgb(255, 255, 255)', secondary_colour: 'rgb(204, 204, 204)',
-    switch_class: 1, title: External Component}
+- fields:
+    artifacts: []
+    icon_class: btn-default
+    icon_code: '&#xf29c'
+    icon_colour: rgb(51, 51, 51)
+    icon_name: fa-question-circle-o
+    icon_style: 'border-radius: 0;'
+    icon_svg: M880 336v-160q0 -14 -9 -23t-23 -9h-160q-14 0 -23 9t-9 23v160q0 14 9
+      23t23 9h160q14 0 23 -9t9 -23zM1136 832q0 -50 -15 -90t-45.5 -69t-52 -44t-59.5
+      -36q-32 -18 -46.5 -28t-26 -24t-11.5 -29v-32q0 -14 -9 -23t-23 -9h-160q-14 0 -23
+      9t-9 23v68q0 35 10.5 64.5 t24 47.5t39 35.5t41 25.5t44.5 21q53 25 75 43t22 49q0
+      42 -43.5 71.5t-95.5 29.5q-56 0 -95 -27q-29 -20 -80 -83q-9 -12 -25 -12q-11 0
+      -19 6l-108 82q-10 7 -12 20t5 23q122 192 349 192q129 0 238.5 -89.5t109.5 -214.5zM768
+      1280q-130 0 -248.5 -51t-204 -136.5 t-136.5 -204t-51 -248.5t51 -248.5t136.5 -204t204
+      -136.5t248.5 -51t248.5 51t204 136.5t136.5 204t51 248.5t-51 248.5t-136.5 204t-204
+      136.5t-248.5 51zM1536 640q0 -209 -103 -385.5t-279.5 -279.5t-385.5 -103t-385.5
+      103t-279.5 279.5t-103 385.5t103 385.5 t279.5 279.5t385.5 103t385.5 -103t279.5
+      -279.5t103 -385.5z
+    parent: null
+    primary_colour: rgb(255, 255, 255)
+    secondary_colour: rgb(204, 204, 204)
+    switch_class: 1
+    title: External Component
+    tosca_class: 10
   model: api.componenttype
   pk: 4
-
-- fields: {icon_name: 'fa-link', icon_class: 'btn-info', icon_style: 'border-radius: 0;', icon_code: '&#xf0c1', icon_colour: 'rgb(255, 255, 255)', icon_svg: M1456
-      320q0 40 -28 68l-208 208q-28 28 -68 28q-42 0 -72 -32q3 -3 19 -18.5t21.5 -21.5t15
-      -19t13 -25.5t3.5 -27.5q0 -40 -28 -68t-68 -28q-15 0 -27.5 3.5t-25.5 13t-19 15t-21.5
-      21.5t-18.5 19q-33 -31 -33 -73q0 -40 28 -68l206 -207q27 -27 68 -27q40 0 68 26
-      l147 146q28 28 28 67zM753 1025q0 40 -28 68l-206 207q-28 28 -68 28q-39 0 -68
-      -27l-147 -146q-28 -28 -28 -67q0 -40 28 -68l208 -208q27 -27 68 -27q42 0 72 31q-3
-      3 -19 18.5t-21.5 21.5t-15 19t-13 25.5t-3.5 27.5q0 40 28 68t68 28q15 0 27.5 -3.5t25.5
-      -13t19 -15 t21.5 -21.5t18.5 -19q33 31 33 73zM1648 320q0 -120 -85 -203l-147 -146q-83
-      -83 -203 -83q-121 0 -204 85l-206 207q-83 83 -83 203q0 123 88 209l-88 88q-86
-      -88 -208 -88q-120 0 -204 84l-208 208q-84 84 -84 204t85 203l147 146q83 83 203
-      83q121 0 204 -85l206 -207 q83 -83 83 -203q0 -123 -88 -209l88 -88q86 88 208 88q120
-      0 204 -84l208 -208q84 -84 84 -204z, primary_colour: 'rgb(91, 192, 222)', secondary_colour: 'rgb(70,
-      184, 218)', switch_class: 1, title: Network}
+- fields:
+    artifacts: []
+    icon_class: btn-info
+    icon_code: '&#xf0c1'
+    icon_colour: rgb(255, 255, 255)
+    icon_name: fa-link
+    icon_style: 'border-radius: 0;'
+    icon_svg: M1456 320q0 40 -28 68l-208 208q-28 28 -68 28q-42 0 -72 -32q3 -3 19 -18.5t21.5
+      -21.5t15 -19t13 -25.5t3.5 -27.5q0 -40 -28 -68t-68 -28q-15 0 -27.5 3.5t-25.5
+      13t-19 15t-21.5 21.5t-18.5 19q-33 -31 -33 -73q0 -40 28 -68l206 -207q27 -27 68
+      -27q40 0 68 26 l147 146q28 28 28 67zM753 1025q0 40 -28 68l-206 207q-28 28 -68
+      28q-39 0 -68 -27l-147 -146q-28 -28 -28 -67q0 -40 28 -68l208 -208q27 -27 68 -27q42
+      0 72 31q-3 3 -19 18.5t-21.5 21.5t-15 19t-13 25.5t-3.5 27.5q0 40 28 68t68 28q15
+      0 27.5 -3.5t25.5 -13t19 -15 t21.5 -21.5t18.5 -19q33 31 33 73zM1648 320q0 -120
+      -85 -203l-147 -146q-83 -83 -203 -83q-121 0 -204 85l-206 207q-83 83 -83 203q0
+      123 88 209l-88 88q-86 -88 -208 -88q-120 0 -204 84l-208 208q-84 84 -84 204t85
+      203l147 146q83 83 203 83q121 0 204 -85l206 -207 q83 -83 83 -203q0 -123 -88 -209l88
+      -88q86 88 208 88q120 0 204 -84l208 -208q84 -84 84 -204z
+    parent: null
+    primary_colour: rgb(91, 192, 222)
+    secondary_colour: rgb(70, 184, 218)
+    switch_class: 1
+    title: Network
+    tosca_class: 11
   model: api.componenttype
   pk: 5
-
-- fields: {icon_name: 'fa-line-chart', icon_class: 'btn-success btn-circle', icon_code: '&#xf201', icon_colour: 'rgb(255, 255, 255)', icon_svg: M2048
-      0v-128h-2048v1536h128v-1408h1920zM1920 1248v-435q0 -21 -19.5 -29.5t-35.5 7.5l-121
-      121l-633 -633q-10 -10 -23 -10t-23 10l-233 233l-416 -416l-192 192l585 585q10
-      10 23 10t23 -10l233 -233l464 464l-121 121q-16 16 -7.5 35.5t29.5 19.5h435q14
-      0 23 -9 t9 -23z, primary_colour: 'rgb(92, 184, 92)', secondary_colour: 'rgb(76,
-      174, 76)', switch_class: 3, title: Monitoring Agent}
+- fields:
+    artifacts: []
+    icon_class: btn-success btn-circle
+    icon_code: '&#xf201'
+    icon_colour: rgb(255, 255, 255)
+    icon_name: fa-line-chart
+    icon_style: ''
+    icon_svg: M2048 0v-128h-2048v1536h128v-1408h1920zM1920 1248v-435q0 -21 -19.5 -29.5t-35.5
+      7.5l-121 121l-633 -633q-10 -10 -23 -10t-23 10l-233 233l-416 -416l-192 192l585
+      585q10 10 23 10t23 -10l233 -233l464 464l-121 121q-16 16 -7.5 35.5t29.5 19.5h435q14
+      0 23 -9 t9 -23z
+    parent: null
+    primary_colour: rgb(92, 184, 92)
+    secondary_colour: rgb(76, 174, 76)
+    switch_class: 3
+    title: Monitoring Agent
+    tosca_class: 12
   model: api.componenttype
   pk: 6
-
-- fields: {icon_name: 'fa-microphone', icon_class: 'btn-grass btn-circle', icon_code: '&#xf130', icon_colour: 'rgb(255, 255, 255)', icon_svg: M1152
-      832v-128q0 -221 -147.5 -384.5t-364.5 -187.5v-132h256q26 0 45 -19t19 -45t-19
-      -45t-45 -19h-640q-26 0 -45 19t-19 45t19 45t45 19h256v132q-217 24 -364.5 187.5t-147.5
-      384.5v128q0 26 19 45t45 19t45 -19t19 -45v-128q0 -185 131.5 -316.5t316.5 -131.5
-      t316.5 131.5t131.5 316.5v128q0 26 19 45t45 19t45 -19t19 -45zM896 1216v-512q0
-      -132 -94 -226t-226 -94t-226 94t-94 226v512q0 132 94 226t226 94t226 -94t94 -226z,
-    primary_colour: 'rgb(212, 225, 87)', secondary_colour: 'rgb(189, 213, 125)', switch_class: 3,
-    title: Event Listener}
+- fields:
+    artifacts: []
+    icon_class: btn-grass btn-circle
+    icon_code: '&#xf130'
+    icon_colour: rgb(255, 255, 255)
+    icon_name: fa-microphone
+    icon_style: ''
+    icon_svg: M1152 832v-128q0 -221 -147.5 -384.5t-364.5 -187.5v-132h256q26 0 45 -19t19
+      -45t-19 -45t-45 -19h-640q-26 0 -45 19t-19 45t19 45t45 19h256v132q-217 24 -364.5
+      187.5t-147.5 384.5v128q0 26 19 45t45 19t45 -19t19 -45v-128q0 -185 131.5 -316.5t316.5
+      -131.5 t316.5 131.5t131.5 316.5v128q0 26 19 45t45 19t45 -19t19 -45zM896 1216v-512q0
+      -132 -94 -226t-226 -94t-226 94t-94 226v512q0 132 94 226t226 94t226 -94t94 -226z
+    parent: null
+    primary_colour: rgb(212, 225, 87)
+    secondary_colour: rgb(189, 213, 125)
+    switch_class: 3
+    title: Event Listener
+    tosca_class: 13
   model: api.componenttype
   pk: 7
-
-- fields: {icon_name: 'fa-info', icon_class: 'btn-coral btn-circle', icon_code: '&#xf129', icon_colour: 'rgb(255, 255, 255)', icon_svg: M640
-      192v-128q0 -26 -19 -45t-45 -19h-512q-26 0 -45 19t-19 45v128q0 26 19 45t45 19h64v384h-64q-26
-      0 -45 19t-19 45v128q0 26 19 45t45 19h384q26 0 45 -19t19 -45v-576h64q26 0 45
-      -19t19 -45zM512 1344v-192q0 -26 -19 -45t-45 -19h-256q-26 0 -45 19t-19 45v192
-      q0 26 19 45t45 19h256q26 0 45 -19t19 -45z, primary_colour: 'rgb(255, 127, 80)',
-    secondary_colour: 'rgb(230, 115, 72)', switch_class: 3, title: Message Passer}
+- fields:
+    artifacts: []
+    icon_class: btn-coral btn-circle
+    icon_code: '&#xf129'
+    icon_colour: rgb(255, 255, 255)
+    icon_name: fa-info
+    icon_style: ''
+    icon_svg: M640 192v-128q0 -26 -19 -45t-45 -19h-512q-26 0 -45 19t-19 45v128q0 26
+      19 45t45 19h64v384h-64q-26 0 -45 19t-19 45v128q0 26 19 45t45 19h384q26 0 45
+      -19t19 -45v-576h64q26 0 45 -19t19 -45zM512 1344v-192q0 -26 -19 -45t-45 -19h-256q-26
+      0 -45 19t-19 45v192 q0 26 19 45t45 19h256q26 0 45 -19t19 -45z
+    parent: null
+    primary_colour: rgb(255, 127, 80)
+    secondary_colour: rgb(230, 115, 72)
+    switch_class: 3
+    title: Message Passer
+    tosca_class: 14
   model: api.componenttype
   pk: 8
-
-- fields: {icon_name: 'fa-flag', icon_class: 'btn-warning btn-circle', icon_code: '&#xf024', icon_colour: 'rgb(255, 255, 255)', icon_svg: M320
-      1280q0 -72 -64 -110v-1266q0 -13 -9.5 -22.5t-22.5 -9.5h-64q-13 0 -22.5 9.5t-9.5
-      22.5v1266q-64 38 -64 110q0 53 37.5 90.5t90.5 37.5t90.5 -37.5t37.5 -90.5zM1792
-      1216v-763q0 -25 -12.5 -38.5t-39.5 -27.5q-215 -116 -369 -116q-61 0 -123.5 22t-108.5
-      48 t-115.5 48t-142.5 22q-192 0 -464 -146q-17 -9 -33 -9q-26 0 -45 19t-19 45v742q0
-      32 31 55q21 14 79 43q236 120 421 120q107 0 200 -29t219 -88q38 -19 88 -19q54
-      0 117.5 21t110 47t88 47t54.5 21q26 0 45 -19t19 -45z, primary_colour: 'rgb(240,
-      173, 78)', secondary_colour: 'rgb(238, 162, 54)', switch_class: 3, title: Constraint}
+- fields:
+    artifacts: []
+    icon_class: btn-warning btn-circle
+    icon_code: '&#xf024'
+    icon_colour: rgb(255, 255, 255)
+    icon_name: fa-flag
+    icon_style: ''
+    icon_svg: M320 1280q0 -72 -64 -110v-1266q0 -13 -9.5 -22.5t-22.5 -9.5h-64q-13 0
+      -22.5 9.5t-9.5 22.5v1266q-64 38 -64 110q0 53 37.5 90.5t90.5 37.5t90.5 -37.5t37.5
+      -90.5zM1792 1216v-763q0 -25 -12.5 -38.5t-39.5 -27.5q-215 -116 -369 -116q-61
+      0 -123.5 22t-108.5 48 t-115.5 48t-142.5 22q-192 0 -464 -146q-17 -9 -33 -9q-26
+      0 -45 19t-19 45v742q0 32 31 55q21 14 79 43q236 120 421 120q107 0 200 -29t219
+      -88q38 -19 88 -19q54 0 117.5 21t110 47t88 47t54.5 21q26 0 45 -19t19 -45z
+    parent: null
+    primary_colour: rgb(240, 173, 78)
+    secondary_colour: rgb(238, 162, 54)
+    switch_class: 3
+    title: Constraint
+    tosca_class: 15
   model: api.componenttype
   pk: 9
-
-- fields: {icon_name: 'fa-code', icon_class: 'btn-danger btn-circle', icon_code: '&#xf121', icon_colour: 'rgb(255, 255, 255)', icon_svg: M617
-      137l-50 -50q-10 -10 -23 -10t-23 10l-466 466q-10 10 -10 23t10 23l466 466q10 10
-      23 10t23 -10l50 -50q10 -10 10 -23t-10 -23l-393 -393l393 -393q10 -10 10 -23t-10
-      -23zM1208 1204l-373 -1291q-4 -13 -15.5 -19.5t-23.5 -2.5l-62 17q-13 4 -19.5 15.5t-2.5
-      24.5 l373 1291q4 13 15.5 19.5t23.5 2.5l62 -17q13 -4 19.5 -15.5t2.5 -24.5zM1865
-      553l-466 -466q-10 -10 -23 -10t-23 10l-50 50q-10 10 -10 23t10 23l393 393l-393
-      393q-10 10 -10 23t10 23l50 50q10 10 23 10t23 -10l466 -466q10 -10 10 -23t-10
-      -23z, primary_colour: 'rgb(217, 83, 79)', secondary_colour: 'rgb(212, 63, 58)',
-    switch_class: 3, title: Adaptation Profile}
+- fields:
+    artifacts: []
+    icon_class: btn-danger btn-circle
+    icon_code: '&#xf121'
+    icon_colour: rgb(255, 255, 255)
+    icon_name: fa-code
+    icon_style: ''
+    icon_svg: M617 137l-50 -50q-10 -10 -23 -10t-23 10l-466 466q-10 10 -10 23t10 23l466
+      466q10 10 23 10t23 -10l50 -50q10 -10 10 -23t-10 -23l-393 -393l393 -393q10 -10
+      10 -23t-10 -23zM1208 1204l-373 -1291q-4 -13 -15.5 -19.5t-23.5 -2.5l-62 17q-13
+      4 -19.5 15.5t-2.5 24.5 l373 1291q4 13 15.5 19.5t23.5 2.5l62 -17q13 -4 19.5 -15.5t2.5
+      -24.5zM1865 553l-466 -466q-10 -10 -23 -10t-23 10l-50 50q-10 10 -10 23t10 23l393
+      393l-393 393q-10 10 -10 23t10 23l50 50q10 10 23 10t23 -10l466 -466q10 -10 10
+      -23t-10 -23z
+    parent: null
+    primary_colour: rgb(217, 83, 79)
+    secondary_colour: rgb(212, 63, 58)
+    switch_class: 3
+    title: Adaptation Profile
+    tosca_class: 16
   model: api.componenttype
   pk: 10
-
-- fields: {icon_name: 'fa-shopping-cart', icon_class: 'btn-pink btn-circle', icon_code: '&#xf07a', icon_colour: 'rgb(255, 255, 255)', icon_svg: M640
-      0q0 -52 -38 -90t-90 -38t-90 38t-38 90t38 90t90 38t90 -38t38 -90zM1536 0q0 -52
-      -38 -90t-90 -38t-90 38t-38 90t38 90t90 38t90 -38t38 -90zM1664 1088v-512q0 -24
-      -16.5 -42.5t-40.5 -21.5l-1044 -122q13 -60 13 -70q0 -16 -24 -64h920q26 0 45 -19t19
-      -45 t-19 -45t-45 -19h-1024q-26 0 -45 19t-19 45q0 11 8 31.5t16 36t21.5 40t15.5
-      29.5l-177 823h-204q-26 0 -45 19t-19 45t19 45t45 19h256q16 0 28.5 -6.5t19.5 -15.5t13
-      -24.5t8 -26t5.5 -29.5t4.5 -26h1201q26 0 45 -19t19 -45z, primary_colour: 'rgb(254,
-      97, 198)', secondary_colour: 'rgb(218, 92, 183)', switch_class: 3, title: Requirement}
+- fields:
+    artifacts: []
+    icon_class: btn-pink btn-circle
+    icon_code: '&#xf07a'
+    icon_colour: rgb(255, 255, 255)
+    icon_name: fa-shopping-cart
+    icon_style: ''
+    icon_svg: M640 0q0 -52 -38 -90t-90 -38t-90 38t-38 90t38 90t90 38t90 -38t38 -90zM1536
+      0q0 -52 -38 -90t-90 -38t-90 38t-38 90t38 90t90 38t90 -38t38 -90zM1664 1088v-512q0
+      -24 -16.5 -42.5t-40.5 -21.5l-1044 -122q13 -60 13 -70q0 -16 -24 -64h920q26 0
+      45 -19t19 -45 t-19 -45t-45 -19h-1024q-26 0 -45 19t-19 45q0 11 8 31.5t16 36t21.5
+      40t15.5 29.5l-177 823h-204q-26 0 -45 19t-19 45t19 45t45 19h256q16 0 28.5 -6.5t19.5
+      -15.5t13 -24.5t8 -26t5.5 -29.5t4.5 -26h1201q26 0 45 -19t19 -45z
+    parent: null
+    primary_colour: rgb(254, 97, 198)
+    secondary_colour: rgb(218, 92, 183)
+    switch_class: 3
+    title: Requirement
+    tosca_class: 17
   model: api.componenttype
   pk: 11
-
-- fields: {icon_name: 'fa-tv', icon_class: 'btn-purple btn-diamond', icon_code: '&#xf26c', icon_colour: 'rgb(255, 255, 255)', icon_svg: M1792
-      288v960q0 13 -9.5 22.5t-22.5 9.5h-1600q-13 0 -22.5 -9.5t-9.5 -22.5v-960q0 -13
-      9.5 -22.5t22.5 -9.5h1600q13 0 22.5 9.5t9.5 22.5zM1920 1248v-960q0 -66 -47 -113t-113
-      -47h-736v-128h352q14 0 23 -9t9 -23v-64q0 -14 -9 -23t-23 -9h-832q-14 0 -23 9t-9
-      23 v64q0 14 9 23t23 9h352v128h-736q-66 0 -113 47t-47 113v960q0 66 47 113t113
-      47h1600q66 0 113 -47t47 -113z, primary_colour: 'rgb(198, 107, 225)', secondary_colour: 'rgb(184,
-      70, 218)', switch_class: 4, title: Virtual Machine}
+- fields:
+    artifacts: []
+    icon_class: btn-purple btn-diamond
+    icon_code: '&#xf26c'
+    icon_colour: rgb(255, 255, 255)
+    icon_name: fa-tv
+    icon_style: ''
+    icon_svg: M1792 288v960q0 13 -9.5 22.5t-22.5 9.5h-1600q-13 0 -22.5 -9.5t-9.5 -22.5v-960q0
+      -13 9.5 -22.5t22.5 -9.5h1600q13 0 22.5 9.5t9.5 22.5zM1920 1248v-960q0 -66 -47
+      -113t-113 -47h-736v-128h352q14 0 23 -9t9 -23v-64q0 -14 -9 -23t-23 -9h-832q-14
+      0 -23 9t-9 23 v64q0 14 9 23t23 9h352v128h-736q-66 0 -113 47t-47 113v960q0 66
+      47 113t113 47h1600q66 0 113 -47t47 -113z
+    parent: null
+    primary_colour: rgb(198, 107, 225)
+    secondary_colour: rgb(184, 70, 218)
+    switch_class: 4
+    title: Virtual Machine
+    tosca_class: 24
   model: api.componenttype
   pk: 12
-
-- fields: {icon_name: 'fa-exchange', icon_class: 'btn-magenta btn-diamond', icon_code: '&#xf0ec', icon_colour: 'rgb(255, 255, 255)', icon_svg: M1792
-      1184v192q0 13-9.5 22.5t-22.5 9.5h-1376v192q0 13-9.5 22.5t-22.5 9.5q-12 0-24-10l-319-320q-9-9-9-22
-      0-14 9-23l320-320q9-9 23-9 13 0 22.5 9.5t9.5 22.5v192h1376q13 0 22.5 9.5t9.5
-      22.5zm0-544q0 14-9 23l-320 320q-9 9-23 9-13 0-22.5-9.5t-9.5-22.5v-192h-1376q-13
-      0-22.5-9.5t-9.5-22.5v-192q0-13 9.5-22.5t22.5-9.5h1376v-192q0-14 9-23t23-9q12
-      0 24 10l319 319q9 9 9 23z, primary_colour: 'rgb(204, 0, 204)', secondary_colour: 'rgb(184,
-      70, 218)', switch_class: 4, title: Virtual Network}
+- fields:
+    artifacts: []
+    icon_class: btn-magenta btn-diamond
+    icon_code: '&#xf0ec'
+    icon_colour: rgb(255, 255, 255)
+    icon_name: fa-exchange
+    icon_style: ''
+    icon_svg: M1792 1184v192q0 13-9.5 22.5t-22.5 9.5h-1376v192q0 13-9.5 22.5t-22.5
+      9.5q-12 0-24-10l-319-320q-9-9-9-22 0-14 9-23l320-320q9-9 23-9 13 0 22.5 9.5t9.5
+      22.5v192h1376q13 0 22.5 9.5t9.5 22.5zm0-544q0 14-9 23l-320 320q-9 9-23 9-13
+      0-22.5-9.5t-9.5-22.5v-192h-1376q-13 0-22.5-9.5t-9.5-22.5v-192q0-13 9.5-22.5t22.5-9.5h1376v-192q0-14
+      9-23t23-9q12 0 24 10l319 319q9 9 9 23z
+    parent: null
+    primary_colour: rgb(204, 0, 204)
+    secondary_colour: rgb(184, 70, 218)
+    switch_class: 4
+    title: Virtual Network
+    tosca_class: 19
   model: api.componenttype
   pk: 13
-
-- fields: {title: 'Default Component Link', created_at: '2016-11-17 00:00:00.000000', updated_at: '2016-11-17 00:00:00.000000', user: null}
-  model: api.graphbase
+- fields:
+    artifacts: []
+    icon_class: btn-primary
+    icon_code: '&#xf013'
+    icon_colour: rgb(255, 255, 255)
+    icon_name: fa-cog
+    icon_style: 'border-radius: 0;'
+    icon_svg: M1024 640q0 106 -75 181t-181 75t-181 -75t-75 -181t75 -181t181 -75t181
+      75t75 181zM1536 749v-222q0 -12 -8 -23t-20 -13l-185 -28q-19 -54 -39 -91q35 -50
+      107 -138q10 -12 10 -25t-9 -23q-27 -37 -99 -108t-94 -71q-12 0 -26 9l-138 108q-44
+      -23 -91 -38 q-16 -136 -29 -186q-7 -28 -36 -28h-222q-14 0 -24.5 8.5t-11.5 21.5l-28
+      184q-49 16 -90 37l-141 -107q-10 -9 -25 -9q-14 0 -25 11q-126 114 -165 168q-7
+      10 -7 23q0 12 8 23q15 21 51 66.5t54 70.5q-27 50 -41 99l-183 27q-13 2 -21 12.5t-8
+      23.5v222q0 12 8 23t19 13 l186 28q14 46 39 92q-40 57 -107 138q-10 12 -10 24q0
+      10 9 23q26 36 98.5 107.5t94.5 71.5q13 0 26 -10l138 -107q44 23 91 38q16 136 29
+      186q7 28 36 28h222q14 0 24.5 -8.5t11.5 -21.5l28 -184q49 -16 90 -37l142 107q9
+      9 24 9q13 0 25 -10q129 -119 165 -170q7 -8 7 -22 q0 -12 -8 -23q-15 -21 -51 -66.5t-54
+      -70.5q26 -50 41 -98l183 -28q13 -2 21 -12.5t8 -23.5z
+    parent: 3
+    primary_colour: rgb(51, 122, 183)
+    secondary_colour: rgb(46, 109, 164)
+    switch_class: 1
+    title: Docker
+    tosca_class: 4
+  model: api.componenttype
+  pk: 14
+- fields:
+    artifacts: [4]
+    icon_class: btn-primary
+    icon_code: '&#xf013'
+    icon_colour: rgb(255, 255, 255)
+    icon_name: fa-cog
+    icon_style: 'border-radius: 0;'
+    icon_svg: M1024 640q0 106 -75 181t-181 75t-181 -75t-75 -181t75 -181t181 -75t181
+      75t75 181zM1536 749v-222q0 -12 -8 -23t-20 -13l-185 -28q-19 -54 -39 -91q35 -50
+      107 -138q10 -12 10 -25t-9 -23q-27 -37 -99 -108t-94 -71q-12 0 -26 9l-138 108q-44
+      -23 -91 -38 q-16 -136 -29 -186q-7 -28 -36 -28h-222q-14 0 -24.5 8.5t-11.5 21.5l-28
+      184q-49 16 -90 37l-141 -107q-10 -9 -25 -9q-14 0 -25 11q-126 114 -165 168q-7
+      10 -7 23q0 12 8 23q15 21 51 66.5t54 70.5q-27 50 -41 99l-183 27q-13 2 -21 12.5t-8
+      23.5v222q0 12 8 23t19 13 l186 28q14 46 39 92q-40 57 -107 138q-10 12 -10 24q0
+      10 9 23q26 36 98.5 107.5t94.5 71.5q13 0 26 -10l138 -107q44 23 91 38q16 136 29
+      186q7 28 36 28h222q14 0 24.5 -8.5t11.5 -21.5l28 -184q49 -16 90 -37l142 107q9
+      9 24 9q13 0 25 -10q129 -119 165 -170q7 -8 7 -22 q0 -12 -8 -23q-15 -21 -51 -66.5t-54
+      -70.5q26 -50 41 -98l183 -28q13 -2 21 -12.5t8 -23.5z
+    parent: 14
+    primary_colour: rgb(51, 122, 183)
+    secondary_colour: rgb(46, 109, 164)
+    switch_class: 1
+    title: SWITCH.MonitoringServer
+    tosca_class: 23
+  model: api.componenttype
+  pk: 19
+- fields: {component_type: 1, data_type: 8, default_value: '', is_collection: false,
+    name: source}
+  model: api.componenttypeproperty
+  pk: 9
+- fields: {component_type: 1, data_type: 8, default_value: '', is_collection: false,
+    name: target}
+  model: api.componenttypeproperty
+  pk: 10
+- fields: {component_type: 1, data_type: 2, default_value: '', is_collection: false,
+    name: bandwidth}
+  model: api.componenttypeproperty
+  pk: 11
+- fields: {component_type: 1, data_type: 2, default_value: '', is_collection: false,
+    name: latency}
+  model: api.componenttypeproperty
+  pk: 12
+- fields: {component_type: 1, data_type: 2, default_value: '', is_collection: false,
+    name: jitter}
+  model: api.componenttypeproperty
+  pk: 13
+- fields: {component_type: 1, data_type: 10, default_value: '', is_collection: false,
+    name: multicast}
+  model: api.componenttypeproperty
+  pk: 14
+- fields: {component_type: 11, data_type: 11, default_value: '', is_collection: false,
+    name: host}
+  model: api.componenttypeproperty
+  pk: 15
+- fields: {component_type: 11, data_type: 12, default_value: '', is_collection: false,
+    name: os}
+  model: api.componenttypeproperty
+  pk: 16
+- fields: {component_type: 6, data_type: 13, default_value: "CPU_Probe:\r\n    name:\
+      \ 'CPU'\r\n    path:\r\n    active: True\r\n    static: False\r\n    metrics:\r\
+      \n      cpuTotal_metric:\r\n        name: 'cpuTotal'\r\n        type: 'double'\r\
+      \n        unit: '%'\r\n        thresholds:\r\n          threshold_0:\r\n   \
+      \         operator: greater_than\r\n            value: 80\r\n          threshold_1:\r\
+      \n            operator: less_than\r\n            value: 20\r\n      cpuUser_metric:\r\
+      \n        name: 'cpuUser'\r\n        type: 'double'\r\n        unit: '%'\r\n\
+      \        thresholds: \r\n      cpuSystem_metric:\r\n        name: 'cpuSystem'\r\
+      \n        type: 'double'\r\n        unit: '%'\r\n        thresholds: \r\n  \
+      \    cpuIdle_metric:\r\n        name: 'cpuIdle'\r\n        type: 'double'\r\n\
+      \        unit: '%'\r\n        thresholds: \r\n      cpuIOwait_metric:\r\n  \
+      \      name: 'cpuIOwait'\r\n        type: 'double'\r\n        unit: '%'\r\n\
+      \        thresholds: \r\nMemory_Probe:\r\n    name: 'Memory'\r\n    path:\r\n\
+      \    active: True\r\n    static: False\r\n    metrics:\r\n      memTotal_metric:\r\
+      \n        name: 'memTotal'\r\n        type: 'integer'\r\n        unit: 'KB'\r\
+      \n        thresholds: \r\n      memFree_metric:\r\n        name: 'memFree'\r\
+      \n        type: 'integer'\r\n        unit: 'KB'\r\n        thresholds: \r\n\
+      \      memCache_metric:\r\n        name: 'memCache'\r\n        type: 'integer'\r\
+      \n        unit: 'KB'\r\n        threshold: \r\n      memSwapTotal_metric:\r\n\
+      \        name: 'memSwapTotal'\r\n        type: 'integer'\r\n        unit: 'KB'\r\
+      \n        thresholds: \r\n      memSwapFree_metric:\r\n        name: 'memSwapFree'\r\
+      \n        type: 'integer'\r\n        unit: 'KB'\r\n        thresholds: \r\n\
+      \      memUsed_metric:\r\n        name: 'memUsed'\r\n        type: 'integer'\r\
+      \n        unit: 'KB'\r\n        thresholds: \r\n      memUsedPercent_metric:\r\
+      \n        name: 'memUsedPercent'\r\n        type: 'double'\r\n        unit:\
+      \ '%'\r\n        thresholds: \r\n          threshold_0:\r\n            operator:\
+      \ greater_than\r\n            value: 80\r\n          threshold_1:\r\n      \
+      \      operator: less_than\r\n            value: 20\r\nDiskStats_Probe:\r\n\
+      \    name: 'DiskStats'\r\n    path:\r\n    active: True\r\n    static: False\r\
+      \n    metrics:\r\n      readkbps_metric:\r\n        name: 'readkbps'\r\n   \
+      \     type: 'double'\r\n        unit: 'KB/s'\r\n        thresholds:\r\n    \
+      \  writekbps_metric:\r\n        name: 'writekbps'\r\n        type: 'double'\r\
+      \n        unit: 'KB/s'\r\n        thresholds:\r\n      iotime_metric:\r\n  \
+      \      name: 'iotime'\r\n        type: 'double'\r\n        unit: '%'\r\n   \
+      \     thresholds: \r\n          threshold_0:\r\n            operator: greater_than\r\
+      \n            value: 60\r\nDisk_Probe:\r\n    name: 'Disk'\r\n    path: \r\n\
+      \    active: True\r\n    static: False\r\n    metrics:\r\n      diskFree_metric:\r\
+      \n        name: 'diskFree'\r\n        type: 'long'\r\n        unit: 'MB'\r\n\
+      \        thresholds:\r\n          threshold_0:\r\n            operator: greater_than\r\
+      \n            value: 500\r\n      diskTotal_metric:\r\n        name: 'diskTotal'\r\
+      \n        type: 'long'\r\n        unit: 'MB'\r\n        thresholds: \r\nNetwork_Probe:\r\
+      \n    name: 'Network'\r\n    path:\r\n    active: True\r\n    static: False\r\
+      \n    metrics:\r\n      netBytesIN_metric:\r\n        name: 'netBytesIN'\r\n\
+      \        type: 'double'\r\n        unit: 'bytes/s'\r\n        thresholds:\r\n\
+      \      netBytesOUT_metric:\r\n        name: 'netBytesOUT'\r\n        type: 'double'\r\
+      \n        unit: 'bytes/s'\r\n        thresholds:\r\n      netPacketsIN_metric:\r\
+      \n        name: 'netPacketsIN'\r\n        type: 'double'\r\n        unit: 'bytes/s'\r\
+      \n        thresholds:\r\n      netPacketsOUT_metric:\r\n        name: 'netPacketsOUT'\r\
+      \n        type: 'double'\r\n        unit: 'bytes/s'\r\n        thresholds:\r\
+      \nStaticInfo_Probe:\r\n    name: 'StaticInfo'\r\n    path:\r\n    active: True\r\
+      \n    static: True\r\n    metrics:\r\n      arch_metric:\r\n        name: 'arch'\r\
+      \n        type: 'string'\r\n        unit: \r\n        thresholds:\r\n      btime_metric:\r\
+      \n        name: 'btime'\r\n        type: 'string'\r\n        unit: \r\n    \
+      \    thresholds:\r\n      cpuNum_metric:\r\n        name: 'cpuNum'\r\n     \
+      \   type: 'string'\r\n        unit: \r\n        thresholds:\r\n      os_metric:\r\
+      \n        name: 'os'\r\n        type: 'string'\r\n        unit: \r\n       \
+      \ thresholds:", is_collection: true, name: probes}
+  model: api.componenttypeproperty
+  pk: 17
+- fields: {component_type: 19, data_type: 16, default_value: "port_mapping_0:\r\n\
+      \  container_port: 8080\r\n  host_port: 8080\r\nport_mapping_1:\r\n  container_port:\
+      \ 4242\r\n  host_port: 4242\r\nport_mapping_2:\r\n  container_port: 4245\r\n\
+      \  host_port: 4245\r\nport_mapping_3:\r\n  container_port: 7199\r\n  host_port:\
+      \ 7199\r\nport_mapping_4:\r\n  container_port: 7000\r\n  host_port: 7000\r\n\
+      port_mapping_5:\r\n  container_port: 7001\r\n  host_port: 7001\r\nport_mapping_6:\r\
+      \n  container_port: 9160\r\n  host_port: 9160\r\nport_mapping_7:\r\n  container_port:\
+      \ 9042\r\n  host_port: 9042\r\nport_mapping_8:\r\n  container_port: 8012\r\n\
+      \  host_port: 8012\r\nport_mapping_9:\r\n  container_port: 61621\r\n  host_port:\
+      \ 61621", is_collection: true, name: ports_mapping}
+  model: api.componenttypeproperty
+  pk: 22
+- fields: {component_type: 14, data_type: 16, default_value: '', is_collection: true,
+    name: ports_mapping}
+  model: api.componenttypeproperty
+  pk: 23
+- fields: {component_type: 1, data_type: 7, default_value: '', is_collection: false,
+    name: QoS}
+  model: api.componenttypeproperty
+  pk: 24
+- fields: {component_type: 9, data_type: 7, default_value: '', is_collection: false,
+    name: QoS}
+  model: api.componenttypeproperty
+  pk: 25
+- fields: {type: 1}
+  model: api.component
   pk: 1
-
-- fields: {title: 'Default Component Group', created_at: '2016-11-17 00:00:00.000000', updated_at: '2016-11-17 00:00:00.000000', user: null}
-  model: api.graphbase
+- fields: {type: 2}
+  model: api.component
   pk: 2
-
-- fields: {type: 1, graphbase_ptr: 1}
-  model: api.component
-
-- fields: {type: 2, graphbase_ptr: 2}
-  model: api.component
-
-- fields: {title: 'Default Component Link', graph: 1, component: 1, mode: 'single', created_at: '2016-11-17 00:00:00.000000', updated_at: '2016-11-17 00:00:00.000000',
-    properties: 'bandwidth: SET_ITS_VALUE
-latency: SET_ITS_VALUE
-netmask: SET_ITS_VALUE
-source_address: SET_ITS_VALUE
-target_address: SET_ITS_VALUE'}
+- fields: {artifacts: '', component: 1, created_at: !!timestamp '2016-11-17 00:00:00+00:00',
+    graph: 1, last_x: 0, last_y: 0, mode: single, properties: "bandwidth: SET_ITS_VALUE\n\
+      latency: SET_ITS_VALUE\nnetmask: SET_ITS_VALUE\nsource_address: SET_ITS_VALUE\n\
+      target_address: SET_ITS_VALUE\nQoS:\n  response_time: SET_ITS_VALUE", title: Default
+      Component Link, updated_at: !!timestamp '2016-11-17 00:00:00+00:00', uuid: 11274b39-9b09-4d0b-97bd-aac7c3fbcb65}
   model: api.instance
   pk: 1
-
-- fields: {title: 'Default Component Group', graph: 2, component: 2, mode: 'single', created_at: '2016-11-17 00:00:00.000000', updated_at: '2016-11-17 00:00:00.000000'}
+- fields: {artifacts: '', component: 2, created_at: !!timestamp '2016-11-17 00:00:00+00:00',
+    graph: 2, last_x: 0, last_y: 0, mode: single, properties: 'data: enter metadata
+      as YAML', title: Default Component Group, updated_at: !!timestamp '2016-11-17
+      00:00:00+00:00', uuid: 27fd2a4d-0ffd-4461-bd80-1fbd0f03f429}
   model: api.instance
   pk: 2
+- fields: {description: user public ssh key, name: PUBLIC_SSH_KEY}
+  model: api.switchdocumenttype
+  pk: 1
+- fields: {description: user amazon aws root key, name: AWS_ROOT_KEY}
+  model: api.switchdocumenttype
+  pk: 2
+- fields: {description: user AWS california key, name: AWS_California_Key}
+  model: api.switchdocumenttype
+  pk: 3
+- fields: {description: user AWS virginia key, name: AWS_Virginia_Key}
+  model: api.switchdocumenttype
+  pk: 4
+- fields: {description: Other file, name: Other}
+  model: api.switchdocumenttype
+  pk: 6
+
