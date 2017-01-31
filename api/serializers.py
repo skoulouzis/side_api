@@ -136,6 +136,7 @@ class InstanceSerializer(serializers.ModelSerializer):
             instance = Instance.objects.filter(uuid=uuid, graph=graph).first()
             if instance is not None:
                 return instance
+
         instance = Instance.objects.create(**validated_data)
         return instance
 
