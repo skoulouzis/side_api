@@ -441,45 +441,48 @@ class ApplicationInstance(GraphBase):
         port_translations = {}
 
         for instance in Instance.objects.filter(graph=self.application).all():
-            clone_instance = False
+            try:
+                clone_instance = False
 
-            old_pk = instance.pk
-            instance.pk = None
-            instance.id = None
-            instance.graph = self
-            instance.uuid = uuid.uuid4()
+                old_pk = instance.pk
+                instance.pk = None
+                instance.id = None
+                instance.graph = self
+                instance.uuid = uuid.uuid4()
 
-            if instance.component.type.switch_class.title == 'switch.Component':
-                instance.save()
+                if instance.component.type.switch_class.title == 'switch.Component':
+                    instance.save()
 
-                nested_component = NestedComponent(instance_ptr=instance)
-                nested_component.save_base(raw=True)
+                    nested_component = NestedComponent(instance_ptr=instance)
+                    nested_component.save_base(raw=True)
 
-                for port in ComponentPort.objects.filter(instance_id=old_pk).all():
-                    old_port_pk = port.pk
-                    port.pk = None
-                    port.id = None
-                    port.instance = instance
-                    port.uuid = uuid.uuid4()
-                    port.save()
-                    port_translations[old_port_pk] = port.pk
+                    for port in ComponentPort.objects.filter(instance_id=old_pk).all():
+                        old_port_pk = port.pk
+                        port.pk = None
+                        port.id = None
+                        port.instance = instance
+                        port.uuid = uuid.uuid4()
+                        port.save()
+                        port_translations[old_port_pk] = port.pk
 
-            elif instance.component.type.switch_class.title == 'switch.VirtualResource':
-                instance.component = Component.objects.filter(type__switch_class__title='switch.Host')
-                instance.last_x = 0
-                instance.last_y = 0
-                instance.save()
+                elif instance.component.type.switch_class.title == 'switch.VirtualResource':
+                    instance.component = Component.objects.filter(type__switch_class__title='switch.Host')
+                    instance.last_x = 0
+                    instance.last_y = 0
+                    instance.save()
 
-                nested_component = NestedComponent(instance_ptr=instance)
-                nested_component.save_base(raw=True)
+                    nested_component = NestedComponent(instance_ptr=instance)
+                    nested_component.save_base(raw=True)
 
-            elif instance.component.type.switch_class.title == 'switch.ComponentLink':
-                instance.save()
+                elif instance.component.type.switch_class.title == 'switch.ComponentLink':
+                    instance.save()
 
-                component_link = ComponentLink(instance_ptr=instance)
-                component_link.save_base(raw=True)
+                    component_link = ComponentLink(instance_ptr=instance)
+                    component_link.save_base(raw=True)
 
-            instance_translations[old_pk] = instance.pk
+                instance_translations[old_pk] = instance.pk
+            except Exception as e:
+                print e.message
 
         # for original_nested_component_inside_group in NestedComponent.objects.filter(graph=self, parent__isnull=False):
         #     nested_component_inside_group = NestedComponent.objects.filter(id=instance_translations[original_nested_component_inside_group.id]).first()

@@ -78,7 +78,7 @@ class InstanceViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
             if uuid is not None:
                 queryset = Instance.objects.filter(graph_id=graph_id, uuid=uuid)
         else:
-            queryset = Instance.objects.filter(graph__user=self.request.user)
+            queryset = Instance.objects.filter()
         return queryset
 
     def perform_destroy(self, instance):

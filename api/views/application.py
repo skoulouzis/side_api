@@ -394,11 +394,31 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         return JsonResponse(provision_vi_result)
 
     @detail_route(methods=['get'], permission_classes=[])
-    def run(self, request, pk=None, *args, **kwargs):
+    def deploy(self, request, pk=None, *args, **kwargs):
+
+        result = ''
+        details = []
+        new_pk = None
+
         app = Application.objects.get(id=pk)
-        app_instance = ApplicationInstance.objects.create(application=app)
-        app_instance.clone_from_application()
-        return Response(app_instance.get_graph())
+        try:
+            app_instance = ApplicationInstance.objects.create(application=app)
+            new_pk = app_instance.id
+            app_instance.clone_from_application()
+            result = 'success'
+            details.append('deployment complete')
+        except Exception as e:
+            print e.message
+            result = 'error'
+            details.append('deployment has failed')
+
+        deploy_result = {
+            'pk': new_pk,
+            'result': result,
+            'details': details
+        }
+
+        return JsonResponse(deploy_result)
 
 
 class ApplicationGraphView(PaginateByMaxMixin, APIView):

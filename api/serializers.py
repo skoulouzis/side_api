@@ -47,13 +47,19 @@ class ApplicationSerializer(serializers.ModelSerializer):
 
 class ApplicationInstanceSerializer(serializers.ModelSerializer):
     belongs_to_user = serializers.SerializerMethodField(read_only=True, required=False)
+    notifications = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    unread_notifications = serializers.SerializerMethodField(read_only=True, required=False)
 
     class Meta:
         model = ApplicationInstance
-        fields = ('id', 'title', 'status', 'belongs_to_user', 'created_at')
+        fields = ('id', 'title', 'status', 'belongs_to_user', 'created_at', 'notifications', 'unread_notifications')
 
     def get_belongs_to_user(self, obj):
         return self.context['request'].user == obj.application.user
+
+    def get_unread_notifications(self, obj):
+        qs = Notification.objects.filter(graph__id=obj.pk, viewed=False)
+        return len(qs)
 
 
 class ComponentSerializer(serializers.ModelSerializer):
@@ -101,6 +107,7 @@ class ComponentTypeSerializer(serializers.ModelSerializer):
 
     def get_is_component_group(self, obj):
         return obj.switch_class.title == 'switch.Group'
+
 
 
 class InstanceSerializer(serializers.ModelSerializer):
