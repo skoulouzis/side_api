@@ -183,6 +183,9 @@ class Notification(models.Model):
     class JSONAPIMeta:
         resource_name = "switchnotifications"
 
+    def __unicode__(self):
+        return 'Notification: title=' + self.title + ' message=' + self.message + ' graph=' + self.graph.title
+
     graph = models.ForeignKey(GraphBase, related_name='notifications')
     title = models.CharField(max_length=512)
     message = models.CharField(max_length=2048)
