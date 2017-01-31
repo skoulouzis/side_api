@@ -8,3 +8,4 @@ graphs/*.json
 api/migrations/0001_initial.py
 graphs/
 switch_deploy.sh
+side_api/settings_secret.py
