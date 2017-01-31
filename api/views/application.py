@@ -349,7 +349,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
 
                                     provisioner_output_tosca_file = os.path.join(settings.MEDIA_ROOT, 'documents',
                                                 hashlib.md5(request.user.username).hexdigest(), 'apps', str(app.uuid),
-                                                'dripProvisioner', 'outputs', str(uuid.uuid4()))
+                                                'dripProvisioner', 'outputs', str(uuid.uuid4()) + '.yml')
                                     if not os.path.exists(os.path.dirname(provisioner_output_tosca_file)):
                                         os.makedirs(os.path.dirname(provisioner_output_tosca_file))
                                     with open(provisioner_output_tosca_file, 'w') as f:
@@ -370,7 +370,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                                     kubernetes_config = yaml.load(root.find("./file").text.replace("\\n", "\n"))
                                     kubernetes_config_file = os.path.join(settings.MEDIA_ROOT, 'documents',
                                                 hashlib.md5(request.user.username).hexdigest(), 'apps',
-                                                str(app.uuid), 'dripDeployer', 'outputs', str(uuid.uuid4()))
+                                                str(app.uuid), 'dripDeployer', 'outputs', str(uuid.uuid4()) + '.yml')
                                     if not os.path.exists(os.path.dirname(kubernetes_config_file)):
                                         os.makedirs(os.path.dirname(kubernetes_config_file))
                                     with open(kubernetes_config_file, 'w') as f:
