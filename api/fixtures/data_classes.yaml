@@ -1,4 +1,4 @@
-- fields: { username: "switch_admin", first_name: "admin", last_name: "admin", is_active: true, is_superuser: true, email: "", password: "pbkdf2_sha256$20000$IvWgdymNczX1$oxlW8+m/K7tom3YV0ey4VERJXq5MY1zlEAfFzn0/suA="}
+- fields: { username: "switch_admin", first_name: "admin", last_name: "admin", is_active: true, is_superuser: true, is_staff: true, email: "", password: "pbkdf2_sha256$20000$IvWgdymNczX1$oxlW8+m/K7tom3YV0ey4VERJXq5MY1zlEAfFzn0/suA="}
   model: auth.user
   pk: 1
 - fields: {created_at: !!timestamp '2016-11-17 00:00:00+00:00', title: Default Component
