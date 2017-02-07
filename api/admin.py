@@ -2,9 +2,7 @@ from django import forms
 from django.contrib import admin
 
 # Register your models here.
-from api.models import Application, Component, ComponentClass, ComponentType, ComponentTypeProperty, \
-    ServiceComponent, SwitchDocument, DataType, DataTypeProperty, ToscaClass, SwitchRepository, SwitchArtifact, \
-    SwitchDocumentType, Notification
+from api.models import *
 
 
 class ComponentTypePropertyInline(admin.TabularInline):
@@ -37,6 +35,7 @@ admin.site.register(ComponentClass)
 admin.site.register(ToscaClass)
 admin.site.register(SwitchRepository)
 admin.site.register(SwitchArtifact)
+admin.site.register(SwitchRequirement)
 admin.site.register(ServiceComponent)
 admin.site.register(SwitchDocument)
 admin.site.register(SwitchDocumentType)

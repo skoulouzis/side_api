@@ -4,6 +4,7 @@ import xml.etree.ElementTree as ET
 
 from django.http import JsonResponse
 from django.contrib.sites.shortcuts import get_current_site
+from django.db.models import Q
 from rest_framework import viewsets, status
 from rest_framework.decorators import list_route, detail_route
 from rest_framework.parsers import JSONParser
@@ -85,12 +86,58 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @detail_route(methods=['get'], permission_classes=[])
+    @detail_route(methods=['get','post'], permission_classes=[])
     def tosca(self, request, pk=None, *args, **kwargs):
+        if request.method == 'GET':
+            app = Application.objects.filter(id=pk).first()
+            return JsonResponse(app.get_tosca())
+        elif request.method == 'POST':
+            app = Application.objects.filter(id=pk).first()
+            toca_content = yaml.load(request.body).get('data', None)
+            node_templates = toca_content.get("topology_template", None).get("node_templates")
 
-        app = Application.objects.filter(id=pk).first()
+            for tosca_node_key, tosca_node_value in node_templates.iteritems():
+                instance = app.instances.get(uuid=tosca_node_key)
+                if instance:
+                    # Update the instances that are in the tosca file received and in the application
+                    instance.properties = yaml.dump(tosca_node_value.get('properties'), Dumper=utils.YamlDumper, default_flow_style=False)
+                    instance.save()
+                else:
+                    # Create new instances that are found in the tosca file but not in the application
+                    app_graph_dimensions = app.get_current_graph_dimensions()
+                    component_type = ComponentType.objects.get(tosca_class__title = tosca_node_value.get('type'))
+                    component = Component.objects.filter(type=component_type).first()
+                    if component_type.switch_class.title == 'switch.Component':
+                        # docker component (nested component)
+                        instance = NestedComponent.objects.create(
+                            component=component,
+                            graph=app, title=component_type.title, mode=component.mode,
+                            properties=yaml.dump(tosca_node_value.get('properties')),
+                            artifacts=yaml.dump(tosca_node_value.get('artifacts')),
+                            last_x=app_graph_dimensions.get('mid_x'),
+                            last_y=app_graph_dimensions.get('bottom_y') + 150,
+                            uuid=tosca_node_key)
+                    elif component_type.switch_class.title == 'switch.VirtualResource':
+                        # vm or subnet
+                        instance = ServiceComponent.objects.create(
+                            component=component,
+                            graph=app, title=component_type.title, mode=component.mode,
+                            properties=yaml.dump(tosca_node_value.get('properties')),
+                            artifacts=yaml.dump(tosca_node_value.get('artifacts')),
+                            last_x=app_graph_dimensions.get('mid_x'),
+                            last_y=app_graph_dimensions.get('bottom_y') + 150,
+                            uuid=tosca_node_key)
 
-        return JsonResponse(app.get_tosca())
+            # Delete those instances that were previously in the application but are not found in the tosca file received
+            for instance in app.instances.all():
+                if instance.uuid not in node_templates.keys():
+                    for link in app.service_links.filter(Q(target=instance) | Q(source=instance)).all():
+                        link.delete()
+                    instance.delete()
+
+            # TODO: Process service links and component links
+
+            return Response(status=status.HTTP_204_NO_CONTENT)
 
     @detail_route(methods=['get'], permission_classes=[])
     def validate(self, request, pk=None, *args, **kwargs):
@@ -124,21 +171,54 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
             result = 'error'
             details.append('application has already a planned infrastructure')
         else:
-            #  num_hw_req = Instance.objects.filter(graph__id=app.uuid, component__type__title='Requirement').count()
-            num_hw_req = app.instances.filter(component__type__title='Requirement').count()
-            if num_hw_req == 0:
+            num_hw_req = 0
+            docker_components = app.instances.filter(component__type__switch_class__title='switch.Component').all()
+            for docker_component in docker_components:
+                num_hw_req += app.service_links.filter(target=docker_component,
+                                                     source__component__type__title='Requirement').count()
+
+            if num_hw_req != docker_components.count():
                 result = 'error'
-                details.append('no hardware requirements defined')
+                details.append('Please make sure to define hardware requirements for all software components')
             else:
                 validation_result = json.loads(self.validate(request=request, pk=pk).content)
                 if validation_result['result'] == "error":
                     result = 'error'
                     details.append('Please make sure that the application is valid before to plan the virtual infrastructure')
                 else:
+                    # If there are monitoring agents in the application they need a monitoring server to be deployed with the app
+                    monitoring_agents = app.instances.filter(component__type__title='Monitoring Agent').all()
+                    if monitoring_agents.count() > 0:
+                        num_monitoring_server = app.instances.filter(
+                            component__type__title='SWITCH.MonitoringServer').count()
+                        if num_monitoring_server < 1:
+                            component_monitoring_server = Component.objects.get(title='monitoring_server',
+                                                                                type=ComponentType.objects.get(
+                                                                                    title='SWITCH.MonitoringServer'))
+
+                            # Create a graph_monitoring_server element
+                            app_graph_dimensions = app.get_current_graph_dimensions()
+                            base_instance = component_monitoring_server.get_base_instance()
+                            graph_monitoring_server = NestedComponent.objects.create(
+                                component=component_monitoring_server,
+                                graph=app, title=component_monitoring_server.title, mode=base_instance.mode,
+                                properties=base_instance.properties, artifacts=base_instance.artifacts,
+                                last_x=app_graph_dimensions.get('mid_x'),
+                                last_y=app_graph_dimensions.get('top_y') - 150)
+
+                            x_change = base_instance.last_x - graph_monitoring_server.last_x
+                            y_change = base_instance.last_y - graph_monitoring_server.last_y
+                            component_monitoring_server.clone_instances_in_graph(app, x_change, y_change,
+                                                                                 graph_monitoring_server)
+
+                            for monitoring_agent in monitoring_agents:
+                                link = ServiceLink.objects.create(graph=app, source=graph_monitoring_server,
+                                                                  target=monitoring_agent)
+
                     app_tosca_json = json.loads(self.tosca(request=request, pk=pk).content)
                     planner_input_tosca_file = os.path.join(settings.MEDIA_ROOT, 'documents',
                                                             hashlib.md5(request.user.username).hexdigest(), 'apps',
-                                                            str(app.uuid), 'dripPlanner','inputs','planner_input.yml')
+                                                            str(app.uuid), 'dripPlanner','inputs','planner_input.yaml')
                     if not os.path.exists(os.path.dirname(planner_input_tosca_file)):
                         os.makedirs(os.path.dirname(planner_input_tosca_file))
                     with open(planner_input_tosca_file, 'w') as f:
@@ -172,10 +252,10 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                                 for vm in toca_content.get("components", None):
                                     docker_image = vm.get("dockers")
 
-                                    component_vm, created = Component.objects.get_or_create(user=request.user,
-                                            title='VM', type=ComponentType.objects.get(title='Virtual Machine'))
+                                    component_vm, created = Component.objects.get_or_create(title='vm',
+                                                            type=ComponentType.objects.get(title='Virtual Machine'))
                                     if created:
-                                        Instance.objects.create(graph=component_vm, component=component_vm, title=component_vm.title,
+                                        ServiceComponent.objects.create(graph=component_vm, component=component_vm, title=component_vm.title,
                                                                 last_x=400, last_y=200, mode='single')
 
                                     docker_component = app.instances.filter(artifacts__contains=docker_image).first()
@@ -183,16 +263,20 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
 
                                     # Create a graph_virtual_machine element
                                     graph_vm = ServiceComponent.objects.create(component=component_vm, graph=app,
-                                                title='VM_' + graph_req.title, mode=graph_req.mode,
-                                                last_x=graph_req.last_x, last_y=graph_req.last_y + 80, uuid=vm.get('name'))
+                                                title='VM_' + docker_component.title, mode=docker_component.mode,
+                                                last_x=graph_req.last_x, last_y=graph_req.last_y, uuid=vm.get('name'))
 
                                     del vm['type']
                                     graph_vm.properties = yaml.dump(vm, Dumper=utils.YamlDumper, default_flow_style=False)
                                     graph_vm.save()
 
-                                    # Create a service_link between the new vm and the requirement
-                                    graph_service_link_vm_req = ServiceLink.objects.create(graph=app, source=graph_vm, target=graph_req)
-                                    graph_service_link_vm_req.save()
+                                    # Delete hw_req as it has already been satisfied by the vm
+                                    for req_links in app.service_links.filter(source=docker_component).all():
+                                        req_links.delete()
+                                    graph_req.delete()
+
+                                    # Create a service_link between the new vm and the software component
+                                    graph_service_link_vm_req = ServiceLink.objects.create(graph=app, source=graph_vm, target=docker_component)
 
                                     for ethernet_port in vm.get('ethernet_port',[]):
                                         vms_in_subnet = subnets.get(ethernet_port.get('subnet_name'), [])
@@ -201,17 +285,17 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
 
 
                                 for subnet in toca_content.get("subnets", None):
-                                    component_subnet, created = Component.objects.get_or_create(user=request.user,
-                                            title='subnet', type=ComponentType.objects.get(title='Virtual Network'))
+                                    component_subnet, created = Component.objects.get_or_create(title='subnet',
+                                                    type=ComponentType.objects.get(title='Virtual Network'))
                                     if created:
-                                        Instance.objects.create(graph=component_subnet, component=component_subnet, title=component_subnet.title,
+                                        ServiceComponent.objects.create(graph=component_subnet, component=component_subnet, title=component_subnet.title,
                                                                 last_x=400, last_y=200, mode='single')
 
                                     # Create a graph_virtual_network element
                                     app_graph_dimensions = app.get_current_graph_dimensions()
                                     graph_subnet = ServiceComponent.objects.create(component=component_subnet, graph=app,
                                                 title='subnet_' + subnet.get('name'), mode='single',
-                                                last_x=app_graph_dimensions.get('bottom_x',0)/2, last_y=app_graph_dimensions.get('bottom_y',0) + 80)
+                                                last_x=app_graph_dimensions.get('mid_x'), last_y=app_graph_dimensions.get('bottom_y') + 80)
 
                                     graph_subnet.properties = yaml.dump(subnet, Dumper=utils.YamlDumper, default_flow_style=False)
                                     graph_subnet.save()
@@ -221,7 +305,6 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                                     for vm_uuid in vms_in_subnet:
                                         graph_vm = ServiceComponent.objects.get(uuid=vm_uuid)
                                         graph_service_link_vm_req = ServiceLink.objects.create(graph=app, source=graph_vm, target=graph_subnet)
-                                        graph_service_link_vm_req.save()
 
                         result = 'ok'
                         details.append('plan done correctly')
@@ -286,7 +369,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                 # Create all topology file
                 all_topology_file = os.path.join(settings.MEDIA_ROOT, 'documents',
                                                  hashlib.md5(request.user.username).hexdigest(), 'apps',
-                                                 str(app.uuid), 'dripProvisioner','inputs', 'provisioner_input_all.yml')
+                                                 str(app.uuid), 'dripProvisioner','inputs', 'provisioner_input_all.yaml')
                 if not os.path.exists(os.path.dirname(all_topology_file)):
                     os.makedirs(os.path.dirname(all_topology_file))
                 with open(all_topology_file, 'w') as f:
@@ -300,7 +383,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                 for domain, topology in infrastructure_topologies.iteritems():
                     provisioner_input_specific_topology_file = os.path.join(settings.MEDIA_ROOT, 'documents',
                                     hashlib.md5(request.user.username).hexdigest(), 'apps', str(app.uuid),
-                                    'dripProvisioner','inputs', re.sub(r'[\\/*?:"<>|\\.\\-]',"_",domain) + '.yml')
+                                    'dripProvisioner','inputs', re.sub(r'[\\/*?:"<>|\\.\\-]',"_",domain) + '.yaml')
                     specific_topology_files.append(provisioner_input_specific_topology_file)
                     if not os.path.exists(os.path.dirname(provisioner_input_specific_topology_file)):
                         os.makedirs(os.path.dirname(provisioner_input_specific_topology_file))
@@ -349,7 +432,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
 
                                     provisioner_output_tosca_file = os.path.join(settings.MEDIA_ROOT, 'documents',
                                                 hashlib.md5(request.user.username).hexdigest(), 'apps', str(app.uuid),
-                                                'dripProvisioner', 'outputs', str(uuid.uuid4()) + '.yml')
+                                                'dripProvisioner', 'outputs', str(uuid.uuid4()) + '.yaml')
                                     if not os.path.exists(os.path.dirname(provisioner_output_tosca_file)):
                                         os.makedirs(os.path.dirname(provisioner_output_tosca_file))
                                     with open(provisioner_output_tosca_file, 'w') as f:
@@ -370,7 +453,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                                     kubernetes_config = yaml.load(root.find("./file").text.replace("\\n", "\n"))
                                     kubernetes_config_file = os.path.join(settings.MEDIA_ROOT, 'documents',
                                                 hashlib.md5(request.user.username).hexdigest(), 'apps',
-                                                str(app.uuid), 'dripDeployer', 'outputs', str(uuid.uuid4()) + '.yml')
+                                                str(app.uuid), 'dripDeployer', 'outputs', str(uuid.uuid4()) + '.yaml')
                                     if not os.path.exists(os.path.dirname(kubernetes_config_file)):
                                         os.makedirs(os.path.dirname(kubernetes_config_file))
                                     with open(kubernetes_config_file, 'w') as f:

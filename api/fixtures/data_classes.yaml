@@ -9,6 +9,34 @@
       Group, updated_at: !!timestamp '2016-11-17 00:00:00+00:00', user: null}
   model: api.graphbase
   pk: 2
+- fields: {created_at: !!timestamp '2017-02-01 11:38:46.484452+00:00', title: hw_requirement,
+    updated_at: !!timestamp '2017-02-01 11:38:46.484985+00:00', user: null}
+  model: api.graphbase
+  pk: 3
+- fields: {created_at: !!timestamp '2017-02-01 11:39:46.741564+00:00', title: qos_constraint,
+    updated_at: !!timestamp '2017-02-01 11:39:46.741908+00:00', user: null}
+  model: api.graphbase
+  pk: 4
+- fields: {created_at: !!timestamp '2017-02-01 11:51:18.704265+00:00', title: monitoring_server,
+    updated_at: !!timestamp '2017-02-01 11:51:18.704470+00:00', user: null}
+  model: api.graphbase
+  pk: 5
+- fields: {created_at: !!timestamp '2017-02-01 12:07:51.979124+00:00', title: vm,
+    updated_at: !!timestamp '2017-02-01 12:07:51.979397+00:00', user: null}
+  model: api.graphbase
+  pk: 6
+- fields: {created_at: !!timestamp '2017-02-01 12:08:36.989728+00:00', title: subnet,
+    updated_at: !!timestamp '2017-02-01 12:08:36.989988+00:00', user: null}
+  model: api.graphbase
+  pk: 7
+- fields: {created_at: !!timestamp '2017-02-01 12:10:20.180389+00:00', title: adaptation_policy,
+    updated_at: !!timestamp '2017-02-01 12:10:20.180669+00:00', user: null}
+  model: api.graphbase
+  pk: 8
+- fields: {created_at: !!timestamp '2017-02-01 13:15:34.466827+00:00', title: monitoring_agent,
+    updated_at: !!timestamp '2017-02-01 13:15:34.467021+00:00', user: null}
+  model: api.graphbase
+  pk: 9
 - fields: {default_value: SET_ITS_VALUE, name: string, parent: null}
   model: api.datatype
   pk: 1
@@ -38,16 +66,16 @@
 - fields: {default_value: '', name: Switch.datatypes.Network.Multicast, parent: 5}
   model: api.datatype
   pk: 10
-- fields: {default_value: "num_cpus: SET_ITS_VALUE\r\ncpu_frequency: SET_ITS_VALUE\r\
-      \ndisk_size: SET_ITS_VALUE\r\nmem_size: SET_ITS_VALUE", name: Switch.datatypes.hw.host,
+- fields: {default_value: "num_cpus: SET_ITS_VALUE\ncpu_frequency: SET_ITS_VALUE\
+      \ndisk_size: SET_ITS_VALUE\nmem_size: SET_ITS_VALUE", name: Switch.datatypes.hw.host,
     parent: 5}
   model: api.datatype
   pk: 11
-- fields: {default_value: "architecture: x86_64\r\ntype: linux\r\ndistribution: ubuntu\r\
+- fields: {default_value: "architecture: x86_64\ntype: linux\ndistribution: ubuntu\
       \nos_version: 16.04", name: Switch.datatypes.hw.os, parent: 5}
   model: api.datatype
   pk: 12
-- fields: {default_value: '', name: Switch.datatypes.monitoring.probe, parent: null}
+- fields: {default_value: '', name: Switch.datatypes.monitoring.probe, parent: 5}
   model: api.datatype
   pk: 13
 - fields: {default_value: '', name: Switch.datatypes.monitoring.metric, parent: 5}
@@ -57,119 +85,145 @@
     parent: 5}
   model: api.datatype
   pk: 15
-- fields: {default_value: '', name: Switch.datatypes.port_mapping, parent: null}
+- fields: {default_value: '', name: Switch.datatypes.port_mapping, parent: 5}
   model: api.datatype
   pk: 16
-- fields: {data_type: 2, default_value: '', is_collection: false, name: response_time,
-    parent_data_type: 7}
+- fields: {default_value: '', name: Switch.datatypes.port, parent: 5}
+  model: api.datatype
+  pk: 17
+- fields: {default_value: '', name: Switch.datatypes.ethernet_port, parent: 5}
+  model: api.datatype
+  pk: 18
+- fields: {data_type: 2, default_value: '', collection_type: S, name: response_time,
+    parent_data_type: 7, required: true}
   model: api.datatypeproperty
   pk: 2
-- fields: {data_type: 1, default_value: '', is_collection: false, name: address, parent_data_type: 8}
+- fields: {data_type: 1, default_value: '', collection_type: S, name: address, parent_data_type: 8, required: true}
   model: api.datatypeproperty
   pk: 3
-- fields: {data_type: 1, default_value: '', is_collection: false, name: component_name,
-    parent_data_type: 8}
+- fields: {data_type: 1, default_value: '', collection_type: S, name: component_name,
+    parent_data_type: 8, required: true}
   model: api.datatypeproperty
   pk: 4
-- fields: {data_type: 1, default_value: '', is_collection: false, name: netmask, parent_data_type: 8}
+- fields: {data_type: 1, default_value: '', collection_type: S, name: netmask, parent_data_type: 8, required: true}
   model: api.datatypeproperty
   pk: 5
-- fields: {data_type: 1, default_value: '', is_collection: false, name: port_name,
-    parent_data_type: 8}
+- fields: {data_type: 1, default_value: '', collection_type: S, name: port_name,
+    parent_data_type: 8, required: true}
   model: api.datatypeproperty
   pk: 6
-- fields: {data_type: 1, default_value: '', is_collection: false, name: multicastAddrIP,
-    parent_data_type: 9}
+- fields: {data_type: 1, default_value: '', collection_type: S, name: multicastAddrIP,
+    parent_data_type: 9, required: true}
   model: api.datatypeproperty
   pk: 7
-- fields: {data_type: 1, default_value: '', is_collection: false, name: multicastAddrPort,
-    parent_data_type: 9}
+- fields: {data_type: 1, default_value: '', collection_type: S, name: multicastAddrPort,
+    parent_data_type: 9, required: true}
   model: api.datatypeproperty
   pk: 8
-- fields: {data_type: 1, default_value: '', is_collection: false, name: multicastAddrIP,
-    parent_data_type: 10}
+- fields: {data_type: 1, default_value: '', collection_type: S, name: multicastAddrIP,
+    parent_data_type: 10, required: true}
   model: api.datatypeproperty
   pk: 9
-- fields: {data_type: 1, default_value: '', is_collection: false, name: multicastAddrPort,
-    parent_data_type: 10}
+- fields: {data_type: 1, default_value: '', collection_type: S, name: multicastAddrPort,
+    parent_data_type: 10, required: true}
   model: api.datatypeproperty
   pk: 10
-- fields: {data_type: 2, default_value: '', is_collection: false, name: num_cpus,
-    parent_data_type: 11}
+- fields: {data_type: 2, default_value: '', collection_type: S, name: num_cpus,
+    parent_data_type: 11, required: true}
   model: api.datatypeproperty
   pk: 15
-- fields: {data_type: 3, default_value: '', is_collection: false, name: cpu_frequency,
-    parent_data_type: 11}
+- fields: {data_type: 3, default_value: '', collection_type: S, name: cpu_frequency,
+    parent_data_type: 11, required: true}
   model: api.datatypeproperty
   pk: 16
-- fields: {data_type: 2, default_value: '', is_collection: false, name: disk_size,
-    parent_data_type: 11}
+- fields: {data_type: 2, default_value: '', collection_type: S, name: disk_size,
+    parent_data_type: 11, required: true}
   model: api.datatypeproperty
   pk: 17
-- fields: {data_type: 2, default_value: '', is_collection: false, name: mem_size,
-    parent_data_type: 11}
+- fields: {data_type: 2, default_value: '', collection_type: S, name: mem_size,
+    parent_data_type: 11, required: true}
   model: api.datatypeproperty
   pk: 18
-- fields: {data_type: 1, default_value: '', is_collection: false, name: architecture,
-    parent_data_type: 12}
+- fields: {data_type: 1, default_value: '', collection_type: S, name: architecture,
+    parent_data_type: 12, required: true}
   model: api.datatypeproperty
   pk: 19
-- fields: {data_type: 1, default_value: '', is_collection: false, name: type, parent_data_type: 12}
+- fields: {data_type: 1, default_value: '', collection_type: S, name: type, parent_data_type: 12, required: true}
   model: api.datatypeproperty
   pk: 20
-- fields: {data_type: 1, default_value: '', is_collection: false, name: distribution,
-    parent_data_type: 12}
+- fields: {data_type: 1, default_value: '', collection_type: S, name: distribution,
+    parent_data_type: 12, required: true}
   model: api.datatypeproperty
   pk: 21
-- fields: {data_type: 1, default_value: '', is_collection: false, name: os_version,
-    parent_data_type: 12}
+- fields: {data_type: 1, default_value: '', collection_type: S, name: os_version,
+    parent_data_type: 12, required: true}
   model: api.datatypeproperty
   pk: 22
-- fields: {data_type: 1, default_value: '', is_collection: false, name: name, parent_data_type: 13}
+- fields: {data_type: 1, default_value: '', collection_type: S, name: name, parent_data_type: 13, required: true}
   model: api.datatypeproperty
   pk: 23
-- fields: {data_type: 1, default_value: '', is_collection: false, name: path, parent_data_type: 13}
+- fields: {data_type: 1, default_value: '', collection_type: S, name: path, parent_data_type: 13, required: false}
   model: api.datatypeproperty
   pk: 24
-- fields: {data_type: 4, default_value: '', is_collection: false, name: active, parent_data_type: 13}
+- fields: {data_type: 4, default_value: '', collection_type: S, name: active, parent_data_type: 13, required: true}
   model: api.datatypeproperty
   pk: 25
-- fields: {data_type: 1, default_value: '', is_collection: false, name: name, parent_data_type: 14}
+- fields: {data_type: 1, default_value: '', collection_type: S, name: name, parent_data_type: 14, required: true}
   model: api.datatypeproperty
   pk: 26
-- fields: {data_type: 1, default_value: '', is_collection: false, name: type, parent_data_type: 14}
+- fields: {data_type: 1, default_value: '', collection_type: S, name: type, parent_data_type: 14, required: true}
   model: api.datatypeproperty
   pk: 29
-- fields: {data_type: 1, default_value: '', is_collection: false, name: unit, parent_data_type: 14}
+- fields: {data_type: 1, default_value: '', collection_type: S, name: unit, parent_data_type: 14, required: false}
   model: api.datatypeproperty
   pk: 30
-- fields: {data_type: 1, default_value: equal, is_collection: false, name: operator,
-    parent_data_type: 15}
+- fields: {data_type: 1, default_value: equal, collection_type: S, name: operator,
+    parent_data_type: 15, required: true}
   model: api.datatypeproperty
   pk: 31
-- fields: {data_type: 1, default_value: '', is_collection: false, name: value, parent_data_type: 15}
+- fields: {data_type: 2, default_value: '', collection_type: S, name: value, parent_data_type: 15, required: true}
   model: api.datatypeproperty
   pk: 32
-- fields: {data_type: 15, default_value: '', is_collection: true, name: thresholds,
-    parent_data_type: 14}
+- fields: {data_type: 15, default_value: '', collection_type: M, name: thresholds,
+    parent_data_type: 14, required: false}
   model: api.datatypeproperty
   pk: 33
-- fields: {data_type: 4, default_value: 'False', is_collection: false, name: static,
-    parent_data_type: 13}
+- fields: {data_type: 4, default_value: 'False', collection_type: S, name: static,
+    parent_data_type: 13, required: true}
   model: api.datatypeproperty
   pk: 34
-- fields: {data_type: 14, default_value: '', is_collection: true, name: metrics, parent_data_type: 13}
+- fields: {data_type: 14, default_value: '', collection_type: M, name: metrics, parent_data_type: 13, required: true}
   model: api.datatypeproperty
   pk: 35
-- fields: {data_type: 2, default_value: '', is_collection: false, name: host_port,
-    parent_data_type: 16}
+- fields: {data_type: 2, default_value: '', collection_type: S, name: host_port,
+    parent_data_type: 16, required: true}
   model: api.datatypeproperty
   pk: 36
-- fields: {data_type: 2, default_value: '', is_collection: false, name: container_port,
-    parent_data_type: 16}
+- fields: {data_type: 2, default_value: '', collection_type: S, name: container_port,
+    parent_data_type: 16, required: true}
   model: api.datatypeproperty
   pk: 37
-- fields: {is_normative: true, name: root, parent: null, prefix: tosca.nodes, type: N}
+- fields: {data_type: 1, default_value: '', collection_type: S, name: type,
+    parent_data_type: 17, required: true}
+  model: api.datatypeproperty
+  pk: 38
+- fields: {data_type: 1, default_value: '', collection_type: S, name: port,
+    parent_data_type: 17, required: true}
+  model: api.datatypeproperty
+  pk: 39
+- fields: {data_type: 1, default_value: '', collection_type: S, name: name,
+    parent_data_type: 18, required: true}
+  model: api.datatypeproperty
+  pk: 40
+- fields: {data_type: 1, default_value: '', collection_type: S, name: subnet_name,
+    parent_data_type: 18, required: true}
+  model: api.datatypeproperty
+  pk: 41
+- fields: {data_type: 1, default_value: '', collection_type: S, name: address,
+    parent_data_type: 18, required: true}
+  model: api.datatypeproperty
+  pk: 42
+- fields: {is_normative: true, name: Root, parent: null, prefix: tosca.nodes, type: N}
   model: api.toscaclass
   pk: 1
 - fields: {is_normative: true, name: Compute, parent: 1, prefix: tosca.nodes, type: N}
@@ -179,11 +233,11 @@
     type: N}
   model: api.toscaclass
   pk: 3
-- fields: {is_normative: false, name: Docker, parent: 1, prefix: Switch.nodes.Application.Container,
+- fields: {is_normative: true, name: Application, parent: null, prefix: tosca.nodes.Container,
     type: N}
   model: api.toscaclass
   pk: 4
-- fields: {is_normative: false, name: Connection, parent: 1, prefix: Switch.nodes.Application,
+- fields: {is_normative: false, name: Docker, parent: 4, prefix: Switch.nodes.Application.Container,
     type: N}
   model: api.toscaclass
   pk: 5
@@ -191,7 +245,7 @@
     type: N}
   model: api.toscaclass
   pk: 7
-- fields: {is_normative: false, name: Root, parent: null, prefix: tosca.groups, type: N}
+- fields: {is_normative: false, name: Root, parent: null, prefix: tosca.groups, type: G}
   model: api.toscaclass
   pk: 8
 - fields: {is_normative: false, name: Component, parent: 1, prefix: Switch.nodes,
@@ -221,7 +275,7 @@
     type: N}
   model: api.toscaclass
   pk: 15
-- fields: {is_normative: false, name: AdaptationProfile, parent: 1, prefix: Switch.nodes,
+- fields: {is_normative: false, name: AdaptationPolicy, parent: 1, prefix: Switch.nodes,
     type: N}
   model: api.toscaclass
   pk: 16
@@ -241,14 +295,28 @@
     type: A}
   model: api.toscaclass
   pk: 21
-- fields: {is_normative: false, name: MonitoringServer, parent: 4, prefix: Switch.nodes.Application.Container.Docker,
+- fields: {is_normative: false, name: MonitoringServer, parent: 5, prefix: Switch.nodes.Application.Container.Docker,
     type: N}
   model: api.toscaclass
   pk: 23
 - fields: {is_normative: false, name: Compute, parent: 2, prefix: Switch.nodes, type: N}
   model: api.toscaclass
   pk: 24
-- fields: {credential: "protocol: xauth\r\ntoken_type: X-Auth-Token\r\ntoken: 604bbe45ac7143a79e14f3158df67091",
+- fields: {is_normative: true, name: Node, parent: null, prefix: tosca.capabilities,
+    type: C}
+  model: api.toscaclass
+  pk: 25
+- fields: {is_normative: true, name: DependsOn, parent: null, prefix: tosca.relationships,
+    type: R}
+  model: api.toscaclass
+  pk: 26
+- fields: {capability: 25, name: monitor_server_endpoint, node: 23, relationship: 26}
+  model: api.switchrequirement
+  pk: 1
+- fields: {capability: 25, name: monitored_by, node: 12, relationship: 26}
+  model: api.switchrequirement
+  pk: 2
+- fields: {credential: "protocol: xauth\ntoken_type: X-Auth-Token\ntoken: 604bbe45ac7143a79e14f3158df67091",
     description: switch repository in GitHub, name: SWITCH_docker_hub, url: 'https://github.com/switch-project'}
   model: api.switchrepository
   pk: 1
@@ -266,8 +334,7 @@
 - fields: {classpath: '', is_core_component: false, is_template_component: true, title: switch.Attribute}
   model: api.componentclass
   pk: 3
-- fields: {classpath: '', is_core_component: false, is_template_component: false,
-    title: switch.VirtualResource}
+- fields: {classpath: '', is_core_component: false, is_template_component: true, title: switch.VirtualResource}
   model: api.componentclass
   pk: 4
 - fields: {classpath: '', is_core_component: false, is_template_component: false,
@@ -280,6 +347,7 @@
   pk: 6
 - fields:
     artifacts: []
+    requirements: []
     icon_class: xx
     icon_code: ''
     icon_colour: rgb(255, 255, 255)
@@ -296,6 +364,7 @@
   pk: 1
 - fields:
     artifacts: []
+    requirements: []
     icon_class: btn-default
     icon_code: '&#xf247'
     icon_colour: rgb(51, 51, 51)
@@ -315,6 +384,7 @@
   pk: 2
 - fields:
     artifacts: []
+    requirements: []
     icon_class: btn-primary
     icon_code: '&#xf013'
     icon_colour: rgb(255, 255, 255)
@@ -341,6 +411,7 @@
   pk: 3
 - fields:
     artifacts: []
+    requirements: []
     icon_class: btn-default
     icon_code: '&#xf29c'
     icon_colour: rgb(51, 51, 51)
@@ -367,6 +438,7 @@
   pk: 4
 - fields:
     artifacts: []
+    requirements: []
     icon_class: btn-info
     icon_code: '&#xf0c1'
     icon_colour: rgb(255, 255, 255)
@@ -393,6 +465,7 @@
   pk: 5
 - fields:
     artifacts: []
+    requirements: [1]
     icon_class: btn-success btn-circle
     icon_code: '&#xf201'
     icon_colour: rgb(255, 255, 255)
@@ -412,6 +485,7 @@
   pk: 6
 - fields:
     artifacts: []
+    requirements: []
     icon_class: btn-grass btn-circle
     icon_code: '&#xf130'
     icon_colour: rgb(255, 255, 255)
@@ -432,6 +506,7 @@
   pk: 7
 - fields:
     artifacts: []
+    requirements: []
     icon_class: btn-coral btn-circle
     icon_code: '&#xf129'
     icon_colour: rgb(255, 255, 255)
@@ -451,6 +526,7 @@
   pk: 8
 - fields:
     artifacts: []
+    requirements: []
     icon_class: btn-warning btn-circle
     icon_code: '&#xf024'
     icon_colour: rgb(255, 255, 255)
@@ -472,6 +548,7 @@
   pk: 9
 - fields:
     artifacts: []
+    requirements: []
     icon_class: btn-danger btn-circle
     icon_code: '&#xf121'
     icon_colour: rgb(255, 255, 255)
@@ -488,12 +565,13 @@
     primary_colour: rgb(217, 83, 79)
     secondary_colour: rgb(212, 63, 58)
     switch_class: 3
-    title: Adaptation Profile
+    title: Adaptation Policy
     tosca_class: 16
   model: api.componenttype
   pk: 10
 - fields:
     artifacts: []
+    requirements: []
     icon_class: btn-pink btn-circle
     icon_code: '&#xf07a'
     icon_colour: rgb(255, 255, 255)
@@ -515,6 +593,7 @@
   pk: 11
 - fields:
     artifacts: []
+    requirements: []
     icon_class: btn-purple btn-diamond
     icon_code: '&#xf26c'
     icon_colour: rgb(255, 255, 255)
@@ -535,6 +614,7 @@
   pk: 12
 - fields:
     artifacts: []
+    requirements: []
     icon_class: btn-magenta btn-diamond
     icon_code: '&#xf0ec'
     icon_colour: rgb(255, 255, 255)
@@ -555,6 +635,7 @@
   pk: 13
 - fields:
     artifacts: []
+    requirements: [2]
     icon_class: btn-primary
     icon_code: '&#xf013'
     icon_colour: rgb(255, 255, 255)
@@ -576,11 +657,12 @@
     secondary_colour: rgb(46, 109, 164)
     switch_class: 1
     title: Docker
-    tosca_class: 4
+    tosca_class: 5
   model: api.componenttype
   pk: 14
 - fields:
     artifacts: [4]
+    requirements: []
     icon_class: btn-primary
     icon_code: '&#xf013'
     icon_colour: rgb(255, 255, 255)
@@ -598,134 +680,230 @@
       9 24 9q13 0 25 -10q129 -119 165 -170q7 -8 7 -22 q0 -12 -8 -23q-15 -21 -51 -66.5t-54
       -70.5q26 -50 41 -98l183 -28q13 -2 21 -12.5t8 -23.5z
     parent: 14
-    primary_colour: rgb(51, 122, 183)
-    secondary_colour: rgb(46, 109, 164)
+    primary_colour: rgb(0, 100, 0)
+    secondary_colour: rgb(0, 255, 0)
     switch_class: 1
     title: SWITCH.MonitoringServer
     tosca_class: 23
   model: api.componenttype
   pk: 19
-- fields: {component_type: 1, data_type: 8, default_value: '', is_collection: false,
-    name: source}
+- fields: {component_type: 1, data_type: 8, default_value: '', collection_type: S,
+    name: source, required: true}
   model: api.componenttypeproperty
   pk: 9
-- fields: {component_type: 1, data_type: 8, default_value: '', is_collection: false,
-    name: target}
+- fields: {component_type: 1, data_type: 8, default_value: '', collection_type: S,
+    name: target, required: true}
   model: api.componenttypeproperty
   pk: 10
-- fields: {component_type: 1, data_type: 2, default_value: '', is_collection: false,
-    name: bandwidth}
+- fields: {component_type: 1, data_type: 2, default_value: '', collection_type: S,
+    name: bandwidth, required: true}
   model: api.componenttypeproperty
   pk: 11
-- fields: {component_type: 1, data_type: 2, default_value: '', is_collection: false,
-    name: latency}
+- fields: {component_type: 1, data_type: 2, default_value: '', collection_type: S,
+    name: latency, required: true}
   model: api.componenttypeproperty
   pk: 12
-- fields: {component_type: 1, data_type: 2, default_value: '', is_collection: false,
-    name: jitter}
+- fields: {component_type: 1, data_type: 2, default_value: '', collection_type: S,
+    name: jitter, required: true}
   model: api.componenttypeproperty
   pk: 13
-- fields: {component_type: 1, data_type: 10, default_value: '', is_collection: false,
-    name: multicast}
+- fields: {component_type: 1, data_type: 10, default_value: '', collection_type: S,
+    name: multicast, required: true}
   model: api.componenttypeproperty
   pk: 14
-- fields: {component_type: 11, data_type: 11, default_value: '', is_collection: false,
-    name: host}
+- fields: {component_type: 11, data_type: 11, default_value: '', collection_type: S,
+    name: host, required: true}
   model: api.componenttypeproperty
   pk: 15
-- fields: {component_type: 11, data_type: 12, default_value: '', is_collection: false,
-    name: os}
+- fields: {component_type: 11, data_type: 12, default_value: '', collection_type: S,
+    name: os, required: true}
   model: api.componenttypeproperty
   pk: 16
-- fields: {component_type: 6, data_type: 13, default_value: "CPU_Probe:\r\n    name:\
-      \ 'CPU'\r\n    path:\r\n    active: True\r\n    static: False\r\n    metrics:\r\
-      \n      cpuTotal_metric:\r\n        name: 'cpuTotal'\r\n        type: 'double'\r\
-      \n        unit: '%'\r\n        thresholds:\r\n          threshold_0:\r\n   \
-      \         operator: greater_than\r\n            value: 80\r\n          threshold_1:\r\
-      \n            operator: less_than\r\n            value: 20\r\n      cpuUser_metric:\r\
-      \n        name: 'cpuUser'\r\n        type: 'double'\r\n        unit: '%'\r\n\
-      \        thresholds: \r\n      cpuSystem_metric:\r\n        name: 'cpuSystem'\r\
-      \n        type: 'double'\r\n        unit: '%'\r\n        thresholds: \r\n  \
-      \    cpuIdle_metric:\r\n        name: 'cpuIdle'\r\n        type: 'double'\r\n\
-      \        unit: '%'\r\n        thresholds: \r\n      cpuIOwait_metric:\r\n  \
-      \      name: 'cpuIOwait'\r\n        type: 'double'\r\n        unit: '%'\r\n\
-      \        thresholds: \r\nMemory_Probe:\r\n    name: 'Memory'\r\n    path:\r\n\
-      \    active: True\r\n    static: False\r\n    metrics:\r\n      memTotal_metric:\r\
-      \n        name: 'memTotal'\r\n        type: 'integer'\r\n        unit: 'KB'\r\
-      \n        thresholds: \r\n      memFree_metric:\r\n        name: 'memFree'\r\
-      \n        type: 'integer'\r\n        unit: 'KB'\r\n        thresholds: \r\n\
-      \      memCache_metric:\r\n        name: 'memCache'\r\n        type: 'integer'\r\
-      \n        unit: 'KB'\r\n        threshold: \r\n      memSwapTotal_metric:\r\n\
-      \        name: 'memSwapTotal'\r\n        type: 'integer'\r\n        unit: 'KB'\r\
-      \n        thresholds: \r\n      memSwapFree_metric:\r\n        name: 'memSwapFree'\r\
-      \n        type: 'integer'\r\n        unit: 'KB'\r\n        thresholds: \r\n\
-      \      memUsed_metric:\r\n        name: 'memUsed'\r\n        type: 'integer'\r\
-      \n        unit: 'KB'\r\n        thresholds: \r\n      memUsedPercent_metric:\r\
-      \n        name: 'memUsedPercent'\r\n        type: 'double'\r\n        unit:\
-      \ '%'\r\n        thresholds: \r\n          threshold_0:\r\n            operator:\
-      \ greater_than\r\n            value: 80\r\n          threshold_1:\r\n      \
-      \      operator: less_than\r\n            value: 20\r\nDiskStats_Probe:\r\n\
-      \    name: 'DiskStats'\r\n    path:\r\n    active: True\r\n    static: False\r\
-      \n    metrics:\r\n      readkbps_metric:\r\n        name: 'readkbps'\r\n   \
-      \     type: 'double'\r\n        unit: 'KB/s'\r\n        thresholds:\r\n    \
-      \  writekbps_metric:\r\n        name: 'writekbps'\r\n        type: 'double'\r\
-      \n        unit: 'KB/s'\r\n        thresholds:\r\n      iotime_metric:\r\n  \
-      \      name: 'iotime'\r\n        type: 'double'\r\n        unit: '%'\r\n   \
-      \     thresholds: \r\n          threshold_0:\r\n            operator: greater_than\r\
-      \n            value: 60\r\nDisk_Probe:\r\n    name: 'Disk'\r\n    path: \r\n\
-      \    active: True\r\n    static: False\r\n    metrics:\r\n      diskFree_metric:\r\
-      \n        name: 'diskFree'\r\n        type: 'long'\r\n        unit: 'MB'\r\n\
-      \        thresholds:\r\n          threshold_0:\r\n            operator: greater_than\r\
-      \n            value: 500\r\n      diskTotal_metric:\r\n        name: 'diskTotal'\r\
-      \n        type: 'long'\r\n        unit: 'MB'\r\n        thresholds: \r\nNetwork_Probe:\r\
-      \n    name: 'Network'\r\n    path:\r\n    active: True\r\n    static: False\r\
-      \n    metrics:\r\n      netBytesIN_metric:\r\n        name: 'netBytesIN'\r\n\
-      \        type: 'double'\r\n        unit: 'bytes/s'\r\n        thresholds:\r\n\
-      \      netBytesOUT_metric:\r\n        name: 'netBytesOUT'\r\n        type: 'double'\r\
-      \n        unit: 'bytes/s'\r\n        thresholds:\r\n      netPacketsIN_metric:\r\
-      \n        name: 'netPacketsIN'\r\n        type: 'double'\r\n        unit: 'bytes/s'\r\
-      \n        thresholds:\r\n      netPacketsOUT_metric:\r\n        name: 'netPacketsOUT'\r\
-      \n        type: 'double'\r\n        unit: 'bytes/s'\r\n        thresholds:\r\
-      \nStaticInfo_Probe:\r\n    name: 'StaticInfo'\r\n    path:\r\n    active: True\r\
-      \n    static: True\r\n    metrics:\r\n      arch_metric:\r\n        name: 'arch'\r\
-      \n        type: 'string'\r\n        unit: \r\n        thresholds:\r\n      btime_metric:\r\
-      \n        name: 'btime'\r\n        type: 'string'\r\n        unit: \r\n    \
-      \    thresholds:\r\n      cpuNum_metric:\r\n        name: 'cpuNum'\r\n     \
-      \   type: 'string'\r\n        unit: \r\n        thresholds:\r\n      os_metric:\r\
-      \n        name: 'os'\r\n        type: 'string'\r\n        unit: \r\n       \
-      \ thresholds:", is_collection: true, name: probes}
+- fields: {component_type: 6, data_type: 13, default_value: "CPU_Probe:\n    name:\
+      \ 'CPU'\n    active: True\n    static: False\n    metrics:\
+      \n      cpuTotal_metric:\n        name: 'cpuTotal'\n        type: 'double'\
+      \n        unit: '%'\n        thresholds:\n          threshold_0:\n   \
+      \         operator: greater_than\n            value: 80\n          threshold_1:\
+      \n            operator: less_than\n            value: 20\n      cpuUser_metric:\
+      \n        name: 'cpuUser'\n        type: 'double'\n        unit: '%'\n\
+      \        cpuSystem_metric:\n        name: 'cpuSystem'\
+      \n        type: 'double'\n        unit: '%'\n       \
+      \ cpuIdle_metric:\n        name: 'cpuIdle'\n        type: 'double'\n\
+      \        unit: '%'\n        cpuIOwait_metric:\n  \
+      \      name: 'cpuIOwait'\n        type: 'double'\n        unit: '%'\n\
+      \        Memory_Probe:\n    name: 'Memory'\n\
+      \    active: True\n    static: False\n    metrics:\n      memTotal_metric:\
+      \n        name: 'memTotal'\n        type: 'integer'\n        unit: 'KB'\
+      \n        memFree_metric:\n        name: 'memFree'\
+      \n        type: 'integer'\n        unit: 'KB'\n       \
+      \ memCache_metric:\n        name: 'memCache'\n        type: 'integer'\
+      \n        unit: 'KB'\n        memSwapTotal_metric:\n\
+      \        name: 'memSwapTotal'\n        type: 'integer'\n        unit: 'KB'\
+      \n        memSwapFree_metric:\n        name: 'memSwapFree'\
+      \n        type: 'integer'\n        unit: 'KB'\n\
+      \      memUsed_metric:\n        name: 'memUsed'\n        type: 'integer'\
+      \n        unit: 'KB'\n      memUsedPercent_metric:\
+      \n        name: 'memUsedPercent'\n        type: 'double'\n        unit:\
+      \ '%'\n        thresholds: \n          threshold_0:\n            operator:\
+      \ greater_than\n            value: 80\n          threshold_1:\n      \
+      \      operator: less_than\n            value: 20\nDiskStats_Probe:\n\
+      \    name: 'DiskStats'\n    active: True\n    static: False\
+      \n    metrics:\n      readkbps_metric:\n        name: 'readkbps'\n   \
+      \     type: 'double'\n        unit: 'KB/s'\n    \
+      \  writekbps_metric:\n        name: 'writekbps'\n        type: 'double'\
+      \n        unit: 'KB/s'\n      iotime_metric:\n  \
+      \      name: 'iotime'\n        type: 'double'\n        unit: '%'\n   \
+      \     thresholds: \n          threshold_0:\n            operator: greater_than\
+      \n            value: 60\nDisk_Probe:\n    name: 'Disk'\n\
+      \    active: True\n    static: False\n    metrics:\n      diskFree_metric:\
+      \n        name: 'diskFree'\n        type: 'long'\n        unit: 'MB'\n\
+      \        thresholds:\n          threshold_0:\n            operator: greater_than\
+      \n            value: 500\n      diskTotal_metric:\n        name: 'diskTotal'\
+      \n        type: 'long'\n        unit: 'MB'\nNetwork_Probe:\
+      \n    name: 'Network'\n    active: True\n    static: False\
+      \n    metrics:\n      netBytesIN_metric:\n        name: 'netBytesIN'\n\
+      \        type: 'double'\n        unit: 'bytes/s'\n\
+      \      netBytesOUT_metric:\n        name: 'netBytesOUT'\n        type: 'double'\
+      \n        unit: 'bytes/s'\n        netPacketsIN_metric:\
+      \n        name: 'netPacketsIN'\n        type: 'double'\n        unit: 'bytes/s'\
+      \n        netPacketsOUT_metric:\n        name: 'netPacketsOUT'\
+      \n        type: 'double'\n        unit: 'bytes/s'\
+      \nStaticInfo_Probe:\n    name: 'StaticInfo'\n    active: True\
+      \n    static: True\n    metrics:\n      arch_metric:\n        name: 'arch'\
+      \n        type: 'string'\n      btime_metric:\
+      \n        name: 'btime'\n        type: 'string'\n    \
+      \    thresholds  {}:\n      cpuNum_metric:\n        name: 'cpuNum'\n     \
+      \   type: 'string'\n        os_metric:\
+      \n        name: 'os'\n        type: 'string'", collection_type: M, name: probes, required: true}
   model: api.componenttypeproperty
   pk: 17
-- fields: {component_type: 19, data_type: 16, default_value: "port_mapping_0:\r\n\
-      \  container_port: 8080\r\n  host_port: 8080\r\nport_mapping_1:\r\n  container_port:\
-      \ 4242\r\n  host_port: 4242\r\nport_mapping_2:\r\n  container_port: 4245\r\n\
-      \  host_port: 4245\r\nport_mapping_3:\r\n  container_port: 7199\r\n  host_port:\
-      \ 7199\r\nport_mapping_4:\r\n  container_port: 7000\r\n  host_port: 7000\r\n\
-      port_mapping_5:\r\n  container_port: 7001\r\n  host_port: 7001\r\nport_mapping_6:\r\
-      \n  container_port: 9160\r\n  host_port: 9160\r\nport_mapping_7:\r\n  container_port:\
-      \ 9042\r\n  host_port: 9042\r\nport_mapping_8:\r\n  container_port: 8012\r\n\
-      \  host_port: 8012\r\nport_mapping_9:\r\n  container_port: 61621\r\n  host_port:\
-      \ 61621", is_collection: true, name: ports_mapping}
+- fields: {component_type: 19, data_type: 16, default_value: "port_mapping_0:\n\
+      \  container_port: 8080\n  host_port: 8080\nport_mapping_1:\n  container_port:\
+      \ 4242\n  host_port: 4242\nport_mapping_2:\n  container_port: 4245\n\
+      \  host_port: 4245\nport_mapping_3:\n  container_port: 7199\n  host_port:\
+      \ 7199\nport_mapping_4:\n  container_port: 7000\n  host_port: 7000\n\
+      port_mapping_5:\n  container_port: 7001\n  host_port: 7001\nport_mapping_6:\
+      \n  container_port: 9160\n  host_port: 9160\nport_mapping_7:\n  container_port:\
+      \ 9042\n  host_port: 9042\nport_mapping_8:\n  container_port: 8012\n\
+      \  host_port: 8012\nport_mapping_9:\n  container_port: 61621\n  host_port:\
+      \ 61621", collection_type: M, name: ports_mapping, required: true}
   model: api.componenttypeproperty
   pk: 22
-- fields: {component_type: 14, data_type: 16, default_value: '', is_collection: true,
-    name: ports_mapping}
+- fields: {component_type: 14, data_type: 16, default_value: '', collection_type: M,
+    name: ports_mapping, required: true}
   model: api.componenttypeproperty
   pk: 23
-- fields: {component_type: 1, data_type: 7, default_value: '', is_collection: false,
-    name: QoS}
+- fields: {component_type: 1, data_type: 7, default_value: '', collection_type: S,
+    name: QoS, required: true}
   model: api.componenttypeproperty
   pk: 24
-- fields: {component_type: 9, data_type: 7, default_value: '', is_collection: false,
-    name: QoS}
+- fields: {component_type: 9, data_type: 7, default_value: '', collection_type: S,
+    name: QoS, required: true}
   model: api.componenttypeproperty
   pk: 25
+- fields: {component_type: 12, data_type: 1, default_value: '', collection_type: S,
+    name: domain, required: true}
+  model: api.componenttypeproperty
+  pk: 26
+- fields: {component_type: 12, data_type: 1, default_value: '', collection_type: S,
+    name: nodetype, required: true}
+  model: api.componenttypeproperty
+  pk: 27
+- fields: {component_type: 12, data_type: 1, default_value: '', collection_type: S,
+    name: OStype, required: true}
+  model: api.componenttypeproperty
+  pk: 28
+- fields: {component_type: 12, data_type: 1, default_value: '', collection_type: S,
+    name: installation, required: true}
+  model: api.componenttypeproperty
+  pk: 29
+- fields: {component_type: 12, data_type: 1, default_value: '', collection_type: S,
+    name: script, required: true}
+  model: api.componenttypeproperty
+  pk: 30
+- fields: {component_type: 12, data_type: 1, default_value: '', collection_type: S,
+    name: role, required: true}
+  model: api.componenttypeproperty
+  pk: 31
+- fields: {component_type: 12, data_type: 1, default_value: '', collection_type: S,
+    name: public_address, required: true}
+  model: api.componenttypeproperty
+  pk: 32
+- fields: {component_type: 13, data_type: 1, default_value: '', collection_type: S,
+    name: name, required: true}
+  model: api.componenttypeproperty
+  pk: 33
+- fields: {component_type: 13, data_type: 1, default_value: 255.255.255.0, collection_type: S,
+    name: netmask, required: true}
+  model: api.componenttypeproperty
+  pk: 34
+- fields: {component_type: 13, data_type: 1, default_value: 192.168.10.0, collection_type: S,
+    name: subnet, required: true}
+  model: api.componenttypeproperty
+  pk: 35
+- fields: {component_type: 6, data_type: 1, default_value: '', collection_type: S,
+    name: agent_id, required: true}
+  model: api.componenttypeproperty
+  pk: 36
+- fields: {component_type: 14, data_type: 7, default_value: '', collection_type: S,
+    name: QoS, required: true}
+  model: api.componenttypeproperty
+  pk: 37
+- fields: {component_type: 14, data_type: 17, default_value: '', collection_type: M,
+    name: in_ports, required: false}
+  model: api.componenttypeproperty
+  pk: 38
+- fields: {component_type: 14, data_type: 17, default_value: '', collection_type: M,
+    name: out_ports, required: false}
+  model: api.componenttypeproperty
+  pk: 39
+- fields: {component_type: 14, data_type: 1, default_value: '', collection_type: S,
+    name: scaling_mode, required: false}
+  model: api.componenttypeproperty
+  pk: 40
+- fields: {component_type: 14, data_type: 1, default_value: '', collection_type: S,
+    name: dockers, required: false}
+  model: api.componenttypeproperty
+  pk: 41
+- fields: {component_type: 14, data_type: 1, default_value: '', collection_type: S,
+    name: name, required: false}
+  model: api.componenttypeproperty
+  pk: 42
+- fields: {component_type: 14, data_type: 18, default_value: '', collection_type: L,
+    name: ethernet_port, required: false}
+  model: api.componenttypeproperty
+  pk: 43
+- fields: {component_type: 12, data_type: 1, default_value: '', collection_type: S,
+    name: instanceId, required: true}
+  model: api.componenttypeproperty
+  pk: 44
 - fields: {type: 1}
   model: api.component
   pk: 1
 - fields: {type: 2}
   model: api.component
   pk: 2
+- fields: {type: 11}
+  model: api.component
+  pk: 3
+- fields: {type: 9}
+  model: api.component
+  pk: 4
+- fields: {type: 19}
+  model: api.component
+  pk: 5
+- fields: {type: 12}
+  model: api.component
+  pk: 6
+- fields: {type: 13}
+  model: api.component
+  pk: 7
+- fields: {type: 10}
+  model: api.component
+  pk: 8
+- fields: {type: 6}
+  model: api.component
+  pk: 9
 - fields: {artifacts: '', component: 1, created_at: !!timestamp '2016-11-17 00:00:00+00:00',
     graph: 1, last_x: 0, last_y: 0, mode: single, properties: "bandwidth: SET_ITS_VALUE\n\
       latency: SET_ITS_VALUE\nnetmask: SET_ITS_VALUE\nsource_address: SET_ITS_VALUE\n\
@@ -739,6 +917,174 @@
       00:00:00+00:00', uuid: 27fd2a4d-0ffd-4461-bd80-1fbd0f03f429}
   model: api.instance
   pk: 2
+- fields: {artifacts: '', component: 3, created_at: !!timestamp '2017-02-01 11:38:46.631387+00:00',
+    graph: 3, last_x: 400, last_y: 200, mode: single, properties: "host:\n  cpu_frequency:\
+      \ SET_ITS_VALUE\n  disk_size: SET_ITS_VALUE\n  mem_size: SET_ITS_VALUE\n  num_cpus:\
+      \ SET_ITS_VALUE\nos:\n  architecture: x86_64\n  distribution: ubuntu\n  os_version:\
+      \ 16.04\n  type: linux\n", title: hw_requirement, updated_at: !!timestamp '2017-02-01
+      11:38:56.712441+00:00', uuid: c7302a91-52c0-4cae-8aad-4d1cd13c3bb6}
+  model: api.instance
+  pk: 3
+- fields: {artifacts: '', component: 4, created_at: !!timestamp '2017-02-01 11:39:46.889710+00:00',
+    graph: 4, last_x: 400, last_y: 200, mode: single, properties: "QoS:\n  response_time:\
+      \ SET_ITS_VALUE", title: qos_constraint, updated_at: !!timestamp '2017-02-01
+      11:40:08.392853+00:00', uuid: 53307ef7-a0c8-4491-aa32-5cb8a9c7ae96}
+  model: api.instance
+  pk: 4
+- fields: {artifacts: "monitoring_server_image:\n  file: salmant/salman_monitoring_server_container_image\n\
+      \  repository: SWITCH_docker_hub\n  type: tosca.artifacts.Deployment.Image.Container.Docker\n",
+    component: 5, created_at: !!timestamp '2017-02-01 11:51:19.753240+00:00', graph: 5,
+    last_x: 400, last_y: 200, mode: single, properties: "ports_mapping:\n  port_mapping_0:\n\
+      \    container_port: 8080\n    host_port: 8080\n  port_mapping_1:\n    container_port:\
+      \ 4242\n    host_port: 4242\n  port_mapping_2:\n    container_port: 4245\n \
+      \   host_port: 4245\n  port_mapping_3:\n    container_port: 7199\n    host_port:\
+      \ 7199\n  port_mapping_4:\n    container_port: 7000\n    host_port: 7000\n \
+      \ port_mapping_5:\n    container_port: 7001\n    host_port: 7001\n  port_mapping_6:\n\
+      \    container_port: 9160\n    host_port: 9160\n  port_mapping_7:\n    container_port:\
+      \ 9042\n    host_port: 9042\n  port_mapping_8:\n    container_port: 8012\n \
+      \   host_port: 8012\n  port_mapping_9:\n    container_port: 61621\n    host_port:\
+      \ 61621\n", title: monitoring_server, updated_at: !!timestamp '2017-02-01 11:52:00.907901+00:00',
+    uuid: c8539e81-b61e-40c5-ad44-f80bf71fd29c}
+  model: api.instance
+  pk: 5
+- fields: {artifacts: '', component: 3, created_at: !!timestamp '2017-02-01 11:51:27.715433+00:00',
+    graph: 5, last_x: 444, last_y: 300, mode: single, properties: "host:\n  cpu_frequency:\
+      \ 1.2\n  disk_size: 20\n  mem_size: 4\n  num_cpus:\
+      \ 1\nos:\n  architecture: x86_64\n  distribution: ubuntu\n  os_version:\
+      \ 16.04\n  type: linux\n", title: hw_requirement, updated_at: !!timestamp '2017-02-01
+      11:52:01.004087+00:00', uuid: 5faf015c-8f03-4dfb-82bb-944fcd398e04}
+  model: api.instance
+  pk: 6
+- fields: {artifacts: '', component: 4, created_at: !!timestamp '2017-02-01 11:51:49.924456+00:00',
+    graph: 5, last_x: 448, last_y: 100, mode: single, properties: "QoS:\n  response_time:\
+      \ 50", title: qos_constraint, updated_at: !!timestamp '2017-02-01
+      11:52:01.176618+00:00', uuid: 0cbe3d84-177c-4733-8ce2-661eb11a89bc}
+  model: api.instance
+  pk: 7
+- fields: {artifacts: '', component: 6, created_at: !!timestamp '2017-02-01 12:07:52.161704+00:00',
+    graph: 6, last_x: 400, last_y: 200, mode: single, properties: 'OStype: SET_ITS_VALUE
+
+      domain: SET_ITS_VALUE
+
+      installation: SET_ITS_VALUE
+
+      nodetype: SET_ITS_VALUE
+
+      public_address: SET_ITS_VALUE
+
+      role: SET_ITS_VALUE
+
+      script: SET_ITS_VALUE
+
+      ', title: vm, updated_at: !!timestamp '2017-02-01 12:07:56.733689+00:00', uuid: 099720a7-f518-4f1a-88b7-49338408663a}
+  model: api.instance
+  pk: 8
+- fields: {artifacts: '', component: 7, created_at: !!timestamp '2017-02-01 12:08:37.108958+00:00',
+    graph: 7, last_x: 400, last_y: 200, mode: single, properties: 'name: SET_ITS_VALUE
+
+      netmask: 255.255.255.0
+
+      subnet: 192.168.10.0
+
+      ', title: subnet, updated_at: !!timestamp '2017-02-01 12:08:41.614214+00:00',
+    uuid: d8365756-e01f-46e5-88b6-4eaf0a534291}
+  model: api.instance
+  pk: 9
+- fields: {artifacts: '', component: 8, created_at: !!timestamp '2017-02-01 12:10:20.234163+00:00',
+    graph: 8, last_x: 400, last_y: 200, mode: single, properties: '', title: adaptation_policy,
+    updated_at: !!timestamp '2017-02-01 12:10:20.235043+00:00', uuid: 5ae8ddd6-86b0-4251-b73e-0dd017de3ed2}
+  model: api.instance
+  pk: 10
+- fields: {artifacts: '', component: 9, created_at: !!timestamp '2017-02-01 13:15:36.185232+00:00',
+    graph: 9, last_x: 400, last_y: 200, mode: single, properties: "agent_id: null\n\
+      probes:\n  CPU_Probe:\n    active: true\n    metrics:\n      cpuIOwait_metric:\n\
+      \        name: cpuIOwait\n        type: double\n \
+      \       unit: '%'\n      cpuIdle_metric:\n        name: cpuIdle\n\
+      \        type: double\n        unit: '%'\n      cpuSystem_metric:\n \
+      \       name: cpuSystem\n        type: double\n  \
+      \      unit: '%'\n      cpuTotal_metric:\n        name: cpuTotal\n        thresholds:\n\
+      \          threshold_0:\n            operator: greater_than\n            value:\
+      \ 80\n          threshold_1:\n            operator: less_than\n            value:\
+      \ 20\n        type: double\n        unit: '%'\n      cpuUser_metric:\n     \
+      \   name: cpuUser\n        type: double\n        unit:\
+      \ '%'\n    name: CPU\n    static: false\n  DiskStats_Probe:\n\
+      \    active: true\n    metrics:\n      iotime_metric:\n        name: iotime\n\
+      \        thresholds:\n          threshold_0:\n            operator: greater_than\n\
+      \            value: 60\n        type: double\n        unit: '%'\n      readkbps_metric:\n\
+      \        name: readkbps\n        type: double\n  \
+      \      unit: KB/s\n      writekbps_metric:\n        name: writekbps\n      \
+      \  type: double\n        unit: KB/s\n    name: DiskStats\n\
+      \    static: false\n  Disk_Probe:\n    active: true\n    metrics:\n\
+      \      diskFree_metric:\n        name: diskFree\n        thresholds:\n     \
+      \     threshold_0:\n            operator: greater_than\n            value: 500\n\
+      \        type: long\n        unit: MB\n      diskTotal_metric:\n        name:\
+      \ diskTotal\n        type: long\n        unit: MB\n\
+      \    name: Disk\n    static: false\n  Memory_Probe:\n    active:\
+      \ true\n    metrics:\n      memCache_metric:\n        name: memCache\n     \
+      \   type: integer\n        unit: KB\n      memFree_metric:\n\
+      \        name: memFree\n        type: integer\n  \
+      \      unit: KB\n      memSwapFree_metric:\n        name: memSwapFree\n    \
+      \    type: integer\n        unit: KB\n      memSwapTotal_metric:\n\
+      \        name: memSwapTotal\n        type: integer\n\
+      \        unit: KB\n      memTotal_metric:\n        name: memTotal\n        thresholds:\
+      \ null\n        type: integer\n        unit: KB\n      memUsedPercent_metric:\n\
+      \        name: memUsedPercent\n        thresholds:\n          threshold_0:\n\
+      \            operator: greater_than\n            value: 80\n          threshold_1:\n\
+      \            operator: less_than\n            value: 20\n        type: double\n\
+      \        unit: '%'\n      memUsed_metric:\n        name: memUsed\n\
+      \        type: integer\n        unit: KB\n    name: Memory\n\
+      \    static: false\n  Network_Probe:\n    active: true\n    metrics:\n\
+      \      netBytesIN_metric:\n        name: netBytesIN\n\
+      \        type: double\n        unit: bytes/s\n      netBytesOUT_metric:\n  \
+      \      name: netBytesOUT\n        type: double\n \
+      \       unit: bytes/s\n      netPacketsIN_metric:\n        name: netPacketsIN\n\
+      \        type: double\n        unit: bytes/s\n   \
+      \   netPacketsOUT_metric:\n        name: netPacketsOUT\n\
+      \        type: double\n        unit: bytes/s\n    name: Network\n   \
+      \ static: false\n  StaticInfo_Probe:\n    active: true\n   \
+      \ metrics:\n      arch_metric:\n        name: arch\n\
+      \        type: string\n        btime_metric:\n        name:\
+      \ btime\n        type: string\n\
+      \      cpuNum_metric:\n        name: cpuNum\n    \
+      \    type: string\n      os_metric:\n        name: os\n\
+      \        type: string\n    name:\
+      \ StaticInfo\n    static: true", title: monitoring_agent, updated_at: !!timestamp '2017-02-01
+      13:16:17.312666+00:00', uuid: 48f90f98-49f9-4674-bd2e-c4fc0ce24499}
+  model: api.instance
+  pk: 11
+- fields: {parent: null}
+  model: api.nestedcomponent
+  pk: 5
+- fields: {graph: 5, source: 6, target: 5, uuid: 2a1d15cb-fe15-465b-addf-aff766fd9b12}
+  model: api.servicelink
+  pk: 1
+- fields: {graph: 5, source: 7, target: 5, uuid: 873cea99-ca4d-4fa1-8d15-59b27c3a4e13}
+  model: api.servicelink
+  pk: 2
+- fields: {}
+  model: api.servicecomponent
+  pk: 3
+- fields: {}
+  model: api.servicecomponent
+  pk: 4
+- fields: {}
+  model: api.servicecomponent
+  pk: 6
+- fields: {}
+  model: api.servicecomponent
+  pk: 7
+- fields: {}
+  model: api.servicecomponent
+  pk: 8
+- fields: {}
+  model: api.servicecomponent
+  pk: 9
+- fields: {}
+  model: api.servicecomponent
+  pk: 10
+- fields: {}
+  model: api.servicecomponent
+  pk: 11
 - fields: {description: user public ssh key, name: PUBLIC_SSH_KEY}
   model: api.switchdocumenttype
   pk: 1
@@ -754,4 +1100,3 @@
 - fields: {description: Other file, name: Other}
   model: api.switchdocumenttype
   pk: 6
-
