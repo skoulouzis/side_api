@@ -979,7 +979,7 @@ class NestedComponent(Instance):
 
             for port in self.ports.all():
                 port_obj = {
-                    'port': port.type + "_" + port.title,
+                    'port': " " + port.title + " ",
                     'type': port.type
                 }
                 properties.setdefault(port.type + '_ports', {}).update({str(port.uuid): port_obj})
