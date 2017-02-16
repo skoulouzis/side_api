@@ -43,6 +43,7 @@ INSTALLED_APPS = (
     'rest_framework.authtoken',
     'rest_framework_json_api',
     'api',
+    'django_extensions',
 )
 
 MIDDLEWARE_CLASSES = (
@@ -55,6 +56,11 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'corsheaders.middleware.CorsMiddleware',
 )
+
+GRAPH_MODELS = {
+  'all_applications': True,
+  'group_models': True,
+}
 
 CORS_ORIGIN_ALLOW_ALL = True
 
