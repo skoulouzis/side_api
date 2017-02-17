@@ -46,25 +46,33 @@ class GraphBase(models.Model):
             except Exception as e:
                 print e.message
 
-        for service_link in self.service_links.all():
+        for dependency_link in self.service_links.all():
             try:
-                graph_obj = service_link.get_graph()
+                graph_obj = dependency_link.get_graph()
                 response_cells.append(graph_obj)
 
                 add_parent = True
 
                 for cell in response_cells:
-                    if 'id' in cell and cell['id'] == service_link.source.uuid:
+                    if 'id' in cell and cell['id'] == dependency_link.source.uuid:
                         if 'parent' in cell:
                             add_parent = False
                         else:
-                            cell['parent'] = service_link.target.uuid
+                            cell['parent'] = dependency_link.target.uuid
 
                 if add_parent:
                     for cell in response_cells:
-                        if 'id' in cell and cell['id'] == service_link.target.uuid:
+                        if 'id' in cell and cell['id'] == dependency_link.target.uuid:
                             cell.setdefault('embeds', [])
-                            cell['embeds'].append(service_link.source.uuid)
+                            cell['embeds'].append(dependency_link.source.uuid)
+
+            except Exception as e:
+                print e.message
+
+        for dependency_link in self.dependency_links.all():
+            try:
+                graph_obj = dependency_link.get_graph()
+                response_cells.append(graph_obj)
 
             except Exception as e:
                 print e.message
@@ -1037,6 +1045,9 @@ class NestedComponent(ComponentInstance):
                     tosca_constraint = service_link.source.get_tosca()
                     properties.update(tosca_constraint[str(service_link.source.uuid)]['properties'])
 
+            for dependency_link in DependencyLink.objects.filter(dependant=self).all():
+                requirements.append({'dependency': str(dependency_link.dependency.uuid)})
+
             if requirements:
                 data_obj[str(self.uuid)]['requirements'] = requirements
 
@@ -1125,6 +1136,62 @@ class ComponentLink(ComponentInstance):
         return data_obj
 
 
+class DependencyLink(models.Model):
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False)
+    graph = models.ForeignKey(GraphBase, related_name='dependency_links')
+    dependant = models.ForeignKey(ComponentInstance, related_name='dependencies')
+    dependency = models.ForeignKey(ComponentInstance, related_name='dependants')
+
+    class JSONAPIMeta:
+        def __init__(self):
+            pass
+
+        resource_name = "switchdependencylinks"
+
+    def get_graph(self):
+        graph_obj = {
+            'id': self.uuid,
+            'type': 'switch.DependencyLink',
+            'target': {
+                'id': self.dependency.uuid
+            },
+            'source': {
+                'id': self.dependant.uuid
+            }
+        }
+
+        text, fill = self.dependency.get_mode_labels()
+
+        graph_obj['labels'] = [
+            {
+                'position': 0.2,
+                'attrs': {
+                    'text': {
+                        'text': "",
+                        'fill': 'black'
+                    },
+                    'rect': {
+                        'fill': 'none'
+                    }
+                }
+            },
+            {
+                'position': 0.8,
+                'attrs': {
+                    'text': {
+                        'text': text,
+                        'fill': 'black'
+                    },
+                    'rect': {
+                        'fill': fill
+                    }
+                }
+            }
+        ]
+
+        return graph_obj
+
+
 class ServiceLink(models.Model):
     uuid = models.UUIDField(default=uuid.uuid4, editable=False)
     graph = models.ForeignKey(GraphBase, related_name='service_links')
@@ -1137,23 +1204,14 @@ class ServiceLink(models.Model):
 
         resource_name = "switchservicelinks"
 
-    # todo - check if attrs are needed, i don't think so...
     def get_graph(self):
         graph_obj = {
             'id': self.uuid,
             'type': 'switch.ServiceLink',
-            'attrs': {
-                '.marker-target': {
-                    'stroke': '#fe854f',
-                    'd': 'M 10 0 L 0 5 L 10 10 z',
-                    'fill': '#7c68fc'
-                },
-                'connection': {
-                    'stroke': '#222138'
-                }
-            }, 'target': {
+            'target': {
                 'id': self.target.uuid
-            }, 'source': {
+            },
+            'source': {
                 'id': self.source.uuid
             }
         }

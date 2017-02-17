@@ -2,7 +2,7 @@ import json
 
 from rest_framework import serializers
 from models import Application, Component, ComponentType, ComponentInstance, NestedComponent, ServiceComponent, ComponentPort, ServiceLink, GraphBase,SwitchDocument, \
-    ApplicationInstance, Notification, SwitchDocumentType
+    ApplicationInstance, Notification, SwitchDocumentType, DependencyLink
 from django.contrib.auth.models import User
 
 
@@ -184,3 +184,13 @@ class ServiceLinkSerializer(serializers.ModelSerializer):
     class Meta:
         model = ServiceLink
         fields = ('id', 'graph', 'source', 'target', 'uuid')
+
+
+class DependencyLinkSerializer(serializers.ModelSerializer):
+    graph = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
+    dependant = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
+    dependency = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
+
+    class Meta:
+        model = DependencyLink
+        fields = ('id', 'graph', 'dependant', 'dependency', 'uuid')
