@@ -836,7 +836,7 @@
   model: api.componenttypeproperty
   pk: 36
 - fields: {component_type: 14, data_type: 7, default_value: '', collection_type: S,
-    name: QoS, required: true}
+    name: QoS, required: false}
   model: api.componenttypeproperty
   pk: 37
 - fields: {component_type: 14, data_type: 17, default_value: '', collection_type: M,
