@@ -559,7 +559,7 @@ class ApplicationInstance(GraphBase):
                     port_translations[old_port_pk] = port.pk
 
             elif instance.component.type.switch_class.title == 'switch.VirtualResource':
-                instance.component = Component.objects.filter(type__switch_class__title='switch.Host')
+                instance.component = Component.objects.filter(type__switch_class__title='switch.Host').first()
                 instance.last_x = 0
                 instance.last_y = 0
                 instance.save()
@@ -1205,9 +1205,16 @@ class ServiceLink(models.Model):
         resource_name = "switchservicelinks"
 
     def get_graph(self):
+        link_type = 'switch.ServiceLink'
+
+        print str(self.pk) + ' ' + self.source.component.type.title + ' --> ' + self.target.component.type.title
+
+        if self.target.component.type.title == 'Monitoring Agent' and self.source.component.type.title == 'SWITCH.MonitoringServer':
+            link_type = 'switch.MonitoringLink'
+
         graph_obj = {
             'id': self.uuid,
-            'type': 'switch.ServiceLink',
+            'type': link_type,
             'target': {
                 'id': self.target.uuid
             },

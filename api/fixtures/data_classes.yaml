@@ -37,6 +37,10 @@
     updated_at: !!timestamp '2017-02-01 13:15:34.467021+00:00', user: null}
   model: api.graphbase
   pk: 9
+- fields: {created_at: !!timestamp '2017-02-01 13:15:34.466827+00:00', title: Default Deployed Host,
+    updated_at: !!timestamp '2017-02-01 13:15:34.467021+00:00', user: null}
+  model: api.graphbase
+  pk: 10
 - fields: {default_value: SET_ITS_VALUE, name: string, parent: null}
   model: api.datatype
   pk: 1
@@ -345,6 +349,10 @@
     title: switch.ServiceLink}
   model: api.componentclass
   pk: 6
+- fields: {classpath: '', is_core_component: false, is_template_component: false,
+    title: switch.Host}
+  model: api.componentclass
+  pk: 7
 - fields:
     artifacts: []
     requirements: []
@@ -660,6 +668,27 @@
     tosca_class: 5
   model: api.componenttype
   pk: 14
+- fields:
+    artifacts: []
+    requirements: []
+    icon_class: btn-purple
+    icon_code: '&#xf26c'
+    icon_colour: rgb(51, 51, 51)
+    icon_name: fa-tv
+    icon_style: 'border-radius: 0; border: 1px dashed;'
+    icon_svg: M1792 288v960q0 13 -9.5 22.5t-22.5 9.5h-1600q-13 0 -22.5 -9.5t-9.5 -22.5v-960q0
+      -13 9.5 -22.5t22.5 -9.5h1600q13 0 22.5 9.5t9.5 22.5zM1920 1248v-960q0 -66 -47
+      -113t-113 -47h-736v-128h352q14 0 23 -9t9 -23v-64q0 -14 -9 -23t-23 -9h-832q-14
+      0 -23 9t-9 23 v64q0 14 9 23t23 9h352v128h-736q-66 0 -113 47t-47 113v960q0 66
+      47 113t113 47h1600q66 0 113 -47t47 -113z
+    parent: null
+    primary_colour: rgb(198, 107, 225)
+    secondary_colour: rgb(184, 70, 218)
+    switch_class: 7
+    title: Host
+    tosca_class: 24
+  model: api.componenttype
+  pk: 15
 - fields:
     artifacts: [4]
     requirements: []
@@ -1042,6 +1071,11 @@
       13:16:17.312666+00:00', uuid: 48f90f98-49f9-4674-bd2e-c4fc0ce24499}
   model: api.componentinstance
   pk: 11
+- fields: {artifacts: '', component: 10, created_at: !!timestamp '2016-11-17 00:00:00+00:00',
+    graph: 10, last_x: 0, last_y: 0, mode: single, properties: '', title: Default Deployed Host, updated_at: !!timestamp '2016-11-17
+      00:00:00+00:00', uuid: 27fd2a4d-0ffd-4461-bd80-1fbd0f03f429}
+  model: api.componentinstance
+  pk: 12
 - fields: {parent: null}
   model: api.nestedcomponent
   pk: 5
