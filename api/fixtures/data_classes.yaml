@@ -908,7 +908,7 @@
 - fields: {type: 9}
   model: api.component
   pk: 4
-- fields: {type: 19}
+- fields: {type: 16}
   model: api.component
   pk: 5
 - fields: {type: 12}
