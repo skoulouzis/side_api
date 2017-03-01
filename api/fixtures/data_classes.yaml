@@ -923,6 +923,9 @@
 - fields: {type: 6}
   model: api.component
   pk: 9
+- fields: {type: 15}
+  model: api.component
+  pk: 10
 - fields: {artifacts: '', component: 1, created_at: !!timestamp '2016-11-17 00:00:00+00:00',
     graph: 1, last_x: 0, last_y: 0, mode: single, properties: "bandwidth: SET_ITS_VALUE\n\
       latency: SET_ITS_VALUE\nnetmask: SET_ITS_VALUE\nsource_address: SET_ITS_VALUE\n\
