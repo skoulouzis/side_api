@@ -705,7 +705,7 @@
     title: SWITCH.MonitoringServer
     tosca_class: 23
   model: api.componenttype
-  pk: 15
+  pk: 16
 - fields: {component_type: 1, data_type: 8, default_value: '', collection_type: S,
     name: source, required: true}
   model: api.componenttypeproperty
@@ -796,7 +796,7 @@
       \n        name: 'os'\n        type: 'string'", collection_type: M, name: probes, required: true}
   model: api.componenttypeproperty
   pk: 17
-- fields: {component_type: 19, data_type: 16, default_value: "port_mapping_0:\n\
+- fields: {component_type: 16, data_type: 16, default_value: "port_mapping_0:\n\
       \  container_port: 8080\n  host_port: 8080\nport_mapping_1:\n  container_port:\
       \ 4242\n  host_port: 4242\nport_mapping_2:\n  container_port: 4245\n\
       \  host_port: 4245\nport_mapping_3:\n  container_port: 7199\n  host_port:\
