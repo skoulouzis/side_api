@@ -893,9 +893,13 @@
   model: api.componenttypeproperty
   pk: 43
 - fields: {component_type: 12, data_type: 1, default_value: '', collection_type: S,
-    name: instanceId, required: true}
+    name: instanceId, required: false}
   model: api.componenttypeproperty
   pk: 44
+- fields: {component_type: 12, data_type: 1, default_value: '', collection_type: S,
+    name: subnet_name, required: false}
+  model: api.componenttypeproperty
+  pk: 45
 - fields: {type: 1}
   model: api.component
   pk: 1
