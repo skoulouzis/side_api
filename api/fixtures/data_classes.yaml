@@ -37,6 +37,10 @@
     updated_at: !!timestamp '2017-02-01 13:15:34.467021+00:00', user: null}
   model: api.graphbase
   pk: 9
+- fields: {created_at: !!timestamp '2017-02-01 13:15:34.466827+00:00', title: Default Deployed Host,
+    updated_at: !!timestamp '2017-02-01 13:15:34.467021+00:00', user: null}
+  model: api.graphbase
+  pk: 10
 - fields: {default_value: SET_ITS_VALUE, name: string, parent: null}
   model: api.datatype
   pk: 1
@@ -345,6 +349,10 @@
     title: switch.ServiceLink}
   model: api.componentclass
   pk: 6
+- fields: {classpath: '', is_core_component: false, is_template_component: false,
+    title: switch.Host}
+  model: api.componentclass
+  pk: 7
 - fields:
     artifacts: []
     requirements: []
@@ -661,32 +669,43 @@
   model: api.componenttype
   pk: 14
 - fields:
+    artifacts: []
+    requirements: []
+    icon_class: btn-purple
+    icon_code: '&#xf26c'
+    icon_colour: rgb(51, 51, 51)
+    icon_name: fa-tv
+    icon_style: 'border-radius: 0; border: 1px dashed;'
+    icon_svg: M1792 288v960q0 13 -9.5 22.5t-22.5 9.5h-1600q-13 0 -22.5 -9.5t-9.5 -22.5v-960q0
+      -13 9.5 -22.5t22.5 -9.5h1600q13 0 22.5 9.5t9.5 22.5zM1920 1248v-960q0 -66 -47
+      -113t-113 -47h-736v-128h352q14 0 23 -9t9 -23v-64q0 -14 -9 -23t-23 -9h-832q-14
+      0 -23 9t-9 23 v64q0 14 9 23t23 9h352v128h-736q-66 0 -113 47t-47 113v960q0 66
+      47 113t113 47h1600q66 0 113 -47t47 -113z
+    parent: null
+    primary_colour: rgb(198, 107, 225)
+    secondary_colour: rgb(184, 70, 218)
+    switch_class: 7
+    title: Host
+    tosca_class: 24
+  model: api.componenttype
+  pk: 15
+- fields:
     artifacts: [4]
     requirements: []
-    icon_class: btn-primary
-    icon_code: '&#xf013'
+    icon_class: btn-success
+    icon_code: '&#xf201'
     icon_colour: rgb(255, 255, 255)
-    icon_name: fa-cog
+    icon_name: fa-line-chart
     icon_style: 'border-radius: 0;'
-    icon_svg: M1024 640q0 106 -75 181t-181 75t-181 -75t-75 -181t75 -181t181 -75t181
-      75t75 181zM1536 749v-222q0 -12 -8 -23t-20 -13l-185 -28q-19 -54 -39 -91q35 -50
-      107 -138q10 -12 10 -25t-9 -23q-27 -37 -99 -108t-94 -71q-12 0 -26 9l-138 108q-44
-      -23 -91 -38 q-16 -136 -29 -186q-7 -28 -36 -28h-222q-14 0 -24.5 8.5t-11.5 21.5l-28
-      184q-49 16 -90 37l-141 -107q-10 -9 -25 -9q-14 0 -25 11q-126 114 -165 168q-7
-      10 -7 23q0 12 8 23q15 21 51 66.5t54 70.5q-27 50 -41 99l-183 27q-13 2 -21 12.5t-8
-      23.5v222q0 12 8 23t19 13 l186 28q14 46 39 92q-40 57 -107 138q-10 12 -10 24q0
-      10 9 23q26 36 98.5 107.5t94.5 71.5q13 0 26 -10l138 -107q44 23 91 38q16 136 29
-      186q7 28 36 28h222q14 0 24.5 -8.5t11.5 -21.5l28 -184q49 -16 90 -37l142 107q9
-      9 24 9q13 0 25 -10q129 -119 165 -170q7 -8 7 -22 q0 -12 -8 -23q-15 -21 -51 -66.5t-54
-      -70.5q26 -50 41 -98l183 -28q13 -2 21 -12.5t8 -23.5z
+    icon_svg: M2048 0v-128h-2048v1536h128v-1408h1920zM1920 1248v-435q0 -21 -19.5 -29.5t-35.5 7.5l-121 121l-633 -633q-10 -10 -23 -10t-23 10l-233 233l-416 -416l-192 192l585 585q10 10 23 10t23 -10l233 -233l464 464l-121 121q-16 16 -7.5 35.5t29.5 19.5h435q14 0 23 -9 t9 -23z
     parent: 14
-    primary_colour: rgb(0, 100, 0)
-    secondary_colour: rgb(0, 255, 0)
+    primary_colour: rgb(92, 184, 92)
+    secondary_colour: rgb(76, 174, 76)
     switch_class: 1
     title: SWITCH.MonitoringServer
     tosca_class: 23
   model: api.componenttype
-  pk: 19
+  pk: 16
 - fields: {component_type: 1, data_type: 8, default_value: '', collection_type: S,
     name: source, required: true}
   model: api.componenttypeproperty
@@ -777,7 +796,7 @@
       \n        name: 'os'\n        type: 'string'", collection_type: M, name: probes, required: true}
   model: api.componenttypeproperty
   pk: 17
-- fields: {component_type: 19, data_type: 16, default_value: "port_mapping_0:\n\
+- fields: {component_type: 16, data_type: 16, default_value: "port_mapping_0:\n\
       \  container_port: 8080\n  host_port: 8080\nport_mapping_1:\n  container_port:\
       \ 4242\n  host_port: 4242\nport_mapping_2:\n  container_port: 4245\n\
       \  host_port: 4245\nport_mapping_3:\n  container_port: 7199\n  host_port:\
@@ -889,7 +908,7 @@
 - fields: {type: 9}
   model: api.component
   pk: 4
-- fields: {type: 19}
+- fields: {type: 16}
   model: api.component
   pk: 5
 - fields: {type: 12}
@@ -904,18 +923,21 @@
 - fields: {type: 6}
   model: api.component
   pk: 9
+- fields: {type: 15}
+  model: api.component
+  pk: 10
 - fields: {artifacts: '', component: 1, created_at: !!timestamp '2016-11-17 00:00:00+00:00',
     graph: 1, last_x: 0, last_y: 0, mode: single, properties: "bandwidth: SET_ITS_VALUE\n\
       latency: SET_ITS_VALUE\nnetmask: SET_ITS_VALUE\nsource_address: SET_ITS_VALUE\n\
       target_address: SET_ITS_VALUE\nQoS:\n  response_time: SET_ITS_VALUE", title: Default
       Component Link, updated_at: !!timestamp '2016-11-17 00:00:00+00:00', uuid: 11274b39-9b09-4d0b-97bd-aac7c3fbcb65}
-  model: api.instance
+  model: api.componentinstance
   pk: 1
 - fields: {artifacts: '', component: 2, created_at: !!timestamp '2016-11-17 00:00:00+00:00',
     graph: 2, last_x: 0, last_y: 0, mode: single, properties: 'data: enter metadata
       as YAML', title: Default Component Group, updated_at: !!timestamp '2016-11-17
       00:00:00+00:00', uuid: 27fd2a4d-0ffd-4461-bd80-1fbd0f03f429}
-  model: api.instance
+  model: api.componentinstance
   pk: 2
 - fields: {artifacts: '', component: 3, created_at: !!timestamp '2017-02-01 11:38:46.631387+00:00',
     graph: 3, last_x: 400, last_y: 200, mode: single, properties: "host:\n  cpu_frequency:\
@@ -923,13 +945,13 @@
       \ SET_ITS_VALUE\nos:\n  architecture: x86_64\n  distribution: ubuntu\n  os_version:\
       \ 16.04\n  type: linux\n", title: hw_requirement, updated_at: !!timestamp '2017-02-01
       11:38:56.712441+00:00', uuid: c7302a91-52c0-4cae-8aad-4d1cd13c3bb6}
-  model: api.instance
+  model: api.componentinstance
   pk: 3
 - fields: {artifacts: '', component: 4, created_at: !!timestamp '2017-02-01 11:39:46.889710+00:00',
     graph: 4, last_x: 400, last_y: 200, mode: single, properties: "QoS:\n  response_time:\
       \ SET_ITS_VALUE", title: qos_constraint, updated_at: !!timestamp '2017-02-01
       11:40:08.392853+00:00', uuid: 53307ef7-a0c8-4491-aa32-5cb8a9c7ae96}
-  model: api.instance
+  model: api.componentinstance
   pk: 4
 - fields: {artifacts: "monitoring_server_image:\n  file: salmant/salman_monitoring_server_container_image\n\
       \  repository: SWITCH_docker_hub\n  type: tosca.artifacts.Deployment.Image.Container.Docker\n",
@@ -945,7 +967,7 @@
       \   host_port: 8012\n  port_mapping_9:\n    container_port: 61621\n    host_port:\
       \ 61621\n", title: monitoring_server, updated_at: !!timestamp '2017-02-01 11:52:00.907901+00:00',
     uuid: c8539e81-b61e-40c5-ad44-f80bf71fd29c}
-  model: api.instance
+  model: api.componentinstance
   pk: 5
 - fields: {artifacts: '', component: 3, created_at: !!timestamp '2017-02-01 11:51:27.715433+00:00',
     graph: 5, last_x: 444, last_y: 300, mode: single, properties: "host:\n  cpu_frequency:\
@@ -953,13 +975,13 @@
       \ 1\nos:\n  architecture: x86_64\n  distribution: ubuntu\n  os_version:\
       \ 16.04\n  type: linux\n", title: hw_requirement, updated_at: !!timestamp '2017-02-01
       11:52:01.004087+00:00', uuid: 5faf015c-8f03-4dfb-82bb-944fcd398e04}
-  model: api.instance
+  model: api.componentinstance
   pk: 6
 - fields: {artifacts: '', component: 4, created_at: !!timestamp '2017-02-01 11:51:49.924456+00:00',
     graph: 5, last_x: 448, last_y: 100, mode: single, properties: "QoS:\n  response_time:\
       \ 50", title: qos_constraint, updated_at: !!timestamp '2017-02-01
       11:52:01.176618+00:00', uuid: 0cbe3d84-177c-4733-8ce2-661eb11a89bc}
-  model: api.instance
+  model: api.componentinstance
   pk: 7
 - fields: {artifacts: '', component: 6, created_at: !!timestamp '2017-02-01 12:07:52.161704+00:00',
     graph: 6, last_x: 400, last_y: 200, mode: single, properties: 'OStype: SET_ITS_VALUE
@@ -977,7 +999,7 @@
       script: SET_ITS_VALUE
 
       ', title: vm, updated_at: !!timestamp '2017-02-01 12:07:56.733689+00:00', uuid: 099720a7-f518-4f1a-88b7-49338408663a}
-  model: api.instance
+  model: api.componentinstance
   pk: 8
 - fields: {artifacts: '', component: 7, created_at: !!timestamp '2017-02-01 12:08:37.108958+00:00',
     graph: 7, last_x: 400, last_y: 200, mode: single, properties: 'name: SET_ITS_VALUE
@@ -988,12 +1010,12 @@
 
       ', title: subnet, updated_at: !!timestamp '2017-02-01 12:08:41.614214+00:00',
     uuid: d8365756-e01f-46e5-88b6-4eaf0a534291}
-  model: api.instance
+  model: api.componentinstance
   pk: 9
 - fields: {artifacts: '', component: 8, created_at: !!timestamp '2017-02-01 12:10:20.234163+00:00',
     graph: 8, last_x: 400, last_y: 200, mode: single, properties: '', title: adaptation_policy,
     updated_at: !!timestamp '2017-02-01 12:10:20.235043+00:00', uuid: 5ae8ddd6-86b0-4251-b73e-0dd017de3ed2}
-  model: api.instance
+  model: api.componentinstance
   pk: 10
 - fields: {artifacts: '', component: 9, created_at: !!timestamp '2017-02-01 13:15:36.185232+00:00',
     graph: 9, last_x: 400, last_y: 200, mode: single, properties: "agent_id: null\n\
@@ -1050,8 +1072,13 @@
       \        type: string\n    name:\
       \ StaticInfo\n    static: true", title: monitoring_agent, updated_at: !!timestamp '2017-02-01
       13:16:17.312666+00:00', uuid: 48f90f98-49f9-4674-bd2e-c4fc0ce24499}
-  model: api.instance
+  model: api.componentinstance
   pk: 11
+- fields: {artifacts: '', component: 10, created_at: !!timestamp '2016-11-17 00:00:00+00:00',
+    graph: 10, last_x: 0, last_y: 0, mode: single, properties: '', title: Default Deployed Host, updated_at: !!timestamp '2016-11-17
+      00:00:00+00:00', uuid: 27fd2a4d-0ffd-4461-bd80-1fbd0f03f429}
+  model: api.componentinstance
+  pk: 12
 - fields: {parent: null}
   model: api.nestedcomponent
   pk: 5

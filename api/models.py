@@ -11,6 +11,7 @@ from django.contrib import admin
 from model_utils.managers import InheritanceManager
 from side_api import utils
 
+
 class GraphBase(models.Model):
     user = models.ForeignKey(User, null=True, blank=True, default=None)
     title = models.CharField(max_length=512)
@@ -31,11 +32,11 @@ class GraphBase(models.Model):
         return self.notifications.filter(viewed=False)
 
     def get_instances(self):
-        return Instance.objects.filter(graph=self).select_subclasses()
+        return ComponentInstance.objects.filter(graph=self).select_subclasses()
 
     def get_graph(self):
         response_cells = []
-        instances = Instance.objects.filter(graph=self).select_subclasses()
+        instances = ComponentInstance.objects.filter(graph=self).select_subclasses()
 
         for instance in instances:
             try:
@@ -45,25 +46,33 @@ class GraphBase(models.Model):
             except Exception as e:
                 print e.message
 
-        for service_link in self.service_links.all():
+        for dependency_link in self.service_links.all():
             try:
-                graph_obj = service_link.get_graph()
+                graph_obj = dependency_link.get_graph()
                 response_cells.append(graph_obj)
 
                 add_parent = True
 
                 for cell in response_cells:
-                    if 'id' in cell and cell['id'] == service_link.source.uuid:
+                    if 'id' in cell and cell['id'] == dependency_link.source.uuid:
                         if 'parent' in cell:
                             add_parent = False
                         else:
-                            cell['parent'] = service_link.target.uuid
+                            cell['parent'] = dependency_link.target.uuid
 
                 if add_parent:
                     for cell in response_cells:
-                        if 'id' in cell and cell['id'] == service_link.target.uuid:
+                        if 'id' in cell and cell['id'] == dependency_link.target.uuid:
                             cell.setdefault('embeds', [])
-                            cell['embeds'].append(service_link.source.uuid)
+                            cell['embeds'].append(dependency_link.source.uuid)
+
+            except Exception as e:
+                print e.message
+
+        for dependency_link in self.dependency_links.all():
+            try:
+                graph_obj = dependency_link.get_graph()
+                response_cells.append(graph_obj)
 
             except Exception as e:
                 print e.message
@@ -82,7 +91,7 @@ class GraphBase(models.Model):
     def put_graph(self, json_data):
         try:
             for cell in json_data['cells']:  #
-                instance = Instance.objects.filter(uuid=cell['id'], graph=self).select_subclasses().first()
+                instance = ComponentInstance.objects.filter(uuid=cell['id'], graph=self).select_subclasses().first()
                 if 'position' in cell and cell['position'] is not None:
                     instance.last_x = cell['position']['x']
                     instance.last_y = cell['position']['y']
@@ -94,7 +103,7 @@ class GraphBase(models.Model):
         instance_translations = {}
         port_translations = {}
 
-        for instance in Instance.objects.filter(graph=self).all():
+        for instance in ComponentInstance.objects.filter(graph=self).all():
             old_pk = instance.pk
 
             # we've already created the a copy of the base_instance via the serializer
@@ -113,7 +122,7 @@ class GraphBase(models.Model):
             instance_translations[old_pk] = instance.pk
 
             if instance.component.type.switch_class.title == 'switch.Component' or instance.component.type.switch_class.title == 'switch.Group':
-                nested_component = NestedComponent(instance_ptr=instance)
+                nested_component = NestedComponent(componentinstance_ptr=instance)
                 nested_component.save_base(raw=True)
 
                 for port in ComponentPort.objects.filter(instance_id=old_pk).all():
@@ -126,11 +135,11 @@ class GraphBase(models.Model):
                     port_translations[old_port_pk] = port.pk
 
             elif instance.component.type.switch_class.title == 'switch.VirtualResource' or instance.component.type.switch_class.title == 'switch.Attribute':
-                service_component = ServiceComponent(instance_ptr=instance)
+                service_component = ServiceComponent(componentinstance_ptr=instance)
                 service_component.save_base(raw=True)
 
             elif instance.component.type.switch_class.title == 'switch.ComponentLink':
-                component_link = ComponentLink(instance_ptr=instance)
+                component_link = ComponentLink(componentinstance_ptr=instance)
                 component_link.save_base(raw=True)
 
         for original_nested_component_inside_group in NestedComponent.objects.filter(graph=self, parent__isnull=False):
@@ -140,7 +149,7 @@ class GraphBase(models.Model):
             nested_component_inside_group.save()
 
         for original_component_link in ComponentLink.objects.filter(graph=self).all():
-            component_link = ComponentLink.objects.filter(instance_ptr_id=instance_translations[original_component_link.id]).first()
+            component_link = ComponentLink.objects.filter(componentinstance_ptr_id=instance_translations[original_component_link.id]).first()
             component_link.source_id = port_translations[original_component_link.source_id]
             component_link.target_id = port_translations[original_component_link.target_id]
             component_link.save()
@@ -159,7 +168,7 @@ class GraphBase(models.Model):
         top_y = sys.maxint
         bottom_x = 0
         bottom_y = 0
-        instances = Instance.objects.filter(graph=self).select_subclasses()
+        instances = ComponentInstance.objects.filter(graph=self).select_subclasses()
 
         for instance in instances:
             if instance.last_x !=0 and instance.last_x < top_x:
@@ -183,6 +192,9 @@ class GraphBase(models.Model):
 class Notification(models.Model):
 
     class JSONAPIMeta:
+        def __init__(self):
+            pass
+
         resource_name = "switchnotifications"
 
     def __unicode__(self):
@@ -206,6 +218,9 @@ class Application(GraphBase):
     status = models.IntegerField(default=0)
 
     class JSONAPIMeta:
+        def __init__(self):
+            pass
+
         resource_name = "switchapps"
 
     def __unicode__(self):
@@ -245,7 +260,7 @@ class Application(GraphBase):
 
         groups = {}
 
-        instances = Instance.objects.filter(graph=self).select_subclasses()
+        instances = ComponentInstance.objects.filter(graph=self).select_subclasses()
         for instance in instances:
             graph_obj = instance.get_tosca()
             if instance.component.type.get_base_type().title == 'Component':
@@ -280,6 +295,9 @@ class DataType(models.Model):
     default_value = models.TextField(blank=True)
 
     class JSONAPIMeta:
+        def __init__(self):
+            pass
+
         resource_name = "switchdatatypes"
 
     def __unicode__(self):
@@ -337,6 +355,9 @@ class DataTypeProperty(models.Model):
         verbose_name_plural = "Data type properties"
 
     class JSONAPIMeta:
+        def __init__(self):
+            pass
+
         resource_name = "switchdatatypeproperties"
 
     def __unicode__(self):
@@ -404,6 +425,9 @@ class ToscaClass(models.Model):
         verbose_name_plural = "Tosca classes"
 
     class JSONAPIMeta:
+        def __init__(self):
+            pass
+
         resource_name = "toscaclass"
 
     def __unicode__(self):
@@ -429,6 +453,9 @@ class SwitchRepository(models.Model):
         verbose_name_plural = "Switch repositories"
 
     class JSONAPIMeta:
+        def __init__(self):
+            pass
+
         resource_name = "switchrepository"
 
     def __unicode__(self):
@@ -453,6 +480,9 @@ class SwitchArtifact(models.Model):
         verbose_name_plural = "Switch artifacts"
 
     class JSONAPIMeta:
+        def __init__(self):
+            pass
+
         resource_name = "switchartifact"
 
     def __unicode__(self):
@@ -495,13 +525,16 @@ class ApplicationInstance(GraphBase):
     status = models.IntegerField(default=0)
 
     class JSONAPIMeta:
+        def __init__(self):
+            pass
+
         resource_name = "switchappinstances"
 
     def clone_from_application(self):
         instance_translations = {}
         port_translations = {}
 
-        for instance in Instance.objects.filter(graph=self.application).all():
+        for instance in ComponentInstance.objects.filter(graph=self.application).all():
             clone_instance = False
 
             old_pk = instance.pk
@@ -513,7 +546,7 @@ class ApplicationInstance(GraphBase):
             if instance.component.type.switch_class.title == 'switch.Component':
                 instance.save()
 
-                nested_component = NestedComponent(instance_ptr=instance)
+                nested_component = NestedComponent(componentinstance_ptr=instance)
                 nested_component.save_base(raw=True)
 
                 for port in ComponentPort.objects.filter(instance_id=old_pk).all():
@@ -526,18 +559,18 @@ class ApplicationInstance(GraphBase):
                     port_translations[old_port_pk] = port.pk
 
             elif instance.component.type.switch_class.title == 'switch.VirtualResource':
-                instance.component = Component.objects.filter(type__switch_class__title='switch.Host')
+                instance.component = Component.objects.filter(type__switch_class__title='switch.Host').first()
                 instance.last_x = 0
                 instance.last_y = 0
                 instance.save()
 
-                nested_component = NestedComponent(instance_ptr=instance)
+                nested_component = NestedComponent(componentinstance_ptr=instance)
                 nested_component.save_base(raw=True)
 
             elif instance.component.type.switch_class.title == 'switch.ComponentLink':
                 instance.save()
 
-                component_link = ComponentLink(instance_ptr=instance)
+                component_link = ComponentLink(componentinstance_ptr=instance)
                 component_link.save_base(raw=True)
 
             instance_translations[old_pk] = instance.pk
@@ -550,18 +583,18 @@ class ApplicationInstance(GraphBase):
         #     nested_component_inside_group.save()
 
         for original_component_link in ComponentLink.objects.filter(graph=self.application).all():
-            component_link = ComponentLink.objects.filter(instance_ptr_id=instance_translations[original_component_link.id]).first()
+            component_link = ComponentLink.objects.filter(componentinstance_ptr_id=instance_translations[original_component_link.id]).first()
             component_link.source_id = port_translations[original_component_link.source_id]
             component_link.target_id = port_translations[original_component_link.target_id]
             component_link.save()
 
         for original_service in ServiceComponent.objects.filter(graph=self.application).all():
-            service = NestedComponent.objects.filter(instance_ptr_id=instance_translations[original_service.id]).first()
+            service = NestedComponent.objects.filter(componentinstance_ptr_id=instance_translations[original_service.id]).first()
             if service is not None:
                 print set(original_service.get_source_components())
-                deployed_host = NestedComponent.objects.filter(instance_ptr_id=instance_translations[original_service.id]).first()
+                deployed_host = NestedComponent.objects.filter(componentinstance_ptr_id=instance_translations[original_service.id]).first()
                 for original_component_id in original_service.get_source_components():
-                    component = NestedComponent.objects.filter(instance_ptr_id=instance_translations[original_component_id]).first()
+                    component = NestedComponent.objects.filter(componentinstance_ptr_id=instance_translations[original_component_id]).first()
                     component.parent = deployed_host
                     component.save()
 
@@ -576,6 +609,9 @@ class ComponentClass(models.Model):
         verbose_name_plural = "Component classes"
 
     class JSONAPIMeta:
+        def __init__(self):
+            pass
+
         resource_name = "switchcomponentclass"
 
     def __unicode__(self):
@@ -727,6 +763,9 @@ class ComponentTypeProperty(models.Model):
         verbose_name_plural = "Component type properties"
 
     class JSONAPIMeta:
+        def __init__(self):
+            pass
+
         resource_name = "switchcomponenttypeproperties"
 
     def __unicode__(self):
@@ -771,13 +810,16 @@ class Component(GraphBase):
     type = models.ForeignKey(ComponentType, related_name='components', null=False)
 
     class JSONAPIMeta:
+        def __init__(self):
+            pass
+
         resource_name = "switchcomponents"
 
     def __unicode__(self):
         return 'Component: ' + self.title + ' (' + str(self.type.title) + ')'
 
     def get_base_instance(self):
-        return Instance.objects.filter(graph=self, component=self).select_subclasses().first()
+        return ComponentInstance.objects.filter(graph=self, component=self).select_subclasses().first()
 
     def is_core_component(self):
         return self.type.is_core()
@@ -800,7 +842,7 @@ class Component(GraphBase):
             return ""
 
 
-class Instance(models.Model):
+class ComponentInstance(models.Model):
     objects = InheritanceManager()
     uuid = models.UUIDField(default=uuid.uuid4, editable=True)
     graph = models.ForeignKey(GraphBase, related_name='instances')
@@ -874,7 +916,7 @@ class Instance(models.Model):
         return {str(self.uuid): obj_definition}
 
 
-class NestedComponent(Instance):
+class NestedComponent(ComponentInstance):
     parent = models.ForeignKey('self', null=True, blank=True, related_name='children')
 
     class JSONAPIMeta:
@@ -1003,6 +1045,9 @@ class NestedComponent(Instance):
                     tosca_constraint = service_link.source.get_tosca()
                     properties.update(tosca_constraint[str(service_link.source.uuid)]['properties'])
 
+            for dependency_link in DependencyLink.objects.filter(dependant=self).all():
+                requirements.append({'dependency': str(dependency_link.dependency.uuid)})
+
             if requirements:
                 data_obj[str(self.uuid)]['requirements'] = requirements
 
@@ -1010,16 +1055,19 @@ class NestedComponent(Instance):
 
 
 class ComponentPort(models.Model):
-    instance = models.ForeignKey(Instance, related_name='ports')
+    instance = models.ForeignKey(ComponentInstance, related_name='ports')
     type = models.CharField(max_length=512)
     title = models.CharField(max_length=512)
     uuid = models.CharField(max_length=512)
 
     class JSONAPIMeta:
+        def __init__(self):
+            pass
+
         resource_name = "switchcomponentports"
 
 
-class ComponentLink(Instance):
+class ComponentLink(ComponentInstance):
     source = models.ForeignKey(ComponentPort, null=True, blank=True, related_name='targets')
     target = models.ForeignKey(ComponentPort, null=True, blank=True, related_name='sources')
 
@@ -1088,32 +1136,89 @@ class ComponentLink(Instance):
         return data_obj
 
 
-class ServiceLink(models.Model):
+class DependencyLink(models.Model):
     uuid = models.UUIDField(default=uuid.uuid4, editable=False)
-    graph = models.ForeignKey(GraphBase, related_name='service_links')
-    source = models.ForeignKey(Instance, related_name='sources')
-    target = models.ForeignKey(Instance, related_name='targets')
+    graph = models.ForeignKey(GraphBase, related_name='dependency_links')
+    dependant = models.ForeignKey(ComponentInstance, related_name='dependencies')
+    dependency = models.ForeignKey(ComponentInstance, related_name='dependants')
 
     class JSONAPIMeta:
-        resource_name = "switchservicelinks"
+        def __init__(self):
+            pass
 
-    # todo - check if attrs are needed, i don't think so...
+        resource_name = "switchdependencylinks"
+
     def get_graph(self):
         graph_obj = {
             'id': self.uuid,
-            'type': 'switch.ServiceLink',
-            'attrs': {
-                '.marker-target': {
-                    'stroke': '#fe854f',
-                    'd': 'M 10 0 L 0 5 L 10 10 z',
-                    'fill': '#7c68fc'
-                },
-                'connection': {
-                    'stroke': '#222138'
+            'type': 'switch.DependencyLink',
+            'target': {
+                'id': self.dependency.uuid
+            },
+            'source': {
+                'id': self.dependant.uuid
+            }
+        }
+
+        text, fill = self.dependency.get_mode_labels()
+
+        graph_obj['labels'] = [
+            {
+                'position': 0.2,
+                'attrs': {
+                    'text': {
+                        'text': "",
+                        'fill': 'black'
+                    },
+                    'rect': {
+                        'fill': 'none'
+                    }
                 }
-            }, 'target': {
+            },
+            {
+                'position': 0.8,
+                'attrs': {
+                    'text': {
+                        'text': text,
+                        'fill': 'black'
+                    },
+                    'rect': {
+                        'fill': fill
+                    }
+                }
+            }
+        ]
+
+        return graph_obj
+
+
+class ServiceLink(models.Model):
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False)
+    graph = models.ForeignKey(GraphBase, related_name='service_links')
+    source = models.ForeignKey(ComponentInstance, related_name='sources')
+    target = models.ForeignKey(ComponentInstance, related_name='targets')
+
+    class JSONAPIMeta:
+        def __init__(self):
+            pass
+
+        resource_name = "switchservicelinks"
+
+    def get_graph(self):
+        link_type = 'switch.ServiceLink'
+
+        print str(self.pk) + ' ' + self.source.component.type.title + ' --> ' + self.target.component.type.title
+
+        if self.target.component.type.title == 'Monitoring Agent' and self.source.component.type.title == 'SWITCH.MonitoringServer':
+            link_type = 'switch.MonitoringLink'
+
+        graph_obj = {
+            'id': self.uuid,
+            'type': link_type,
+            'target': {
                 'id': self.target.uuid
-            }, 'source': {
+            },
+            'source': {
                 'id': self.source.uuid
             }
         }
@@ -1150,8 +1255,11 @@ class ServiceLink(models.Model):
         return graph_obj
 
 
-class ServiceComponent(Instance):
+class ServiceComponent(ComponentInstance):
     class JSONAPIMeta:
+        def __init__(self):
+            pass
+
         resource_name = "graph_services"
 
     def __unicode__(self):
@@ -1222,6 +1330,9 @@ class SwitchDocumentType(models.Model):
     description = models.CharField(max_length=255, blank=True)
 
     class JSONAPIMeta:
+        def __init__(self):
+            pass
+
         resource_name = "switchdocumenttypes"
 
     def __unicode__(self):
@@ -1236,6 +1347,9 @@ class SwitchDocument(models.Model):
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     class JSONAPIMeta:
+        def __init__(self):
+            pass
+
         resource_name = "switchdocuments"
 
     def __unicode__(self):

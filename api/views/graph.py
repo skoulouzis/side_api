@@ -48,7 +48,7 @@ class InstanceViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     def ports(self, request, pk=None):
 
         new_ports = request.data.get('ports', [])
-        instance = Instance.objects.filter(pk=pk).first()
+        instance = ComponentInstance.objects.filter(pk=pk).first()
 
         old_ports = list(ComponentPort.objects.filter(instance=instance).all())
         for port in old_ports:
@@ -74,11 +74,11 @@ class InstanceViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         graph_id = self.request.query_params.get('graph_id', None)
         uuid = self.request.query_params.get('uuid', None)
         if graph_id is not None:
-            queryset = Instance.objects.filter(graph_id=graph_id)
+            queryset = ComponentInstance.objects.filter(graph_id=graph_id)
             if uuid is not None:
-                queryset = Instance.objects.filter(graph_id=graph_id, uuid=uuid)
+                queryset = ComponentInstance.objects.filter(graph_id=graph_id, uuid=uuid)
         else:
-            queryset = Instance.objects.filter()
+            queryset = ComponentInstance.objects.filter()
         return queryset
 
     def perform_destroy(self, instance):
@@ -141,4 +141,29 @@ class ServiceLinkViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         source = dict(self.request.data.get('source', None))
         target = dict(self.request.data.get('target', None))
         if 'id' in graph and 'id' in source and 'id' in target:
-            port = serializer.save(graph_id=graph['id'], source_id=source['id'], target_id=target['id'])
+            serializer.save(graph_id=graph['id'], source_id=source['id'], target_id=target['id'])
+
+
+class DependencyLinkViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
+    serializer_class = DependencyLinkSerializer
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+    queryset = DependencyLink.objects.all()
+
+    def get_queryset(self):
+        graph_id = self.request.query_params.get('graph_id', None)
+        uuid = self.request.query_params.get('uuid', None)
+        if graph_id is not None:
+            queryset = DependencyLink.objects.filter(graph_id=graph_id)
+            if uuid is not None:
+                queryset = DependencyLink.objects.filter(graph_id=graph_id, uuid=uuid)
+        else:
+            queryset = DependencyLink.objects.filter(graph__user=self.request.user)
+        return queryset
+
+    def perform_create(self, serializer):
+        graph = dict(self.request.data.get('graph', None))
+        dependant = dict(self.request.data.get('source', None))
+        dependency = dict(self.request.data.get('target', None))
+        if 'id' in graph and 'id' in dependant and 'id' in dependency:
+            serializer.save(graph_id=graph['id'], dependant_id=dependant['id'], dependency_id=dependency['id'])

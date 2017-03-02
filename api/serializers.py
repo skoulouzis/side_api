@@ -1,8 +1,8 @@
 import json
 
 from rest_framework import serializers
-from models import Application, Component, ComponentType, Instance, NestedComponent, ServiceComponent, ComponentPort, ServiceLink, GraphBase,SwitchDocument, \
-    ApplicationInstance, Notification, SwitchDocumentType
+from models import Application, Component, ComponentType, ComponentInstance, NestedComponent, ServiceComponent, ComponentPort, ServiceLink, GraphBase,SwitchDocument, \
+    ApplicationInstance, Notification, SwitchDocumentType, DependencyLink
 from django.contrib.auth.models import User
 
 
@@ -120,7 +120,7 @@ class InstanceSerializer(serializers.ModelSerializer):
     artifacts = serializers.CharField(allow_blank=True)
 
     class Meta:
-        model = Instance
+        model = ComponentInstance
         fields = ('id', 'uuid', 'title', 'mode', 'properties', 'artifacts', 'graph', 'editable', 'deleteable', 'component', 'last_x', 'last_y', 'ports')
 
     def get_editable(self, obj):
@@ -133,11 +133,11 @@ class InstanceSerializer(serializers.ModelSerializer):
         uuid = validated_data.get('uuid', None)
         graph = validated_data.get('graph', None)
         if uuid is not None:
-            instance = Instance.objects.filter(uuid=uuid, graph=graph).first()
+            instance = ComponentInstance.objects.filter(uuid=uuid, graph=graph).first()
             if instance is not None:
                 return instance
 
-        instance = Instance.objects.create(**validated_data)
+        instance = ComponentInstance.objects.create(**validated_data)
         return instance
 
 
@@ -184,3 +184,13 @@ class ServiceLinkSerializer(serializers.ModelSerializer):
     class Meta:
         model = ServiceLink
         fields = ('id', 'graph', 'source', 'target', 'uuid')
+
+
+class DependencyLinkSerializer(serializers.ModelSerializer):
+    graph = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
+    dependant = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
+    dependency = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
+
+    class Meta:
+        model = DependencyLink
+        fields = ('id', 'graph', 'dependant', 'dependency', 'uuid')

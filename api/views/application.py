@@ -26,9 +26,9 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     API endpoint that allows SwitchApps to be CRUDed.
     """
     serializer_class = ApplicationSerializer
-    authentication_classes = (TokenAuthentication,)
+    # authentication_classes = (TokenAuthentication,)
     # permission_classes = (IsAuthenticated, BelongsToUser,)
-    permission_classes = (IsAuthenticated,)
+    # permission_classes = (IsAuthenticated,)
 
     def list(self, request, **kwargs):
         apps = Application.objects.filter()
@@ -581,7 +581,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
 
                                     # Update vm instances to register their public ip addresses
                                     for vm_provisioned in toca_content['components']:
-                                        vm_component = Instance.objects.get(uuid=vm_provisioned['name'])
+                                        vm_component = ComponentInstance.objects.get(uuid=vm_provisioned['name'])
                                         vm_component.title += ' (' + vm_provisioned['public_address'] + ')'
                                         del vm_provisioned['type']
                                         vm_component.properties = yaml.dump(vm_provisioned, Dumper=utils.YamlDumper, default_flow_style=False)

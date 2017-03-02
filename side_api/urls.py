@@ -23,7 +23,8 @@ from api.views.core import UserViewSet, SwitchDocumentViewSet, SwitchDocumentTyp
 from api.views.application import ApplicationViewSet, ApplicationGraphView
 from api.views.instance import ApplicationInstanceViewSet, ApplicationInstanceGraphView
 from api.views.component import ComponentViewSet, ComponentTypeViewSet, ComponentGraphView
-from api.views.graph import GraphViewSet, InstanceViewSet, PortViewSet, ServiceLinkViewSet
+from api.views.graph import GraphViewSet, InstanceViewSet, PortViewSet, ServiceLinkViewSet, DependencyLinkViewSet
+from api.views.knowledgebase import providers_list, providers_detail, ProviderViewSet
 
 router = routers.DefaultRouter(trailing_slash=False)
 router.register("users", UserViewSet, base_name="user")
@@ -36,12 +37,16 @@ router.register("switchcomponentports", PortViewSet, base_name="switchcomponentp
 router.register("switchdocuments", SwitchDocumentViewSet, base_name="switchdocuments")
 router.register("switchdocumenttypes", SwitchDocumentTypeViewSet, base_name="switchdocumenttypes")
 router.register("switchservicelinks", ServiceLinkViewSet, base_name="switchservicelinks")
+router.register("switchdependencylinks", DependencyLinkViewSet, base_name="switchdependencylinks")
 router.register("switchgraphs", GraphViewSet, base_name="switchgraphs")
 router.register("switchnotifications", NotificationViewSet, base_name="switchnotifications")
+router.register("providers", ProviderViewSet, base_name="providers")
 
 urlpatterns = patterns('',
     url(r'^admin/', include(admin.site.urls)),
     url(r'^$', views.index, name='index'),
+    url(r'^api/providers/?$', providers_list, name='providers_list'),
+    url(r'^api/providers/(?P<pk>[^/.]+)', providers_detail, name='providers_detail'),
     url(r'^api/', include(router.urls)),
     url(r'^api-auth-token/', obtain_auth_token),
     url(r'^api-register/', views.register, name='register'),

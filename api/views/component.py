@@ -53,20 +53,20 @@ class ComponentViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         switch_type = ComponentType.objects.get(id=self.request.data['type']['id'])
         component = serializer.save(type=switch_type, user=self.request.user)
 
-        instance = Instance.objects.create(graph=component, component=component, title=component.title,
-                                           last_x=400, last_y=200, mode='single', properties=component.get_default_properties_value(),
-                                           artifacts=component.get_default_artifacts_value())
+        instance = ComponentInstance.objects.create(graph=component, component=component, title=component.title,
+                                                    last_x=400, last_y=200, mode='single', properties=component.get_default_properties_value(),
+                                                    artifacts=component.get_default_artifacts_value())
 
         if component.type.switch_class.title == 'switch.Component' or component.type.switch_class.title == 'switch.Group':
-            nested_component = NestedComponent(instance_ptr=instance)
+            nested_component = NestedComponent(componentinstance_ptr=instance)
             nested_component.save_base(raw=True)
 
         elif component.type.switch_class.title == 'switch.VirtualResource' or component.type.switch_class.title == 'switch.Attribute':
-            service_component = ServiceComponent(instance_ptr=instance)
+            service_component = ServiceComponent(componentinstance_ptr=instance)
             service_component.save_base(raw=True)
 
         elif component.type.switch_class.title == 'switch.ComponentLink':
-            component_link = ComponentLink(instance_ptr=instance)
+            component_link = ComponentLink(componentinstance_ptr=instance)
             component_link.save_base(raw=True)
 
 
