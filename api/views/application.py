@@ -78,6 +78,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         old_app_pk = app.pk
         app.pk = None
         app.id = None
+        app.uuid = uuid.uuid4()
         app.title = "copy of " + app.title
         app.save()
 
