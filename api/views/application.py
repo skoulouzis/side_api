@@ -490,7 +490,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                 vm_instances = app.instances.filter(component__type__title='Virtual Machine').all()
                 for vm_instance in vm_instances:
                     vm_properties = yaml.load(vm_instance.properties.replace("\\n","\n"))
-                    vm_properties['type'] = vm_instance.component.type.tosca_class.full_name
+                    vm_properties['type'] = vm_instance.component.type.tosca_class.get_full_name()
                     if vm_properties.get('domain') in infrastructure_topologies:
                         components = infrastructure_topologies.get(vm_properties.get('domain')).get('components')
                         components.append(vm_properties)
@@ -511,7 +511,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                 # Create all topology file
                 all_topology_file = os.path.join(settings.MEDIA_ROOT, 'documents',
                                                  hashlib.md5(request.user.username).hexdigest(), 'apps',
-                                                 str(app.uuid), 'dripProvisioner','inputs', 'provisioner_input_all.yaml')
+                                                 str(app.uuid), 'dripProvisioner','inputs', 'provisioner_input_all.yml')
                 if not os.path.exists(os.path.dirname(all_topology_file)):
                     os.makedirs(os.path.dirname(all_topology_file))
                 with open(all_topology_file, 'w') as f:
@@ -525,7 +525,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                 for domain, topology in infrastructure_topologies.iteritems():
                     provisioner_input_specific_topology_file = os.path.join(settings.MEDIA_ROOT, 'documents',
                                     hashlib.md5(request.user.username).hexdigest(), 'apps', str(app.uuid),
-                                    'dripProvisioner','inputs', re.sub(r'[\\/*?:"<>|\\.\\-]',"_",domain) + '.yaml')
+                                    'dripProvisioner','inputs', re.sub(r'[\\/*?:"<>|\\.\\-]',"_",domain) + '.yml')
                     specific_topology_files.append(provisioner_input_specific_topology_file)
                     if not os.path.exists(os.path.dirname(provisioner_input_specific_topology_file)):
                         os.makedirs(os.path.dirname(provisioner_input_specific_topology_file))
