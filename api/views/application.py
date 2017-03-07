@@ -299,7 +299,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         return JsonResponse(validation_result)
 
     @detail_route(methods=['get'], permission_classes=[])
-    def planVirtualInfrastructure(self, request, pk=None, *args, **kwargs):
+    def plan(self, request, pk=None, *args, **kwargs):
         # TODO: implement the planning of the virtual infrastructure
         result = ''
         details = []
@@ -329,9 +329,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                         num_monitoring_server = app.instances.filter(
                             component__type__title='SWITCH.MonitoringServer').count()
                         if num_monitoring_server < 1:
-                            component_monitoring_server = Component.objects.get(title='monitoring_server',
-                                                                                type=ComponentType.objects.get(
-                                                                                    title='SWITCH.MonitoringServer'))
+                            component_monitoring_server = Component.objects.get(title='monitoring_server', type__title='SWITCH.MonitoringServer')
 
                             # Create a graph_monitoring_server element
                             app_graph_dimensions = app.get_current_graph_dimensions()
@@ -365,7 +363,6 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                         utils.getPropertyFromConfigFile("DRIP_MANAGER_API", "url"))
                     drip_manager_response = drip_manager_service.planning_virtual_infrastructure(request.user, planner_input_tosca_file)
 
-
                     if drip_manager_response.status_code == 200:
                         root = ET.fromstring(drip_manager_response.text)
                         planner_output_tosca_files = root.findall("./file")
@@ -373,7 +370,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                         for tosca_file in planner_output_tosca_files:
                             tosca_level = tosca_file.attrib['level']
                             tosca_file_name = tosca_file.attrib['name']
-                            toca_content = yaml.load(tosca_file.text.replace("\\n", "\n"))
+                            tosca_content = yaml.load(tosca_file.text.replace("\\n", "\n"))
 
                             planner_output_tosca_file = os.path.join(settings.MEDIA_ROOT, 'documents',
                                                             hashlib.md5(request.user.username).hexdigest(), 'apps',
@@ -381,12 +378,12 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                             if not os.path.exists(os.path.dirname(planner_output_tosca_file)):
                                 os.makedirs(os.path.dirname(planner_output_tosca_file))
                             with open(planner_output_tosca_file, 'w') as f:
-                                yaml.dump(toca_content, f, Dumper=utils.YamlDumper, default_flow_style=False)
+                                yaml.dump(tosca_content, f, Dumper=utils.YamlDumper, default_flow_style=False)
 
                             if tosca_level=='1':
                                 subnets = {}
                                 # Find out which vm corresponds with which application component
-                                for vm in toca_content.get("components", None):
+                                for vm in tosca_content.get("components", None):
                                     docker_image = vm.get("dockers")
 
                                     component_vm, created = Component.objects.get_or_create(title='vm',
@@ -395,12 +392,12 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                                         ServiceComponent.objects.create(graph=component_vm, component=component_vm, title=component_vm.title,
                                                                 last_x=400, last_y=200, mode='single')
 
-                                    docker_instance = app.instances.filter(artifacts__contains=docker_image).first()
-                                    graph_req = app.service_links.filter(target=docker_instance, source__component__type__title='Requirement').first().source
+                                    docker_component = app.instances.filter(artifacts__contains=docker_image).first()
+                                    graph_req = app.service_links.filter(target=docker_component, source__component__type__title='Requirement').first().source
 
                                     # Create a graph_virtual_machine element
                                     graph_vm = ServiceComponent.objects.create(component=component_vm, graph=app,
-                                                title='VM_' + docker_instance.title, mode=docker_instance.mode,
+                                                title='VM_' + docker_component.title, mode=docker_component.mode,
                                                 last_x=graph_req.last_x, last_y=graph_req.last_y, uuid=vm.get('name'))
 
                                     del vm['type']
@@ -408,7 +405,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                                     graph_vm.save()
 
                                     # Delete hw_req as it has already been satisfied by the vm
-                                    for req_links in app.service_links.filter(source=docker_instance).all():
+                                    for req_links in app.service_links.filter(source=graph_req).all():
                                         req_links.delete()
                                     graph_req.delete()
 
@@ -421,7 +418,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                                         subnets[ethernet_port.get('subnet_name')]=vms_in_subnet
 
 
-                                for subnet in toca_content.get("subnets", None):
+                                for subnet in tosca_content.get("subnets", None):
                                     component_subnet, created = Component.objects.get_or_create(title='subnet',
                                                     type=ComponentType.objects.get(title='Virtual Network'))
                                     if created:
@@ -453,7 +450,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                         app.save()
                     else:
                         result = 'error'
-                        details.append('planification of virtual infrastructure has failed')
+                        details.append('planning of virtual infrastructure has failed')
 
         planning_vi_result = {
             'result': result,
@@ -463,7 +460,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         return JsonResponse(planning_vi_result)
 
     @detail_route(methods=['get'], permission_classes=[])
-    def provisionVirtualInfrastructure(self, request, pk=None, *args, **kwargs):
+    def provision(self, request, pk=None, *args, **kwargs):
         result = ''
         details = []
 
@@ -489,7 +486,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                 vm_instances = app.instances.filter(component__type__title='Virtual Machine').all()
                 for vm_instance in vm_instances:
                     vm_properties = yaml.load(vm_instance.properties.replace("\\n","\n"))
-                    vm_properties['type'] = vm_instance.component.type.tosca_class.full_name
+                    vm_properties['type'] = vm_instance.component.type.tosca_class.get_full_name()
                     if vm_properties.get('domain') in infrastructure_topologies:
                         components = infrastructure_topologies.get(vm_properties.get('domain')).get('components')
                         components.append(vm_properties)
