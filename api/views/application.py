@@ -360,8 +360,9 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                     with open(planner_input_tosca_file, 'w') as f:
                         yaml.dump(app_tosca_json['data'], f, Dumper=utils.YamlDumper, default_flow_style=False)
 
-                    drip_manager_service = DripManagerService(
-                        utils.getPropertyFromConfigFile("DRIP_MANAGER_API", "url"))
+                    print "calling the planner"
+
+                    drip_manager_service = DripManagerService(utils.getPropertyFromConfigFile("DRIP_MANAGER_API", "url"))
                     drip_manager_response = drip_manager_service.planning_virtual_infrastructure(request.user, planner_input_tosca_file)
 
                     if drip_manager_response.status_code == 200:

@@ -98,7 +98,6 @@ class DripManagerService:
         r = requests.post(self.drip_manager_endpoint + "/account/configure/ec2", data=xml, headers=headers)
         return r
 
-
     def planning_virtual_infrastructure(self, user, path_app_tosca):
         with open(path_app_tosca, 'r') as f:
             app_tosca = f.read()
@@ -114,7 +113,6 @@ class DripManagerService:
         headers = {'Content-Type': 'text/xml'}
         r = requests.post(self.drip_manager_endpoint + "/plan/planning", data=xml, headers=headers)
         return r
-
 
     def upload_tosca(self, user, path_all_topology_file, path_tosca_files):
         xml = """<?xml version='1.0' encoding='utf-8'?>
@@ -135,7 +133,6 @@ class DripManagerService:
         headers = {'Content-Type': 'text/xml'}
         r = requests.post(self.drip_manager_endpoint + "/provision/upload", data=xml, headers=headers)
         return r
-
 
     def conf_user_key(self, user, user_ssh_document, action_number):
         xml = """<?xml version='1.0' encoding='utf-8'?>
