@@ -78,6 +78,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         old_app_pk = app.pk
         app.pk = None
         app.id = None
+        app.uuid = uuid.uuid4()
         app.title = "copy of " + app.title
         app.save()
 
@@ -410,7 +411,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                                     graph_req.delete()
 
                                     # Create a service_link between the new vm and the software component
-                                    graph_service_link_vm_req = ServiceLink.objects.create(graph=app, source=graph_vm, target=docker_component)
+                                    graph_service_link_vm_req = ServiceLink.objects.create(graph=app, source=graph_vm, target=docker_instance)
 
                                     for ethernet_port in vm.get('ethernet_port',[]):
                                         vms_in_subnet = subnets.get(ethernet_port.get('subnet_name'), [])
@@ -507,7 +508,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                 # Create all topology file
                 all_topology_file = os.path.join(settings.MEDIA_ROOT, 'documents',
                                                  hashlib.md5(request.user.username).hexdigest(), 'apps',
-                                                 str(app.uuid), 'dripProvisioner','inputs', 'provisioner_input_all.yaml')
+                                                 str(app.uuid), 'dripProvisioner','inputs', 'provisioner_input_all.yml')
                 if not os.path.exists(os.path.dirname(all_topology_file)):
                     os.makedirs(os.path.dirname(all_topology_file))
                 with open(all_topology_file, 'w') as f:
@@ -521,7 +522,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                 for domain, topology in infrastructure_topologies.iteritems():
                     provisioner_input_specific_topology_file = os.path.join(settings.MEDIA_ROOT, 'documents',
                                     hashlib.md5(request.user.username).hexdigest(), 'apps', str(app.uuid),
-                                    'dripProvisioner','inputs', re.sub(r'[\\/*?:"<>|\\.\\-]',"_",domain) + '.yaml')
+                                    'dripProvisioner','inputs', re.sub(r'[\\/*?:"<>|\\.\\-]',"_",domain) + '.yml')
                     specific_topology_files.append(provisioner_input_specific_topology_file)
                     if not os.path.exists(os.path.dirname(provisioner_input_specific_topology_file)):
                         os.makedirs(os.path.dirname(provisioner_input_specific_topology_file))

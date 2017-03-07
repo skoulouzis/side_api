@@ -105,6 +105,7 @@ class GraphBase(models.Model):
 
         for instance in ComponentInstance.objects.filter(graph=self).all():
             old_pk = instance.pk
+            old_uuid = instance.uuid
 
             # we've already created the a copy of the base_instance via the serializer
             # done because ComponentLinks was messing up (wrong id was being returned!)
@@ -135,6 +136,18 @@ class GraphBase(models.Model):
                     port_translations[old_port_pk] = port.pk
 
             elif instance.component.type.switch_class.title == 'switch.VirtualResource' or instance.component.type.switch_class.title == 'switch.Attribute':
+                update_vm = False
+                instance_properties = yaml.load(instance.properties.replace("\\n", "\n"))
+                if 'name' in instance_properties and instance_properties['name'] == str(old_uuid):
+                    update_vm = True
+                    instance_properties['name'] = str(instance.uuid)
+                if 'public_address' in instance_properties and instance_properties['public_address'] == str(old_uuid):
+                    update_vm = True
+                    instance_properties['public_address'] = str(instance.uuid)
+                if update_vm:
+                    instance.properties = yaml.dump(instance_properties, Dumper=utils.YamlDumper, default_flow_style=False)
+                    instance.save()
+
                 service_component = ServiceComponent(componentinstance_ptr=instance)
                 service_component.save_base(raw=True)
 

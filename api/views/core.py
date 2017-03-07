@@ -37,6 +37,8 @@ class UserViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     def configureEC2account(self, request, pk=None, *args, **kwargs):
         drip_manager_service = DripManagerService(utils.getPropertyFromConfigFile("DRIP_MANAGER_API", "url"))
 
+        drip_manager_response = drip_manager_service.register(request.user)
+
         aws_root_key_document = SwitchDocument.objects.filter(user=request.user, document_type=SwitchDocumentType.objects.get(name="AWS_ROOT_KEY")).first()
         california_key_document = SwitchDocument.objects.filter(user=request.user, document_type=SwitchDocumentType.objects.get(name="AWS_California_Key")).first()
         virginia_key_document = SwitchDocument.objects.filter(user=request.user, document_type=SwitchDocumentType.objects.get(name="AWS_Virginia_Key")).first()
