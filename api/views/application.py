@@ -412,7 +412,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                                     graph_req.delete()
 
                                     # Create a service_link between the new vm and the software component
-                                    graph_service_link_vm_req = ServiceLink.objects.create(graph=app, source=graph_vm, target=docker_instance)
+                                    graph_service_link_vm_req = ServiceLink.objects.create(graph=app, source=graph_vm, target=docker_component)
 
                                     for ethernet_port in vm.get('ethernet_port',[]):
                                         vms_in_subnet = subnets.get(ethernet_port.get('subnet_name'), [])
