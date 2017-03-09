@@ -723,11 +723,11 @@
   model: api.componenttypeproperty
   pk: 12
 - fields: {component_type: 1, data_type: 2, default_value: '', collection_type: S,
-    name: jitter, required: true}
+    name: jitter, required: false}
   model: api.componenttypeproperty
   pk: 13
 - fields: {component_type: 1, data_type: 10, default_value: '', collection_type: S,
-    name: multicast, required: true}
+    name: multicast, required: false}
   model: api.componenttypeproperty
   pk: 14
 - fields: {component_type: 11, data_type: 11, default_value: '', collection_type: S,
@@ -745,20 +745,20 @@
       \         operator: greater_than\n            value: 80\n          threshold_1:\
       \n            operator: less_than\n            value: 20\n      cpuUser_metric:\
       \n        name: 'cpuUser'\n        type: 'double'\n        unit: '%'\n\
-      \        cpuSystem_metric:\n        name: 'cpuSystem'\
-      \n        type: 'double'\n        unit: '%'\n       \
+      \      cpuSystem_metric:\n        name: 'cpuSystem'\
+      \n        type: 'double'\n        unit: '%'\n     \
       \ cpuIdle_metric:\n        name: 'cpuIdle'\n        type: 'double'\n\
-      \        unit: '%'\n        cpuIOwait_metric:\n  \
-      \      name: 'cpuIOwait'\n        type: 'double'\n        unit: '%'\n\
-      \        Memory_Probe:\n    name: 'Memory'\n\
+      \        unit: '%'\n      cpuIOwait_metric:\n  \
+      \      name: 'cpuIOwait'\n        type: 'double'\n        unit: '%'\
+      \nMemory_Probe:\n    name: 'Memory'\n\
       \    active: True\n    static: False\n    metrics:\n      memTotal_metric:\
       \n        name: 'memTotal'\n        type: 'integer'\n        unit: 'KB'\
-      \n        memFree_metric:\n        name: 'memFree'\
-      \n        type: 'integer'\n        unit: 'KB'\n       \
+      \n      memFree_metric:\n        name: 'memFree'\
+      \n        type: 'integer'\n        unit: 'KB'\n     \
       \ memCache_metric:\n        name: 'memCache'\n        type: 'integer'\
-      \n        unit: 'KB'\n        memSwapTotal_metric:\n\
+      \n        unit: 'KB'\n      memSwapTotal_metric:\n\
       \        name: 'memSwapTotal'\n        type: 'integer'\n        unit: 'KB'\
-      \n        memSwapFree_metric:\n        name: 'memSwapFree'\
+      \n      memSwapFree_metric:\n        name: 'memSwapFree'\
       \n        type: 'integer'\n        unit: 'KB'\n\
       \      memUsed_metric:\n        name: 'memUsed'\n        type: 'integer'\
       \n        unit: 'KB'\n      memUsedPercent_metric:\
@@ -783,7 +783,7 @@
       \n    metrics:\n      netBytesIN_metric:\n        name: 'netBytesIN'\n\
       \        type: 'double'\n        unit: 'bytes/s'\n\
       \      netBytesOUT_metric:\n        name: 'netBytesOUT'\n        type: 'double'\
-      \n        unit: 'bytes/s'\n        netPacketsIN_metric:\
+      \n        unit: 'bytes/s'\n      netPacketsIN_metric:\
       \n        name: 'netPacketsIN'\n        type: 'double'\n        unit: 'bytes/s'\
       \n        netPacketsOUT_metric:\n        name: 'netPacketsOUT'\
       \n        type: 'double'\n        unit: 'bytes/s'\
@@ -791,8 +791,8 @@
       \n    static: True\n    metrics:\n      arch_metric:\n        name: 'arch'\
       \n        type: 'string'\n      btime_metric:\
       \n        name: 'btime'\n        type: 'string'\n    \
-      \    thresholds  {}:\n      cpuNum_metric:\n        name: 'cpuNum'\n     \
-      \   type: 'string'\n        os_metric:\
+      \    cpuNum_metric:\n        name: 'cpuNum'\n     \
+      \   type: 'string'\n      os_metric:\
       \n        name: 'os'\n        type: 'string'", collection_type: M, name: probes, required: true}
   model: api.componenttypeproperty
   pk: 17
@@ -1052,8 +1052,8 @@
       \      unit: KB\n      memSwapFree_metric:\n        name: memSwapFree\n    \
       \    type: integer\n        unit: KB\n      memSwapTotal_metric:\n\
       \        name: memSwapTotal\n        type: integer\n\
-      \        unit: KB\n      memTotal_metric:\n        name: memTotal\n        thresholds:\
-      \ null\n        type: integer\n        unit: KB\n      memUsedPercent_metric:\n\
+      \        unit: KB\n      memTotal_metric:\n        name: memTotal\n\
+      \        type: integer\n        unit: KB\n      memUsedPercent_metric:\n\
       \        name: memUsedPercent\n        thresholds:\n          threshold_0:\n\
       \            operator: greater_than\n            value: 80\n          threshold_1:\n\
       \            operator: less_than\n            value: 20\n        type: double\n\
@@ -1064,8 +1064,8 @@
       \        type: double\n        unit: bytes/s\n      netBytesOUT_metric:\n  \
       \      name: netBytesOUT\n        type: double\n \
       \       unit: bytes/s\n      netPacketsIN_metric:\n        name: netPacketsIN\n\
-      \        type: double\n        unit: bytes/s\n   \
-      \   netPacketsOUT_metric:\n        name: netPacketsOUT\n\
+      \        type: double\n        unit: bytes/s\n\
+      \      netPacketsOUT_metric:\n        name: netPacketsOUT\n\
       \        type: double\n        unit: bytes/s\n    name: Network\n   \
       \ static: false\n  StaticInfo_Probe:\n    active: true\n   \
       \ metrics:\n      arch_metric:\n        name: arch\n\
