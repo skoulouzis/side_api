@@ -95,6 +95,20 @@ class SwitchDocumentTypeViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     parser_classes = (JSONParser,)
 
 
+class SwitchArtifactViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
+    #authentication_classes = (TokenAuthentication,)
+    #permission_classes = (IsAuthenticated, )
+    serializer_class = SwitchArtifactSerializer
+    queryset = SwitchArtifact.objects.all()
+
+
+class SwitchRepositoryViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
+    #authentication_classes = (TokenAuthentication,)
+    #permission_classes = (IsAuthenticated, )
+    serializer_class = SwitchRepositorySerializer
+    queryset = SwitchRepository.objects.all()
+
+
 class NotificationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     #authentication_classes = (TokenAuthentication,)
     #permission_classes = (IsAuthenticated, )

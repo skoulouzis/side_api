@@ -26,9 +26,9 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     API endpoint that allows SwitchApps to be CRUDed.
     """
     serializer_class = ApplicationSerializer
-    # authentication_classes = (TokenAuthentication,)
+    authentication_classes = (TokenAuthentication,)
     # permission_classes = (IsAuthenticated, BelongsToUser,)
-    # permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated,)
 
     def list(self, request, **kwargs):
         apps = Application.objects.filter()

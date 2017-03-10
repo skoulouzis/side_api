@@ -2,7 +2,8 @@ import json
 
 from rest_framework import serializers
 from models import Application, Component, ComponentType, ComponentInstance, NestedComponent, ServiceComponent, ComponentPort, ServiceLink, GraphBase,SwitchDocument, \
-    ApplicationInstance, Notification, SwitchDocumentType, DependencyLink
+    ApplicationInstance, Notification, SwitchDocumentType, DependencyLink, SwitchArtifact, SwitchRepository, ToscaClass, \
+    ComponentClass
 from django.contrib.auth.models import User
 
 
@@ -66,11 +67,10 @@ class ComponentSerializer(serializers.ModelSerializer):
     type = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
     belongs_to_user = serializers.SerializerMethodField(read_only=True, required=False)
     editable = serializers.SerializerMethodField(read_only=True, required=False)
-    root_type = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Component
-        fields = ('id', 'title', 'type', 'root_type', 'editable', 'belongs_to_user', 'is_core_component', 'is_template_component')
+        fields = ('id', 'title', 'type', 'editable', 'belongs_to_user', 'is_core_component', 'is_template_component')
 
     def get_belongs_to_user(self, obj):
         return self.context['request'].user == obj.user
@@ -78,36 +78,46 @@ class ComponentSerializer(serializers.ModelSerializer):
     def get_editable(self, obj):
         return self.context['request'].user == obj.user
 
-    def get_root_type(self, obj):
-        return obj.type.get_base_type().title
-
 
 class ComponentTypeSerializer(serializers.ModelSerializer):
     switch_class = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
-    is_core_component = serializers.SerializerMethodField(read_only=True, required=False)
-    is_template_component = serializers.SerializerMethodField(read_only=True, required=False)
     is_component_group = serializers.SerializerMethodField(read_only=True, required=False)
     classpath = serializers.SerializerMethodField(read_only=True, required=False)
     parent = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
+    artifacts = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
 
     class Meta:
         model = ComponentType
         fields = ('id', 'title', 'primary_colour', 'secondary_colour', 'icon_name', 'icon_class', 'icon_style',
-                  'icon_svg', 'icon_code', 'icon_colour', 'switch_class', 'is_core_component', 'is_template_component',
-                  'is_component_group', 'classpath', 'parent')
+                  'icon_svg', 'icon_code', 'icon_colour', 'switch_class', 'is_core', 'is_template', 'is_concrete',
+                  'is_component_group', 'classpath', 'parent', 'artifacts')
+
+    def create(self, validated_data):
+        obj = ComponentType.objects.create(**validated_data)
+        parent_id = self.initial_data['parent_id']
+        switch_class_id = self.initial_data['switch_class_id']
+        classpath  = self.initial_data['classpath']
+        classpath = classpath.rsplit('.', 1)
+        parent_tosca = ToscaClass.objects.get(id=5)
+        tosca_class, created = ToscaClass.objects.get_or_create(type='N', is_normative=False, prefix=classpath[0], parent=parent_tosca, name=classpath[1])
+        obj.parent = ComponentType.objects.get(id=parent_id)
+        obj.switch_class = ComponentClass.objects.get(id=switch_class_id)
+        obj.tosca_class = tosca_class
+        obj.save()
+        return obj
 
     def get_classpath(self, obj):
         return obj.computed_class()
 
-    def get_is_template_component(self, obj):
-        return obj.is_template()
-
-    def get_is_core_component(self, obj):
-        return obj.is_core()
-
     def get_is_component_group(self, obj):
         return obj.switch_class.title == 'switch.Group'
 
+
+class ComponentClassSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = ComponentType
+        fields = ('id', 'title')
 
 
 class InstanceSerializer(serializers.ModelSerializer):
@@ -159,6 +169,35 @@ class SwitchDocumentTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = SwitchDocumentType
         fields = ('id', 'name', 'description')
+
+
+class SwitchArtifactSerializer(serializers.ModelSerializer):
+    repository = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
+
+    class Meta:
+        model = SwitchArtifact
+        fields = ('id', 'name', 'file', 'repository')
+
+    def create(self, validated_data):
+        obj = SwitchArtifact.objects.create(**validated_data)
+        obj.repository = SwitchRepository.objects.get(id=1)
+        obj.type = ToscaClass.objects.get(id=21)
+        obj.save()
+
+        if 'bound_to' in self.initial_data:
+            bound_to = self.initial_data['bound_to']
+            parent = ComponentType.objects.get(id=bound_to)
+            parent.artifacts.add(obj)
+            parent.save()
+
+        return obj
+
+
+class SwitchRepositorySerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = SwitchRepository
+        fields = ('id', 'name', 'description', 'url', 'credential')
 
 
 class GraphSerializer(serializers.ModelSerializer):

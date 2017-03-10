@@ -1,5 +1,5 @@
 from rest_framework import viewsets
-from rest_framework.parsers import JSONParser
+from rest_framework.parsers import JSONParser, FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_extensions.mixins import PaginateByMaxMixin
@@ -15,7 +15,6 @@ class ComponentTypeViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     authentication_classes = (TokenAuthentication,)
     permission_classes = (IsAuthenticated,)
     queryset = ComponentType.objects.all()
-    parser_classes = (JSONParser,)
 
     def get_queryset(self):
         is_core_component = self.request.query_params.get('is_core', None)
@@ -28,6 +27,13 @@ class ComponentTypeViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
             queryset = queryset.filter(switch_class__is_template_component=is_template_component)
 
         return queryset
+
+
+class ComponentClassViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
+    serializer_class = ComponentClassSerializer
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+    queryset = ComponentClass.objects.all()
 
 
 class ComponentViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):

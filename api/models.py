@@ -441,7 +441,7 @@ class ToscaClass(models.Model):
         def __init__(self):
             pass
 
-        resource_name = "toscaclass"
+        resource_name = "toscaclasses"
 
     def __unicode__(self):
         return self.get_full_name()
@@ -469,7 +469,7 @@ class SwitchRepository(models.Model):
         def __init__(self):
             pass
 
-        resource_name = "switchrepository"
+        resource_name = "switchrepositories"
 
     def __unicode__(self):
         return self.name
@@ -485,18 +485,15 @@ class SwitchRepository(models.Model):
 
 class SwitchArtifact(models.Model):
     name = models.CharField(max_length=512, unique=True)
-    type = models.ForeignKey(ToscaClass, limit_choices_to={'type': ToscaClass.ARTIFACT_TYPE})
-    file = models.CharField(max_length=512)
-    repository = models.ForeignKey(SwitchRepository)
-
-    class Meta:
-        verbose_name_plural = "Switch artifacts"
+    type = models.ForeignKey(ToscaClass, null=True, blank=True, limit_choices_to={'type': ToscaClass.ARTIFACT_TYPE})
+    file = models.CharField(max_length=512, null=True, blank=True)
+    repository = models.ForeignKey(SwitchRepository, null=True, blank=True)
 
     class JSONAPIMeta:
         def __init__(self):
             pass
 
-        resource_name = "switchartifact"
+        resource_name = "switchartifacts"
 
     def __unicode__(self):
         return self.name
@@ -634,7 +631,7 @@ class ComponentClass(models.Model):
 class ComponentType(models.Model):
     parent = models.ForeignKey('self', null=True, blank=True, related_name='children')
     title = models.CharField(max_length=512)
-    switch_class = models.ForeignKey(ComponentClass, related_name='types')
+    switch_class = models.ForeignKey(ComponentClass, null=True, blank=True, related_name='types')
     primary_colour = models.CharField(max_length=512, blank=True)
     secondary_colour = models.CharField(max_length=512, blank=True)
     icon_name = models.CharField(max_length=1024, blank=True)
@@ -643,7 +640,7 @@ class ComponentType(models.Model):
     icon_svg = models.CharField(max_length=1024, blank=True)
     icon_code = models.CharField(max_length=512, blank=True)
     icon_colour = models.CharField(max_length=512, blank=True)
-    tosca_class = models.ForeignKey(ToscaClass, limit_choices_to={'type': ToscaClass.NODE_TYPE})
+    tosca_class = models.ForeignKey(ToscaClass, null=True, blank=True, limit_choices_to={'type': ToscaClass.NODE_TYPE})
     artifacts = models.ManyToManyField(SwitchArtifact, blank=True)
     requirements = models.ManyToManyField(SwitchRequirement, blank=True)
 
@@ -661,7 +658,7 @@ class ComponentType(models.Model):
 
     def is_core(self):
         if self.parent is not None:
-            return self.parent.is_template()
+            return self.parent.is_core()
         else:
             return self.switch_class.is_core_component
 
@@ -678,6 +675,9 @@ class ComponentType(models.Model):
         else:
             classpath = self.switch_class.title + '.' + classpath
         return classpath
+
+    def is_concrete(self):
+        return self.artifacts.count() > 0
 
     def get_tosca(self):
         if self.tosca_class.is_normative:
@@ -703,7 +703,6 @@ class ComponentType(models.Model):
                     requirements.append(requirement.get_tosca())
                 obj_definition['requirements'] = requirements
             return {self.tosca_class.get_full_name(): obj_definition}
-
 
     def get_default_properties_value(self):
         properties = {}

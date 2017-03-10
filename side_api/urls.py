@@ -19,10 +19,10 @@ from rest_framework_nested import routers
 from rest_framework.authtoken.views import obtain_auth_token
 
 import views
-from api.views.core import UserViewSet, SwitchDocumentViewSet, SwitchDocumentTypeViewSet, NotificationViewSet
+from api.views.core import UserViewSet, SwitchDocumentViewSet, SwitchDocumentTypeViewSet, NotificationViewSet, SwitchArtifactViewSet, SwitchRepositoryViewSet
 from api.views.application import ApplicationViewSet, ApplicationGraphView
 from api.views.instance import ApplicationInstanceViewSet, ApplicationInstanceGraphView
-from api.views.component import ComponentViewSet, ComponentTypeViewSet, ComponentGraphView
+from api.views.component import ComponentViewSet, ComponentTypeViewSet, ComponentGraphView, ComponentClassViewSet
 from api.views.graph import GraphViewSet, InstanceViewSet, PortViewSet, ServiceLinkViewSet, DependencyLinkViewSet
 from api.views.knowledgebase import providers_list, providers_detail, ProviderViewSet
 
@@ -32,6 +32,7 @@ router.register("switchapps", ApplicationViewSet, base_name="switchapps")
 router.register("switchappinstances", ApplicationInstanceViewSet, base_name="switchappinstances")
 router.register("switchcomponents", ComponentViewSet, base_name="switchcomponents")
 router.register("switchcomponenttypes", ComponentTypeViewSet, base_name="switchcomponenttypes")
+router.register("switchcomponentclasses", ComponentClassViewSet, base_name="switchcomponentclasses")
 router.register("switchcomponentinstances", InstanceViewSet, base_name="switchcomponentinstances")
 router.register("switchcomponentports", PortViewSet, base_name="switchcomponentports")
 router.register("switchdocuments", SwitchDocumentViewSet, base_name="switchdocuments")
@@ -40,6 +41,8 @@ router.register("switchservicelinks", ServiceLinkViewSet, base_name="switchservi
 router.register("switchdependencylinks", DependencyLinkViewSet, base_name="switchdependencylinks")
 router.register("switchgraphs", GraphViewSet, base_name="switchgraphs")
 router.register("switchnotifications", NotificationViewSet, base_name="switchnotifications")
+router.register("switchartifacts", SwitchArtifactViewSet, base_name="switchartifacts")
+router.register("switchrepositories", SwitchRepositoryViewSet, base_name="switchrepositories")
 router.register("providers", ProviderViewSet, base_name="providers")
 
 urlpatterns = patterns('',
