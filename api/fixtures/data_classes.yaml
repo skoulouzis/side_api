@@ -785,13 +785,13 @@
       \      netBytesOUT_metric:\n        name: 'netBytesOUT'\n        type: 'double'\
       \n        unit: 'bytes/s'\n      netPacketsIN_metric:\
       \n        name: 'netPacketsIN'\n        type: 'double'\n        unit: 'bytes/s'\
-      \n        netPacketsOUT_metric:\n        name: 'netPacketsOUT'\
+      \n      netPacketsOUT_metric:\n        name: 'netPacketsOUT'\
       \n        type: 'double'\n        unit: 'bytes/s'\
       \nStaticInfo_Probe:\n    name: 'StaticInfo'\n    active: True\
       \n    static: True\n    metrics:\n      arch_metric:\n        name: 'arch'\
       \n        type: 'string'\n      btime_metric:\
-      \n        name: 'btime'\n        type: 'string'\n    \
-      \    cpuNum_metric:\n        name: 'cpuNum'\n     \
+      \n        name: 'btime'\n        type: 'string'\
+      \n      cpuNum_metric:\n        name: 'cpuNum'\n     \
       \   type: 'string'\n      os_metric:\
       \n        name: 'os'\n        type: 'string'", collection_type: M, name: probes, required: true}
   model: api.componenttypeproperty
@@ -1069,7 +1069,7 @@
       \        type: double\n        unit: bytes/s\n    name: Network\n   \
       \ static: false\n  StaticInfo_Probe:\n    active: true\n   \
       \ metrics:\n      arch_metric:\n        name: arch\n\
-      \        type: string\n        btime_metric:\n        name:\
+      \        type: string\n      btime_metric:\n        name:\
       \ btime\n        type: string\n\
       \      cpuNum_metric:\n        name: cpuNum\n    \
       \    type: string\n      os_metric:\n        name: os\n\
