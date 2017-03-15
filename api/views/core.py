@@ -122,3 +122,17 @@ class NotificationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
 
     def get_queryset(self):
         return Notification.objects.filter()
+
+
+class SwitchDataTypeViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
+    #authentication_classes = (TokenAuthentication,)
+    #permission_classes = (IsAuthenticated, )
+    serializer_class = DataTypeSerializer
+    queryset = DataType.objects.all()
+
+
+class SwitchDataTypePropertyViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
+    #authentication_classes = (TokenAuthentication,)
+    #permission_classes = (IsAuthenticated, )
+    serializer_class = DataTypePropertySerializer
+    queryset = DataTypeProperty.objects.all()

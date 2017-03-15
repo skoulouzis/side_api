@@ -171,7 +171,6 @@ class DripManagerService:
         r = requests.post(self.drip_manager_endpoint + "/provision/execute", data=xml, headers=headers)
         return r
 
-
     def setup_docker_orchestrator(self, user, action_number, docker_orchestrator_type):
         xml = """<?xml version='1.0' encoding='utf-8'?>
          <deploy>

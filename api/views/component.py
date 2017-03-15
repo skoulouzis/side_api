@@ -29,6 +29,18 @@ class ComponentTypeViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         return queryset
 
 
+class ComponentTypePropertyViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
+    serializer_class = ComponentTypePropertySerializer
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+    queryset = ComponentTypeProperty.objects.all()
+
+    def perform_create(self, serializer):
+        data_type = DataType.objects.get(pk=self.request.data['data_type_id'])
+        component_type = ComponentType.objects.get(pk=self.request.data['component_type_id'])
+        component_type_property = serializer.save(data_type=data_type, component_type=component_type)
+
+
 class ComponentClassViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     serializer_class = ComponentClassSerializer
     authentication_classes = (TokenAuthentication,)

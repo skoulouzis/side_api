@@ -19,10 +19,12 @@ from rest_framework_nested import routers
 from rest_framework.authtoken.views import obtain_auth_token
 
 import views
-from api.views.core import UserViewSet, SwitchDocumentViewSet, SwitchDocumentTypeViewSet, NotificationViewSet, SwitchArtifactViewSet, SwitchRepositoryViewSet
+from api.views.core import UserViewSet, SwitchDocumentViewSet, SwitchDocumentTypeViewSet, NotificationViewSet, \
+    SwitchArtifactViewSet, SwitchRepositoryViewSet, SwitchDataTypeViewSet, SwitchDataTypePropertyViewSet
 from api.views.application import ApplicationViewSet, ApplicationGraphView
 from api.views.instance import ApplicationInstanceViewSet, ApplicationInstanceGraphView
-from api.views.component import ComponentViewSet, ComponentTypeViewSet, ComponentGraphView, ComponentClassViewSet
+from api.views.component import ComponentViewSet, ComponentTypeViewSet, ComponentGraphView, ComponentClassViewSet, \
+    ComponentTypePropertyViewSet
 from api.views.graph import GraphViewSet, InstanceViewSet, PortViewSet, ServiceLinkViewSet, DependencyLinkViewSet
 from api.views.knowledgebase import providers_list, providers_detail, ProviderViewSet
 
@@ -32,6 +34,9 @@ router.register("switchapps", ApplicationViewSet, base_name="switchapps")
 router.register("switchappinstances", ApplicationInstanceViewSet, base_name="switchappinstances")
 router.register("switchcomponents", ComponentViewSet, base_name="switchcomponents")
 router.register("switchcomponenttypes", ComponentTypeViewSet, base_name="switchcomponenttypes")
+router.register("switchcomponenttypeproperties", ComponentTypePropertyViewSet, base_name="switchcomponenttypeproperties")
+router.register("switchdatatypes", SwitchDataTypeViewSet, base_name="switchdatatypes")
+router.register("switchdatatypeproperties", SwitchDataTypePropertyViewSet, base_name="switchdatatypeproperties")
 router.register("switchcomponentclasses", ComponentClassViewSet, base_name="switchcomponentclasses")
 router.register("switchcomponentinstances", InstanceViewSet, base_name="switchcomponentinstances")
 router.register("switchcomponentports", PortViewSet, base_name="switchcomponentports")

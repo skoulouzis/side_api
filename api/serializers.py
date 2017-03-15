@@ -1,9 +1,11 @@
 import json
 
 from rest_framework import serializers
+
+from api.models import ComponentTypeProperty
 from models import Application, Component, ComponentType, ComponentInstance, NestedComponent, ServiceComponent, ComponentPort, ServiceLink, GraphBase,SwitchDocument, \
     ApplicationInstance, Notification, SwitchDocumentType, DependencyLink, SwitchArtifact, SwitchRepository, ToscaClass, \
-    ComponentClass
+    ComponentClass, DataType, DataTypeProperty
 from django.contrib.auth.models import User
 
 
@@ -85,12 +87,13 @@ class ComponentTypeSerializer(serializers.ModelSerializer):
     classpath = serializers.SerializerMethodField(read_only=True, required=False)
     parent = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
     artifacts = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    properties = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
 
     class Meta:
         model = ComponentType
         fields = ('id', 'title', 'primary_colour', 'secondary_colour', 'icon_name', 'icon_class', 'icon_style',
                   'icon_svg', 'icon_code', 'icon_colour', 'switch_class', 'is_core', 'is_template', 'is_concrete',
-                  'is_component_group', 'classpath', 'parent', 'artifacts')
+                  'is_component_group', 'classpath', 'parent', 'artifacts', 'properties')
 
     def create(self, validated_data):
         obj = ComponentType.objects.create(**validated_data)
@@ -233,3 +236,28 @@ class DependencyLinkSerializer(serializers.ModelSerializer):
     class Meta:
         model = DependencyLink
         fields = ('id', 'graph', 'dependant', 'dependency', 'uuid')
+
+class ComponentTypePropertySerializer(serializers.ModelSerializer):
+    component_type = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
+    data_type = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
+
+    class Meta:
+        model = ComponentTypeProperty
+        fields = ('id', 'name', 'default_value', 'required', 'component_type', 'collection_type', 'data_type')
+
+class DataTypeSerializer(serializers.ModelSerializer):
+    parent = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
+    properties = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+
+    class Meta:
+        model = DataType
+        fields = ('id', 'name', 'default_value', 'parent', 'properties')
+
+
+class DataTypePropertySerializer(serializers.ModelSerializer):
+    data_type = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
+    parent_data_type = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
+
+    class Meta:
+        model = DataTypeProperty
+        fields = ('id', 'name', 'default_value', 'required', 'data_type', 'collection_type', 'parent_data_type')
