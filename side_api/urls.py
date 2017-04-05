@@ -27,6 +27,7 @@ from api.views.component import ComponentViewSet, ComponentTypeViewSet, Componen
     ComponentTypePropertyViewSet
 from api.views.graph import GraphViewSet, InstanceViewSet, PortViewSet, ServiceLinkViewSet, DependencyLinkViewSet
 from api.views.knowledgebase import providers_list, providers_detail, ProviderViewSet
+from rest_framework_swagger.views import get_swagger_view
 
 router = routers.DefaultRouter(trailing_slash=False)
 router.register("users", UserViewSet, base_name="user")
@@ -50,9 +51,12 @@ router.register("switchartifacts", SwitchArtifactViewSet, base_name="switchartif
 router.register("switchrepositories", SwitchRepositoryViewSet, base_name="switchrepositories")
 router.register("providers", ProviderViewSet, base_name="providers")
 
+schema_view = get_swagger_view(title='SIDE API')
+
 urlpatterns = patterns('',
     url(r'^admin/', include(admin.site.urls)),
-    url(r'^$', views.index, name='index'),
+    url(r'^$', schema_view),
+    #url(r'^$', views.index, name='index'),
     url(r'^api/providers/?$', providers_list, name='providers_list'),
     url(r'^api/providers/(?P<pk>[^/.]+)', providers_detail, name='providers_detail'),
     url(r'^api/', include(router.urls)),
