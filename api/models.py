@@ -14,7 +14,7 @@ from side_api import utils
 
 class GraphBase(models.Model):
     user = models.ForeignKey(User, null=True, blank=True, default=None)
-    title = models.CharField(max_length=512)
+    title = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -135,7 +135,7 @@ class GraphBase(models.Model):
                     port.save()
                     port_translations[old_port_pk] = port.pk
 
-            elif instance.component.type.switch_class.title == 'switch.VirtualResource' or instance.component.type.switch_class.title == 'switch.Attribute':
+            elif instance.component.type.switch_class.title == 'switch.VirtualResource' or instance.component.type.switch_class.title == 'switch.Attribute' or instance.component.type.switch_class.title == 'switch.DST':
                 update_vm = False
                 instance_properties = yaml.load(instance.properties.replace("\\n", "\n"))
                 if 'name' in instance_properties and instance_properties['name'] == str(old_uuid):
@@ -214,7 +214,7 @@ class Notification(models.Model):
         return 'Notification: title=' + self.title + ' message=' + self.message + ' graph=' + self.graph.title
 
     graph = models.ForeignKey(GraphBase, related_name='notifications')
-    title = models.CharField(max_length=512)
+    title = models.CharField(max_length=255)
     message = models.CharField(max_length=2048)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -303,7 +303,7 @@ class Application(GraphBase):
 
 
 class DataType(models.Model):
-    name = models.CharField(max_length=512)
+    name = models.CharField(max_length=255)
     parent = models.ForeignKey('self', null=True, blank=True, related_name='children')
     default_value = models.TextField(blank=True)
 
@@ -353,7 +353,7 @@ class DataTypeProperty(models.Model):
         (LIST, 'List')
     )
 
-    name = models.CharField(max_length=512)
+    name = models.CharField(max_length=255)
     data_type = models.ForeignKey(DataType)
     default_value = models.TextField(blank=True)
     required = models.BooleanField(default=True)
@@ -424,14 +424,14 @@ class ToscaClass(models.Model):
         (CAPABILITY_TYPE, 'Capability type'),
     )
 
-    name = models.CharField(max_length=512)
+    name = models.CharField(max_length=255)
     type = models.CharField(
         max_length=2,
         choices=TYPE_CHOICES,
         default=NODE_TYPE,
     )
     parent = models.ForeignKey('self', null=True, blank=True)
-    prefix = models.CharField(max_length=512)
+    prefix = models.CharField(max_length=255)
     is_normative = models.BooleanField(default=False)
 
     class Meta:
@@ -457,8 +457,8 @@ class ToscaClass(models.Model):
 
 
 class SwitchRepository(models.Model):
-    name = models.CharField(max_length=512, unique=True)
-    description = models.CharField(max_length=512, blank=True)
+    name = models.CharField(max_length=255, unique=True)
+    description = models.CharField(max_length=255, blank=True)
     url = models.URLField(max_length=512)
     credential = models.TextField(blank=True)
 
@@ -484,9 +484,9 @@ class SwitchRepository(models.Model):
 
 
 class SwitchArtifact(models.Model):
-    name = models.CharField(max_length=512, unique=True)
+    name = models.CharField(max_length=255, unique=True)
     type = models.ForeignKey(ToscaClass, null=True, blank=True, limit_choices_to={'type': ToscaClass.ARTIFACT_TYPE})
-    file = models.CharField(max_length=512, null=True, blank=True)
+    file = models.CharField(max_length=255, null=True, blank=True)
     repository = models.ForeignKey(SwitchRepository, null=True, blank=True)
 
     class JSONAPIMeta:
@@ -507,7 +507,7 @@ class SwitchArtifact(models.Model):
 
 
 class SwitchRequirement(models.Model):
-    name = models.CharField(max_length=512, unique=True)
+    name = models.CharField(max_length=255, unique=True)
     node = models.ForeignKey(ToscaClass, limit_choices_to={'type': ToscaClass.NODE_TYPE}, related_name='req_nodes')
     capability = models.ForeignKey(ToscaClass, limit_choices_to={'type': ToscaClass.CAPABILITY_TYPE}, related_name='cap_nodes')
     relationship = models.ForeignKey(ToscaClass, limit_choices_to={'type': ToscaClass.RELATIONSHIP_TYPE}, related_name='rel_nodes')
@@ -610,8 +610,8 @@ class ApplicationInstance(GraphBase):
 
 
 class ComponentClass(models.Model):
-    title = models.CharField(max_length=512)
-    classpath = models.CharField(max_length=512, blank=True)
+    title = models.CharField(max_length=255)
+    classpath = models.CharField(max_length=255, blank=True)
     is_core_component = models.BooleanField(default=False)
     is_template_component = models.BooleanField(default=False)
 
@@ -630,16 +630,16 @@ class ComponentClass(models.Model):
 
 class ComponentType(models.Model):
     parent = models.ForeignKey('self', null=True, blank=True, related_name='children')
-    title = models.CharField(max_length=512)
+    title = models.CharField(max_length=255)
     switch_class = models.ForeignKey(ComponentClass, null=True, blank=True, related_name='types')
-    primary_colour = models.CharField(max_length=512, blank=True)
-    secondary_colour = models.CharField(max_length=512, blank=True)
+    primary_colour = models.CharField(max_length=255, blank=True)
+    secondary_colour = models.CharField(max_length=255, blank=True)
     icon_name = models.CharField(max_length=1024, blank=True)
     icon_style = models.CharField(max_length=1024, blank=True)
     icon_class = models.CharField(max_length=1024, blank=True)
     icon_svg = models.CharField(max_length=1024, blank=True)
-    icon_code = models.CharField(max_length=512, blank=True)
-    icon_colour = models.CharField(max_length=512, blank=True)
+    icon_code = models.CharField(max_length=255, blank=True)
+    icon_colour = models.CharField(max_length=255, blank=True)
     tosca_class = models.ForeignKey(ToscaClass, null=True, blank=True, limit_choices_to={'type': ToscaClass.NODE_TYPE})
     artifacts = models.ManyToManyField(SwitchArtifact, blank=True)
     requirements = models.ManyToManyField(SwitchRequirement, blank=True)
@@ -760,7 +760,7 @@ class ComponentTypeProperty(models.Model):
         (LIST, 'List')
     )
 
-    name = models.CharField(max_length=512)
+    name = models.CharField(max_length=255)
     data_type = models.ForeignKey(DataType)
     default_value = models.TextField(blank=True)
     collection_type = models.CharField(
@@ -860,8 +860,8 @@ class ComponentInstance(models.Model):
     graph = models.ForeignKey(GraphBase, related_name='instances')
     component = models.ForeignKey(Component, related_name='child_instances')
     neighbors = models.ManyToManyField('self', through='ServiceLink', symmetrical=False)
-    title = models.CharField(max_length=512)
-    mode = models.CharField(max_length=512, blank=True)
+    title = models.CharField(max_length=255)
+    mode = models.CharField(max_length=255, blank=True)
     properties = models.TextField(blank=True, default='data: enter metadata as YAML')
     artifacts = models.TextField(blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -1068,9 +1068,9 @@ class NestedComponent(ComponentInstance):
 
 class ComponentPort(models.Model):
     instance = models.ForeignKey(ComponentInstance, related_name='ports')
-    type = models.CharField(max_length=512)
-    title = models.CharField(max_length=512)
-    uuid = models.CharField(max_length=512)
+    type = models.CharField(max_length=255)
+    title = models.CharField(max_length=255)
+    uuid = models.CharField(max_length=255)
 
     class JSONAPIMeta:
         def __init__(self):
@@ -1137,13 +1137,16 @@ class ComponentLink(ComponentInstance):
     def get_tosca(self):
         data_obj = super(ComponentLink, self).get_tosca()
         properties = data_obj[str(self.uuid)]['properties']
-        properties['target'] = {'address': properties['target_address'], 'component_name': self.target.instance.uuid,
-                                'netmask': properties['netmask'],'port_name': self.target.uuid}
-        properties['source'] = {'address': properties['source_address'], 'component_name': self.source.instance.uuid,
-                                'netmask': properties['netmask'],'port_name': self.source.uuid}
-        del properties['netmask']
-        del properties['source_address']
-        del properties['target_address']
+        properties['target'] = {'address': properties.get('target_address',''), 'component_name': self.target.instance.uuid,
+                                'netmask': properties.get('netmask',''),'port_name': self.target.uuid}
+        properties['source'] = {'address': properties.get('source_address',''), 'component_name': self.source.instance.uuid,
+                                'netmask': properties.get('netmask',''),'port_name': self.source.uuid}
+        if 'netmask' in properties:
+            del properties['netmask']
+        if 'source_address' in properties:
+            del properties['source_address']
+        if 'target_address' in properties:
+            del properties['target_address']
 
         return data_obj
 
@@ -1291,6 +1294,8 @@ class ServiceComponent(ComponentInstance):
             graph_obj['size'] = {"width": 30, "height": 30}
         elif self.component.type.switch_class.title == 'switch.VirtualResource':
             graph_obj['size'] = {"width": 35, "height": 35}
+        elif self.component.type.switch_class.title == 'switch.DST':
+            graph_obj['size'] = {"width": 25, "height": 35}
 
         return graph_obj
 

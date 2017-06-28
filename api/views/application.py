@@ -153,7 +153,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                         instance.properties = yaml.dump(properties, Dumper=utils.YamlDumper, default_flow_style=False),
                         instance.save()
 
-                    elif component_type.switch_class.title == 'switch.VirtualResource' or component_type.switch_class.title == 'switch.Attribute':
+                    elif component_type.switch_class.title == 'switch.VirtualResource' or component_type.switch_class.title == 'switch.Attribute' or component_type.switch_class.title == 'switch.DST':
                         instance = ServiceComponent.objects.create(
                             component=component,
                             graph=app, title=component_type.title, mode='single',

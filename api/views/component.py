@@ -79,7 +79,7 @@ class ComponentViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
             nested_component = NestedComponent(componentinstance_ptr=instance)
             nested_component.save_base(raw=True)
 
-        elif component.type.switch_class.title == 'switch.VirtualResource' or component.type.switch_class.title == 'switch.Attribute':
+        elif component.type.switch_class.title == 'switch.VirtualResource' or component.type.switch_class.title == 'switch.Attribute' or component.type.switch_class.title == 'switch.DST':
             service_component = ServiceComponent(componentinstance_ptr=instance)
             service_component.save_base(raw=True)
 

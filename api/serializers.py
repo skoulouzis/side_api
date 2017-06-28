@@ -69,16 +69,20 @@ class ComponentSerializer(serializers.ModelSerializer):
     type = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
     belongs_to_user = serializers.SerializerMethodField(read_only=True, required=False)
     editable = serializers.SerializerMethodField(read_only=True, required=False)
+    is_deletable = serializers.SerializerMethodField(read_only=True, required=False)
 
     class Meta:
         model = Component
-        fields = ('id', 'title', 'type', 'editable', 'belongs_to_user', 'is_core_component', 'is_template_component')
+        fields = ('id', 'title', 'type', 'editable', 'is_deletable', 'belongs_to_user', 'is_core_component', 'is_template_component')
 
     def get_belongs_to_user(self, obj):
         return self.context['request'].user == obj.user
 
     def get_editable(self, obj):
         return self.context['request'].user == obj.user
+
+    def get_is_deletable(self, obj):
+        return obj.pk != obj.type.pk
 
 
 class ComponentTypeSerializer(serializers.ModelSerializer):
