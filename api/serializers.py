@@ -265,3 +265,22 @@ class DataTypePropertySerializer(serializers.ModelSerializer):
     class Meta:
         model = DataTypeProperty
         fields = ('id', 'name', 'default_value', 'required', 'data_type', 'collection_type', 'parent_data_type')
+
+
+class DSTInstanceSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = DSTInstance
+        fields = '__all__'
+
+
+class DSTRequestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DSTRequest
+        fields = '__all__'
+
+
+class DSTUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DSTUpdate
+        fields = '__all__'

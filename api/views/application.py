@@ -19,7 +19,7 @@ from rest_framework.permissions import IsAuthenticated
 
 from side_api import settings, utils
 from api.services import JenaFusekiService, DripManagerService
-
+import json
 
 class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     """
