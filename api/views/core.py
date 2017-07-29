@@ -68,8 +68,8 @@ class UserViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
 
 
 class SwitchDocumentViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
-    authentication_classes = (TokenAuthentication,)
     permission_classes = (IsAuthenticated, )
+    authentication_classes = (TokenAuthentication,)
     serializer_class = SwitchDocumentSerializer
     queryset = SwitchDocument.objects.all()
     parser_classes = (JSONParser,FormParser,MultiPartParser,)
@@ -122,6 +122,11 @@ class NotificationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
 
     def get_queryset(self):
         return Notification.objects.filter()
+
+    def perform_create(self, serializer):
+        document_type = SwitchDocumentType.objects.get(pk=self.request.data['document_type_id'])
+        document = serializer.save() #user=self.request.user, document_type=document_type)
+        return Response(serializer.data)
 
 
 class SwitchDataTypeViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):

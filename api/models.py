@@ -215,6 +215,7 @@ class Notification(models.Model):
 
     graph = models.ForeignKey(GraphBase, related_name='notifications')
     title = models.CharField(max_length=255)
+    nType = models.CharField(max_length=255)
     message = models.CharField(max_length=2048)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

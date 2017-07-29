@@ -5,7 +5,7 @@ from rest_framework import serializers
 from api.models import ComponentTypeProperty
 from models import Application, Component, ComponentType, ComponentInstance, NestedComponent, ServiceComponent, ComponentPort, ServiceLink, GraphBase,SwitchDocument, \
     ApplicationInstance, Notification, SwitchDocumentType, DependencyLink, SwitchArtifact, SwitchRepository, ToscaClass, \
-    ComponentClass, DataType, DataTypeProperty
+    ComponentClass, DataType, DataTypeProperty, DSTUpdate, DSTRequest, DSTInstance
 from django.contrib.auth.models import User
 
 
@@ -18,7 +18,7 @@ class UserSerializer(serializers.ModelSerializer):
 class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
-        fields = ('graph', 'title', 'message', 'created_at', 'severity', 'viewed')
+        fields = ('graph', 'nType', 'title', 'message', 'created_at', 'severity', 'viewed')
 
 
 class ApplicationSerializer(serializers.ModelSerializer):
