@@ -113,6 +113,7 @@ class NotificationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     #authentication_classes = (TokenAuthentication,)
     #permission_classes = (IsAuthenticated, )
     serializer_class = NotificationSerializer
+    notification_class = Notification
     queryset = Notification.objects.all()
 
     def list(self, request, **kwargs):
@@ -124,9 +125,29 @@ class NotificationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         return Notification.objects.filter()
 
     def perform_create(self, serializer):
-        document_type = SwitchDocumentType.objects.get(pk=self.request.data['document_type_id'])
-        document = serializer.save() #user=self.request.user, document_type=document_type)
+        #  document_type = SwitchDocumentType.objects.get(pk=self.request.data['document_type_id'])
+        #  document = serializer.save() #user=self.request.user, document_type=document_type)
         return Response(serializer.data)
+
+    @list_route(methods=['post'], permission_classes=[])
+    def new(self, request, pk=None, *args, **kwargs):
+        #requestJSON = JSONParser().parse(request.data)
+        app = GraphBase.objects.filter(pk=self.request.data['appID']).first()
+        notification = Notification.objects.first()
+        notification.graph = app
+        notification.title = self.request.data['title']
+        notification.nType = self.request.data['nType']
+        notification.message = self.request.data['message']
+        notification.severity = self.request.data['severity']
+        notification.id = None
+        notification.pk = None
+        response = NotificationSerializer(notification)
+        notification.save()
+
+        # document_type = SwitchDocumentType.objects.get(pk=self.request.data['document_type_id'])
+        # document = notification.save() #user=self.request.user, document_type=document_type)
+
+        return JsonResponse(response.data)
 
 
 class SwitchDataTypeViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):

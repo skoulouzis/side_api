@@ -80,6 +80,7 @@ REST_FRAMEWORK = {
         'rest_framework_json_api.parsers.JSONParser',
         'rest_framework.parsers.FormParser',
         'rest_framework.parsers.MultiPartParser',
+        'rest_framework.parsers.JSONParser',
         'rest_framework_xml.parsers.XMLParser'
     ),
     'DEFAULT_RENDERER_CLASSES': (
@@ -116,18 +117,18 @@ WSGI_APPLICATION = 'side_api.wsgi.application'
 # https://docs.djangoproject.com/en/1.8/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-    },
     # 'default': {
-    #     'ENGINE': 'django.db.backends.mysql',
-    #     'NAME': 'side_production',
-    #     'USER': 'side_cardiff',
-    #     'PASSWORD': '4p7B7brsnzmnt2bf',
-    #     'HOST': '131.251.172.233',
-    #     'PORT': '3306',
-    # }
+    #     'ENGINE': 'django.db.backends.sqlite3',
+    #     'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+    # },
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'side_production',
+        'USER': 'side_cardiff',
+        'PASSWORD': '4p7B7brsnzmnt2bf',
+        'HOST': '131.251.172.233',
+        'PORT': '7005',
+    }
 }
 
 
