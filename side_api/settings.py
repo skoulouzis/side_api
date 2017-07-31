@@ -123,11 +123,11 @@ DATABASES = {
     # },
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'side_production',
-        'USER': 'side_cardiff',
-        'PASSWORD': '4p7B7brsnzmnt2bf',
-        'HOST': '131.251.172.233',
-        'PORT': '7005',
+        'NAME': 'xxx',
+        'USER': 'xxx',
+        'PASSWORD': 'xxxx',
+        'HOST': 'xxx',
+        'PORT': 'xxx',
     }
 }
 
