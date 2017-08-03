@@ -21,14 +21,16 @@ from side_api import settings, utils
 from api.services import JenaFusekiService, DripManagerService
 import json
 
+
 class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     """
     API endpoint that allows SwitchApps to be CRUDed.
     """
+    # TODO: Permissions were nuked in most classes, as I was testing this. Uncomment!
     serializer_class = ApplicationSerializer
-    authentication_classes = (TokenAuthentication,)
+    # authentication_classes = (TokenAuthentication,)
     # permission_classes = (IsAuthenticated, BelongsToUser,)
-    permission_classes = (IsAuthenticated,)
+    # permission_classes = (IsAuthenticated,)
 
     def list(self, request, **kwargs):
         apps = Application.objects.filter()
@@ -91,190 +93,12 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     def tosca(self, request, pk=None, *args, **kwargs):
         if request.method == 'GET':
             app = Application.objects.filter(id=pk).first()
-            return JsonResponse(app.get_tosca())
+            tosca = app.get_tosca()
+            return JsonResponse(tosca)
         elif request.method == 'POST':
             app = Application.objects.filter(id=pk).first()
-            toca_content = yaml.load(request.body).get('data', None)
-            node_templates = toca_content.get("topology_template", None).get("node_templates")
-
-            # ADD NEW INSTANCES FOUND IN THE TOSCA FILE BUT NOT IN THE APPLICATION
-            for tosca_node_key, tosca_node_value in node_templates.iteritems():
-                properties = tosca_node_value.get('properties')
-
-                if not app.instances.filter(uuid=tosca_node_key).first():
-                    app_graph_dimensions = app.get_current_graph_dimensions()
-                    component_type = ComponentType.objects.get(tosca_class__prefix= tosca_node_value.get('type').rsplit('.',1)[0] ,tosca_class__name = tosca_node_value.get('type').rsplit('.',1)[1])
-                    component = Component.objects.filter(type=component_type).first()
-                    if component_type.switch_class.title == 'switch.Component':
-
-                        instance = NestedComponent.objects.create(
-                            component=component,
-                            graph=app, title=component_type.title, mode='single',
-                            last_x=app_graph_dimensions.get('mid_x'),
-                            last_y=app_graph_dimensions.get('bottom_y') + 150,
-                            uuid=tosca_node_key)
-
-                        if tosca_node_value.get('artifacts',None):
-                            instance.artifacts = yaml.dump(tosca_node_value.get('artifacts'), Dumper=utils.YamlDumper, default_flow_style=False)
-                            instance.save()
-
-                        # Add in_ports and out_ports
-                        in_ports = properties.get('in_ports', None)
-                        if in_ports:
-                            for in_port_key, in_port_value in in_ports.iteritems():
-                                port = ComponentPort.objects.create(uuid=in_port_key,
-                                                                    title=in_port_value.get('port').strip(),
-                                                                    type=in_port_value.get('type'),
-                                                                    instance=instance)
-                            del properties['in_ports']
-
-                        out_ports = properties.get('out_ports', None)
-                        if out_ports:
-                            for out_port_key, out_port_value in out_ports.iteritems():
-                                port = ComponentPort.objects.create(uuid=out_port_key,
-                                                                    title=out_port_value.get('port').strip(),
-                                                                    type=out_port_value.get('type'),
-                                                                    instance=instance)
-                            del properties['out_ports']
-
-                        qos_attribute = properties.get('QoS', None)
-                        if qos_attribute:
-                            constraint_instance = ServiceComponent.objects.create(
-                                component=Component.objects.get(type__title='Constraint'),
-                                graph=app, title='QoS_constraint', mode='single',
-                                properties=yaml.dump(qos_attribute, Dumper=utils.YamlDumper,
-                                                     default_flow_style=False),
-                                last_x=app_graph_dimensions.get('mid_x'),
-                                last_y=app_graph_dimensions.get('bottom_y') + 150,
-                                uuid=tosca_node_key)
-                            constraint_link = ServiceLink.objects.create(graph=app, source=constraint_instance, target=instance)
-                            del properties['QoS']
-
-                        instance.properties = yaml.dump(properties, Dumper=utils.YamlDumper, default_flow_style=False),
-                        instance.save()
-
-                    elif component_type.switch_class.title == 'switch.VirtualResource' or component_type.switch_class.title == 'switch.Attribute' or component_type.switch_class.title == 'switch.DST':
-                        instance = ServiceComponent.objects.create(
-                            component=component,
-                            graph=app, title=component_type.title, mode='single',
-                            properties=yaml.dump(properties, Dumper=utils.YamlDumper, default_flow_style=False),
-                            last_x=app_graph_dimensions.get('mid_x'),
-                            last_y=app_graph_dimensions.get('bottom_y') + 150,
-                            uuid=tosca_node_key)
-
-                        if tosca_node_value.get('artifacts', None):
-                            instance.artifacts = yaml.dump(tosca_node_value.get('artifacts'), Dumper=utils.YamlDumper, default_flow_style=False)
-                            instance.save()
-
-                    elif component.type.switch_class.title == 'switch.ComponentLink':
-                        instance = ComponentLink.objects.create(
-                            component=component,
-                            graph=app, title=component_type.title, mode='single',
-                            last_x=app_graph_dimensions.get('mid_x'),
-                            last_y=app_graph_dimensions.get('bottom_y') + 150,
-                            uuid=tosca_node_key)
-
-                        properties['netmask'] = properties.get('source').get('netmask')
-                        properties['source_address'] = properties.get('source').get('address')
-                        properties['target_address'] = properties.get('target').get('address')
-                        del properties['target']
-                        del properties['source']
-                        instance.properties = yaml.dump(properties, Dumper=utils.YamlDumper, default_flow_style=False),
-                        instance.save()
-
-            # UPDATE EXISTING ELEMENTS
-            for tosca_node_key, tosca_node_value in node_templates.iteritems():
-                properties = tosca_node_value.get('properties')
-                instance = app.instances.get(uuid=tosca_node_key)
-
-                if instance.component.type.switch_class.title == 'switch.Component' or instance.component.type.switch_class.title == 'switch.Attribute':
-                    in_ports = properties.get('in_ports', None)
-                    if in_ports:
-                        for in_port_key, in_port_value in in_ports.iteritems():
-                            port = ComponentPort.objects.get_or_create(uuid=in_port_key,
-                                                                title=in_port_value.get('port').strip(),
-                                                                type=in_port_value.get('type'), instance=instance)
-                        del properties['in_ports']
-
-                    out_ports = properties.get('out_ports', None)
-                    if out_ports:
-                        for out_port_key, out_port_value in out_ports.iteritems():
-                            port = ComponentPort.objects.get_or_create(uuid=out_port_key,
-                                                                title=out_port_value.get('port').strip(),
-                                                                type=out_port_value.get('type'),
-                                                                instance=instance)
-                        del properties['out_ports']
-
-                    qos_attribute = properties.get('QoS', None)
-                    if qos_attribute:
-                        constraint_link = ServiceLink.objects.filter(graph=app, target=instance,
-                                                                     source__component__type__title='Constraint').first()
-                        constraint_link.source.properties = yaml.dump({'QoS':qos_attribute}, Dumper=utils.YamlDumper,
-                                               default_flow_style=False)
-                        constraint_link.source.save()
-                        del properties['QoS']
-
-                    instance.properties = yaml.dump(properties, Dumper=utils.YamlDumper, default_flow_style=False)
-                    instance.save()
-
-                    # Add service links
-                    tosca_node_requirements = tosca_node_value.get('requirements', None)
-                    if tosca_node_requirements:
-                        for tosca_node_requirement in tosca_node_requirements:
-                            source_instance = app.instances.get(uuid=tosca_node_requirement.values()[0])
-                            link = ServiceLink.objects.get_or_create(graph=app, source=source_instance, target=instance)
-
-                        # Delete old links
-                        for link in ServiceLink.objects.filter(graph=app, target=instance).all():
-                            if not any(str(link.source.uuid) in d.values() for d in
-                                       tosca_node_requirements) and link.source.component.type.title != 'Constraint':
-                                link.delete()
-
-                elif instance.component.type.switch_class.title == 'switch.VirtualResource':
-                    # Add connections between vms and subnets
-                    ethernet_ports = properties.get('ethernet_port',None)
-                    if ethernet_ports:
-                        for ethernet_port in ethernet_ports:
-                            subnet = ServiceComponent.objects.get(uuid=ethernet_port.get('subnet_name'))
-                            link = ServiceLink.objects.get_or_create(graph=app, source=instance, target=subnet)
-
-                elif instance.component.type.switch_class.title == 'switch.ComponentLink':
-                    if properties.get('source', None):
-                        source_port = ComponentPort.objects.get(uuid=properties.get('source').get('port_name'),
-                                        instance=app.instances.get(uuid=properties.get('source').get('component_name')))
-                        target_port = ComponentPort.objects.get(uuid=properties.get('target').get('port_name'),
-                                        instance=app.instances.get(uuid=properties.get('target').get('component_name')))
-                        instance.__class__ = ComponentLink
-                        instance.source = source_port
-                        instance.target = target_port
-
-                        properties['netmask'] = properties.get('source').get('netmask')
-                        properties['source_address'] = properties.get('source').get('address')
-                        properties['target_address'] = properties.get('target').get('address')
-                        del properties['target']
-                        del properties['source']
-                        instance.properties = yaml.dump(properties, Dumper=utils.YamlDumper, default_flow_style=False)
-                        instance.save()
-
-                # Add service links between components and services
-                tosca_node_requirements = tosca_node_value.get('requirements', None)
-                if tosca_node_requirements:
-                    for tosca_node_requirement in tosca_node_requirements:
-                        source_instance = app.instances.get(uuid=tosca_node_requirement.values()[0])
-                        link = ServiceLink.objects.get_or_create(graph = app, source=source_instance, target=instance)
-
-                    # Delete old links
-                    for link in ServiceLink.objects.filter(graph = app, target=instance).all():
-                        if not any(str(link.source.uuid) in d.values() for d in tosca_node_requirements) and link.source.component.type.title != 'Constraint':
-                            link.delete()
-
-            # DELETE OLD ELEMENTS FOUND IN APP BUT NOT IN TOSCA FILE
-            for instance in app.instances.all():
-                if str(instance.uuid) not in node_templates.keys() and instance.component.type.title != 'Constraint':
-                    for link in app.service_links.filter(Q(target=instance) | Q(source=instance)).all():
-                        link.delete()
-                    instance.delete()
-
+            tosca = yaml.load(request.body).get('data', None)
+            app.tosca_update(tosca)
             return Response(status=status.HTTP_204_NO_CONTENT)
 
     @detail_route(methods=['get'], permission_classes=[])
@@ -568,7 +392,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                                 provision_output_tosca_files = root.findall("./file")
                                 # TODO: At the moment the provisioner doesn't return a tosca compliance file, instead it returns a list of yaml files with the infrastructure topologies
                                 for tosca_file in provision_output_tosca_files:
-                                    toca_content = yaml.load(tosca_file.text.replace("\\n", "\n"))
+                                    tosca_content = yaml.load(tosca_file.text.replace("\\n", "\n"))
 
                                     provisioner_output_tosca_file = os.path.join(settings.MEDIA_ROOT, 'documents',
                                                 hashlib.md5(request.user.username).hexdigest(), 'apps', str(app.uuid),
@@ -576,10 +400,10 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                                     if not os.path.exists(os.path.dirname(provisioner_output_tosca_file)):
                                         os.makedirs(os.path.dirname(provisioner_output_tosca_file))
                                     with open(provisioner_output_tosca_file, 'w') as f:
-                                        yaml.dump(toca_content, f, Dumper=utils.YamlDumper, default_flow_style=False)
+                                        yaml.dump(tosca_content, f, Dumper=utils.YamlDumper, default_flow_style=False)
 
                                     # Update vm instances to register their public ip addresses
-                                    for vm_provisioned in toca_content['components']:
+                                    for vm_provisioned in tosca_content['components']:
                                         vm_component = ComponentInstance.objects.get(uuid=vm_provisioned['name'])
                                         vm_component.title += ' (' + vm_provisioned['public_address'] + ')'
                                         del vm_provisioned['type']
@@ -649,9 +473,9 @@ class ApplicationGraphView(PaginateByMaxMixin, APIView):
     API endpoint that allows SwitchApps to be CRUDed.
     """
     serializer_class = ApplicationSerializer
-    authentication_classes = (TokenAuthentication,)
+    # authentication_classes = (TokenAuthentication,)
     # permission_classes = (IsAuthenticated, BelongsToUser,)
-    permission_classes = (IsAuthenticated,)
+    # permission_classes = (IsAuthenticated,)
     parser_classes = (JSONParser,)
 
     def get(self, request, pk=None):

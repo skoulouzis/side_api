@@ -123,11 +123,11 @@ DATABASES = {
     # },
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'xxx',
-        'USER': 'xxx',
+        'NAME': 'xxxx',
+        'USER': 'xxxx',
         'PASSWORD': 'xxxx',
-        'HOST': 'xxx',
-        'PORT': 'xxx',
+        'HOST': '127.0.0.1',
+        'PORT': '3306',
     }
 }
 

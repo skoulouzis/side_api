@@ -12,8 +12,8 @@ from rest_framework.permissions import IsAuthenticated
 
 class GraphViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     serializer_class = GraphSerializer
-    authentication_classes = (TokenAuthentication,)
-    permission_classes = (IsAuthenticated,)
+    # authentication_classes = (TokenAuthentication,)
+    # permission_classes = (IsAuthenticated,)
     queryset = GraphBase.objects.all()
 
 

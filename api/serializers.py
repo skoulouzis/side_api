@@ -241,6 +241,7 @@ class DependencyLinkSerializer(serializers.ModelSerializer):
         model = DependencyLink
         fields = ('id', 'graph', 'dependant', 'dependency', 'uuid')
 
+
 class ComponentTypePropertySerializer(serializers.ModelSerializer):
     component_type = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
     data_type = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
@@ -248,6 +249,7 @@ class ComponentTypePropertySerializer(serializers.ModelSerializer):
     class Meta:
         model = ComponentTypeProperty
         fields = ('id', 'name', 'default_value', 'required', 'component_type', 'collection_type', 'data_type')
+
 
 class DataTypeSerializer(serializers.ModelSerializer):
     parent = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
