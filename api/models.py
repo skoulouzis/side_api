@@ -234,6 +234,7 @@ class Application(GraphBase):
     public_editable = models.BooleanField(default=False)
     # Status: 0 no plan virtual infrastructure; 1 planned; 2 provisioned; 3 deployed
     status = models.IntegerField(default=0)
+    drip_plan_id = models.CharField(max_length=255, blank=True)
 
     class JSONAPIMeta:
         def __init__(self):
@@ -494,6 +495,59 @@ class Application(GraphBase):
         return {
             'data': data
         }
+
+    def get_status(self, status_string):
+        status_dict = {
+            'NoPlan': 0,
+            'Planed': 1,
+            'Provisioned': 2,
+            'Deployed': 3,
+        }
+        if self.status == status_dict[status_string]:
+            return True
+        else:
+            return False
+
+    def validate_requirements(self):
+        num_hw_req = 0
+        docker_components = self.instances.filter(component__type__switch_class__title='switch.Component').all()
+        for docker_component in docker_components:
+            num_hw_req += self.service_links.filter(target=docker_component,
+                                                    source__component__type__title='Requirement').count()
+
+        return num_hw_req == docker_components.count()
+
+    def needs_monitoring_server(self):
+        monitoring_agents = self.instances.filter(component__type__title='Monitoring Agent').all()
+        num_monitoring_server = self.instances.filter(component__type__title='SWITCH.MonitoringServer').count()
+        if monitoring_agents.count() > 0 and num_monitoring_server < 1:
+            return True
+        else:
+            return False
+
+    def create_monitoring_server(self):
+
+        monitoring_agents = self.instances.filter(component__type__title='Monitoring Agent').all()
+
+        component_monitoring_server = Component.objects.get(title='monitoring_server',
+                                                            type__title='SWITCH.MonitoringServer')
+
+        app_graph_dimensions = self.get_current_graph_dimensions()
+        base_instance = component_monitoring_server.get_base_instance()
+        graph_monitoring_server = NestedComponent.objects.create(
+            component=component_monitoring_server,
+            graph=self, title=component_monitoring_server.title, mode=base_instance.mode,
+            properties=base_instance.properties, artifacts=base_instance.artifacts,
+            last_x=app_graph_dimensions.get('mid_x'),
+            last_y=app_graph_dimensions.get('top_y') - 150)
+
+        x_change = base_instance.last_x - graph_monitoring_server.last_x
+        y_change = base_instance.last_y - graph_monitoring_server.last_y
+        component_monitoring_server.clone_instances_in_graph(self, x_change, y_change,
+                                                             graph_monitoring_server)
+
+        for monitoring_agent in monitoring_agents:
+            link = ServiceLink.objects.create(graph=self, source=graph_monitoring_server, target=monitoring_agent)
 
     def tosca_update(self, tosca):
         node_templates = tosca.get("topology_template", None).get("node_templates")

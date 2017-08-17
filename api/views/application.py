@@ -1,6 +1,9 @@
 import os
 import re
 import xml.etree.ElementTree as ET
+import requests
+
+from requests.auth import HTTPBasicAuth
 
 from django.http import JsonResponse
 from django.contrib.sites.shortcuts import get_current_site
@@ -22,15 +25,18 @@ from api.services import JenaFusekiService, DripManagerService
 import json
 
 
+# TODO: Permissions were nuked in most classes, as I was testing this. Uncomment!
+
+
 class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     """
-    API endpoint that allows SwitchApps to be CRUDed.
+    API endpoints that deal with application.
     """
-    # TODO: Permissions were nuked in most classes, as I was testing this. Uncomment!
     serializer_class = ApplicationSerializer
     # authentication_classes = (TokenAuthentication,)
     # permission_classes = (IsAuthenticated, BelongsToUser,)
     # permission_classes = (IsAuthenticated,)
+    cloud_credentials_id = ''
 
     def list(self, request, **kwargs):
         apps = Application.objects.filter()
@@ -103,6 +109,8 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
 
     @detail_route(methods=['get'], permission_classes=[])
     def validate(self, request, pk=None, *args, **kwargs):
+        # TODO: Implement validation from DRIP
+        # TODO: Move to Application Model
         details = []
         app = Application.objects.filter(id=pk).first()
 
@@ -123,315 +131,155 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
 
         return JsonResponse(validation_result)
 
+    def validation_done(self, pk):
+        validation_result = json.loads(self.validate(request=None, pk=pk).content)
+        if validation_result['result'] == "error":
+            return False
+        else:
+            return True
+
+    @detail_route(methods=['post'], permission_classes=[])
+    def upload_credentials(self, request,  drip_username, drip_password):
+
+        # TODO: This needs a new view so that the user can input this data directly to DRIP
+        # Prefer to pass this data directly to DRIP withou saving it to the MySQL so that we do not need to
+        # deal with security.
+
+
+        # drip credentials
+        drip_host = 'https://drip.vlan400.uvalight.net:8443/drip-api'
+        drip_credentials_endpoint = '/user/v1.0/credentials/cloud/'
+
+
+        # ID and timestamp feel like something that DRIP should return not something I should provide!
+        # What are attributes?
+        credentials_json = {
+                "secretKey": secret_key,
+                "cloudProvider Name": cloud_provider,
+                "accessKeyId": acces_key,
+                "attributes": {
+                    "property1": {},
+                    "property2": {}
+                },
+                "owner": drip_username
+            }
+        # TODO: uncoment when DRIP service available
+        # cloud_credentials_id = requests.post(drip_host + drip_credentials_endpoint,
+        #               json=credentials_json,
+        #               auth=HTTPBasicAuth(drip_username, drip_password))
+
+        # store data to a new model
+
     @detail_route(methods=['get'], permission_classes=[])
     def plan(self, request, pk=None, *args, **kwargs):
-        # TODO: implement the planning of the virtual infrastructure
-        result = ''
+        # TODO Think about making this more transparent. This should be something that is stored in the application?
+        drip_host = 'https://drip.vlan400.uvalight.net:8443/drip-api'
+        drip_tosca_endpoint = '/user/v1.0/tosca'
+        drip_plan_endpoint = '/user/v1.0/planner/plan/'
+        # TODO: This will be removed once DRIP user registration is complete.
+
+
+        result = 'error'
         details = []
         app = Application.objects.get(id=pk)
-        if app.status >= 1:
-            result = 'error'
+        # TODO: move this to validation
+        if app.needs_monitoring_server():
+            app.create_monitoring_server()
+
+        if app.get_status('Planed'):
             details.append('application has already a planned infrastructure')
+        # TODO: move this to validation.
+        elif not app.validate_requirements():
+            result = 'error'
+            details.append('Please make sure to define hardware requirements for all software components')
+        elif not self.validation_done(pk):
+            #bla bla
+            details.append('Please make sure that the application is valid before to plan the virtual infrastructure')
+
+        # Calling the DRIP API
         else:
-            num_hw_req = 0
-            docker_components = app.instances.filter(component__type__switch_class__title='switch.Component').all()
-            for docker_component in docker_components:
-                num_hw_req += app.service_links.filter(target=docker_component,
-                                                     source__component__type__title='Requirement').count()
+            app_tosca = app.get_tosca()
+            # TODO make this call an actual request not working because of the user missing
+            tosca_id = 1 # requests.post(drip_host + drip_tosca_endpoint + '/post',
+                          #          data=app_tosca,
+                          #          auth=HTTPBasicAuth(drip_username, drip_password))
 
-            if num_hw_req != docker_components.count():
-                result = 'error'
-                details.append('Please make sure to define hardware requirements for all software components')
+            plan_response = 'OK' # = requests.get(drip_host + drip_plan_endpoint + tosca_id,
+                                                # auth=HTTPBasicAuth(drip_username, drip_password))
+            if plan_response == 'OK':
+                # TODO: Parse plan to get TOSCA ID - need actual access to DRIP
+                plan_id = 2
+                # get new TOSCA
+
+                # There is a posibility that the planer does not do what was agreed upon. Ie it does not return TOSCA but some random YAMLs.
+                # In that case strangle Spiros and revert back to Frans code.
+                tosca_download_url = drip_host + drip_tosca_endpoint + plan_id
+                planed_tosca_response = 'response'  #  requests.get(drip_host + drip_tosca_endpoint + plan_id, auth=HTTPBasicAuth(drip_username, drip_password))
+                # new_tosca = yaml.load(planed_tosca_response.body).get('data', None)
+                new_tosca = app_tosca  # TODO Placeholder! Remove!
+
+
+                # Update application with new TOSCA
+                app.tosca_update(new_tosca)
+
+                result = 'OK'
+                details.append('plan done correctly')
+                app.status = 1
+                app.drip_plan_id = 'planID'
+                app.save()
             else:
-                validation_result = json.loads(self.validate(request=request, pk=pk).content)
-                if validation_result['result'] == "error":
-                    result = 'error'
-                    details.append('Please make sure that the application is valid before to plan the virtual infrastructure')
-                else:
-                    # If there are monitoring agents in the application they need a monitoring server to be deployed with the app
-                    monitoring_agents = app.instances.filter(component__type__title='Monitoring Agent').all()
-                    if monitoring_agents.count() > 0:
-                        num_monitoring_server = app.instances.filter(
-                            component__type__title='SWITCH.MonitoringServer').count()
-                        if num_monitoring_server < 1:
-                            component_monitoring_server = Component.objects.get(title='monitoring_server', type__title='SWITCH.MonitoringServer')
-
-                            # Create a graph_monitoring_server element
-                            app_graph_dimensions = app.get_current_graph_dimensions()
-                            base_instance = component_monitoring_server.get_base_instance()
-                            graph_monitoring_server = NestedComponent.objects.create(
-                                component=component_monitoring_server,
-                                graph=app, title=component_monitoring_server.title, mode=base_instance.mode,
-                                properties=base_instance.properties, artifacts=base_instance.artifacts,
-                                last_x=app_graph_dimensions.get('mid_x'),
-                                last_y=app_graph_dimensions.get('top_y') - 150)
-
-                            x_change = base_instance.last_x - graph_monitoring_server.last_x
-                            y_change = base_instance.last_y - graph_monitoring_server.last_y
-                            component_monitoring_server.clone_instances_in_graph(app, x_change, y_change,
-                                                                                 graph_monitoring_server)
-
-                            for monitoring_agent in monitoring_agents:
-                                link = ServiceLink.objects.create(graph=app, source=graph_monitoring_server,
-                                                                  target=monitoring_agent)
-
-                    app_tosca_json = json.loads(self.tosca(request=request, pk=pk).content)
-                    planner_input_tosca_file = os.path.join(settings.MEDIA_ROOT, 'documents',
-                                                            hashlib.md5(request.user.username).hexdigest(), 'apps',
-                                                            str(app.uuid), 'dripPlanner','inputs','planner_input.yaml')
-                    if not os.path.exists(os.path.dirname(planner_input_tosca_file)):
-                        os.makedirs(os.path.dirname(planner_input_tosca_file))
-                    with open(planner_input_tosca_file, 'w') as f:
-                        yaml.dump(app_tosca_json['data'], f, Dumper=utils.YamlDumper, default_flow_style=False)
-
-                    print "calling the planner"
-
-                    drip_manager_service = DripManagerService(utils.getPropertyFromConfigFile("DRIP_MANAGER_API", "url"))
-                    drip_manager_response = drip_manager_service.planning_virtual_infrastructure(request.user, planner_input_tosca_file)
-
-                    if drip_manager_response.status_code == 200:
-                        root = ET.fromstring(drip_manager_response.text)
-                        planner_output_tosca_files = root.findall("./file")
-                        # TODO: At the moment the planner doesn't return a tosca compliance file, instead it returns a list of yaml files with the infrastructure topologies
-                        for tosca_file in planner_output_tosca_files:
-                            tosca_level = tosca_file.attrib['level']
-                            tosca_file_name = tosca_file.attrib['name']
-                            tosca_content = yaml.load(tosca_file.text.replace("\\n", "\n"))
-
-                            planner_output_tosca_file = os.path.join(settings.MEDIA_ROOT, 'documents',
-                                                            hashlib.md5(request.user.username).hexdigest(), 'apps',
-                                                            str(app.uuid), 'dripPlanner','outputs', tosca_file_name)
-                            if not os.path.exists(os.path.dirname(planner_output_tosca_file)):
-                                os.makedirs(os.path.dirname(planner_output_tosca_file))
-                            with open(planner_output_tosca_file, 'w') as f:
-                                yaml.dump(tosca_content, f, Dumper=utils.YamlDumper, default_flow_style=False)
-
-                            if tosca_level=='1':
-                                subnets = {}
-                                # Find out which vm corresponds with which application component
-                                for vm in tosca_content.get("components", None):
-                                    docker_image = vm.get("dockers")
-
-                                    component_vm, created = Component.objects.get_or_create(title='vm',
-                                                            type=ComponentType.objects.get(title='Virtual Machine'))
-                                    if created:
-                                        ServiceComponent.objects.create(graph=component_vm, component=component_vm, title=component_vm.title,
-                                                                last_x=400, last_y=200, mode='single')
-
-                                    docker_component = app.instances.filter(artifacts__contains=docker_image).first()
-                                    graph_req = app.service_links.filter(target=docker_component, source__component__type__title='Requirement').first().source
-
-                                    # Create a graph_virtual_machine element
-                                    graph_vm = ServiceComponent.objects.create(component=component_vm, graph=app,
-                                                title='VM_' + docker_component.title, mode=docker_component.mode,
-                                                last_x=graph_req.last_x, last_y=graph_req.last_y, uuid=vm.get('name'))
-
-                                    del vm['type']
-                                    graph_vm.properties = yaml.dump(vm, Dumper=utils.YamlDumper, default_flow_style=False)
-                                    graph_vm.save()
-
-                                    # Delete hw_req as it has already been satisfied by the vm
-                                    for req_links in app.service_links.filter(source=graph_req).all():
-                                        req_links.delete()
-                                    graph_req.delete()
-
-                                    # Create a service_link between the new vm and the software component
-                                    graph_service_link_vm_req = ServiceLink.objects.create(graph=app, source=graph_vm, target=docker_component)
-
-                                    for ethernet_port in vm.get('ethernet_port',[]):
-                                        vms_in_subnet = subnets.get(ethernet_port.get('subnet_name'), [])
-                                        vms_in_subnet.append(str(graph_vm.uuid))
-                                        subnets[ethernet_port.get('subnet_name')]=vms_in_subnet
-
-
-                                for subnet in tosca_content.get("subnets", None):
-                                    component_subnet, created = Component.objects.get_or_create(title='subnet',
-                                                    type=ComponentType.objects.get(title='Virtual Network'))
-                                    if created:
-                                        ServiceComponent.objects.create(graph=component_subnet, component=component_subnet, title=component_subnet.title,
-                                                                last_x=400, last_y=200, mode='single')
-
-                                    # Create a graph_virtual_network element
-                                    app_graph_dimensions = app.get_current_graph_dimensions()
-                                    graph_subnet = ServiceComponent.objects.create(component=component_subnet, graph=app,
-                                                title='subnet_' + subnet.get('name'), mode='single',
-                                                last_x=app_graph_dimensions.get('mid_x'), last_y=app_graph_dimensions.get('bottom_y') + 80)
-
-                                    graph_subnet.properties = yaml.dump(subnet, Dumper=utils.YamlDumper, default_flow_style=False)
-                                    graph_subnet.save()
-
-                                    # Create a service_link between the subnet and all the vms associated with it
-                                    vms_in_subnet = subnets.get(subnet.get('name'), [])
-                                    for vm_uuid in vms_in_subnet:
-                                        graph_vm = ServiceComponent.objects.get(uuid=vm_uuid)
-                                        vm_properties = yaml.load(graph_vm.properties.replace("\\n","\n"))
-                                        vm_properties['subnet_name'] = str(graph_subnet.uuid)
-                                        graph_vm.properties = yaml.dump(vm_properties, Dumper=utils.YamlDumper, default_flow_style=False)
-                                        graph_vm.save()
-                                        graph_service_link_vm_req = ServiceLink.objects.create(graph=app, source=graph_vm, target=graph_subnet)
-
-                        result = 'ok'
-                        details.append('plan done correctly')
-                        app.status = 1
-                        app.save()
-                    else:
-                        result = 'error'
-                        details.append('planning of virtual infrastructure has failed')
+                details.append('planning of virtual infrastructure has failed')
 
         planning_vi_result = {
             'result': result,
             'details': details
         }
-
         return JsonResponse(planning_vi_result)
 
     @detail_route(methods=['get'], permission_classes=[])
     def provision(self, request, pk=None, *args, **kwargs):
-        result = ''
+        drip_host = 'https://drip.vlan400.uvalight.net:8443/drip-api'
+        drip_provisioner_endpoint = '/user/v1.0/provisioner/provision'
+        drip_keyID_store_endpoint = '/user/v1.0/keys/ids'
+        drip_cloud_credentials_ids ='/user/v1.0/credentials/cloud/ids'
+        # TODO: This will be removed once DRIP user registration is complete.
+
+
+        result = 'error'
         details = []
-
         app = Application.objects.get(id=pk)
-        if app.status < 1:
-            result = 'error'
+
+        if not app.get_status('Planed'):
             details.append('virtual infrastructure has not been planned yet')
-        elif app.status >= 2:
-            result = 'error'
+        elif app.get_status('Provisioned'):
             details.append('application has already a provisioned infrastructure')
+        elif app.get_status('Deployed'):
+            details.append('application is already deployed on provisioned infrastructure')
+        elif not self.validation_done(pk):
+            details.append('Please make sure that the application is valid before provisioning virtual infrastructure')
         else:
-            validation_result = json.loads(self.validate(request=request, pk=pk).content)
-            if validation_result['result'] == "error":
-                result = 'error'
-                details.append('Please make sure that the application is valid before to provision the virtual infrastructure')
-            else:
-                # get the tosca file of the application
-                app_tosca_json = json.loads(self.tosca(request=request, pk=pk).content)
+            # get the tosca file of the application post it to DRIP
+            app_tosca = app.get_tosca()
+            tosca_id = 1  # requests.post(drip_host + drip_tosca_endpoint + '/post',
+                                #         data=app_tosca,
+                                #         auth=HTTPBasicAuth(drip_username, drip_password))
 
-                #TODO: At the monent the provisioner doesn't work with standard tosca so we have prepare the input files from the information our db rather than passing the tosca file
-                infrastructure_topologies = {}
+            drip_cloud_credentials_ids = requests.get(drip_host + drip_cloud_credentials_ids, auth=HTTPBasicAuth(drip_username, drip_password))
+            vm_user_key_pair_ids = requests.get(drip_host + drip_keyID_store_endpoint, auth=HTTPBasicAuth(drip_username, drip_password))
 
-                vm_instances = app.instances.filter(component__type__title='Virtual Machine').all()
-                for vm_instance in vm_instances:
-                    vm_properties = yaml.load(vm_instance.properties.replace("\\n","\n"))
-                    vm_properties['type'] = vm_instance.component.type.tosca_class.get_full_name()
-                    if vm_properties.get('domain') in infrastructure_topologies:
-                        components = infrastructure_topologies.get(vm_properties.get('domain')).get('components')
-                        components.append(vm_properties)
-                        infrastructure_topologies.get(vm_properties.get('domain'))['components']= components
-                    else:
-                        infrastructure_topologies[vm_properties.get('domain')] = {'components':[vm_properties], 'subnets': []}
+            provision_json = {
+                "cloudCredentialsIDs": drip_cloud_credentials_ids,
+                "planID": tosca_id,
+                "userKeyPairIDs": vm_user_key_pair_ids
+            }
 
-                    service_links_vm_network = ServiceLink.objects.filter(graph=app, source=vm_instance,
-                                               target__component__type__title='Virtual Network').all()
+            provision_response = requests.post(drip_host + drip_provisioner_endpoint,
+                                               json=provision_json,
+                                               auth=HTTPBasicAuth(drip_username, drip_password))
 
-                    for service_link_vm_network in service_links_vm_network:
-                        network_properties = yaml.load(service_link_vm_network.target.properties.replace("\\n","\n"))
-                        subnets = infrastructure_topologies.get(vm_properties.get('domain')).get('subnets')
-                        if not any(subnet.get('name', None) == network_properties.get('name') for subnet in subnets):
-                            subnets.append(network_properties)
-                            infrastructure_topologies.get(vm_properties.get('domain'))['subnets'] = subnets
-
-                # Create all topology file
-                all_topology_file = os.path.join(settings.MEDIA_ROOT, 'documents',
-                                                 hashlib.md5(request.user.username).hexdigest(), 'apps',
-                                                 str(app.uuid), 'dripProvisioner','inputs', 'provisioner_input_all.yml')
-                if not os.path.exists(os.path.dirname(all_topology_file)):
-                    os.makedirs(os.path.dirname(all_topology_file))
-                with open(all_topology_file, 'w') as f:
-                    list_topologies = []
-                    for domain in infrastructure_topologies:
-                        list_topologies.append({'topology': re.sub(r'[\\/*?:"<>|\\.\\-]',"_",domain), 'cloudProvider':domain.split('.')[0]})
-                    yaml.dump({'topologies':list_topologies}, f, Dumper=utils.YamlDumper, default_flow_style=False)
-
-                # Create individual files for each topology (cloud provider / region)
-                specific_topology_files = []
-                for domain, topology in infrastructure_topologies.iteritems():
-                    provisioner_input_specific_topology_file = os.path.join(settings.MEDIA_ROOT, 'documents',
-                                    hashlib.md5(request.user.username).hexdigest(), 'apps', str(app.uuid),
-                                    'dripProvisioner','inputs', re.sub(r'[\\/*?:"<>|\\.\\-]',"_",domain) + '.yml')
-                    specific_topology_files.append(provisioner_input_specific_topology_file)
-                    if not os.path.exists(os.path.dirname(provisioner_input_specific_topology_file)):
-                        os.makedirs(os.path.dirname(provisioner_input_specific_topology_file))
-                    with open(provisioner_input_specific_topology_file, 'w') as f:
-                        credentials = {
-                            'publicKeyPath': 'id_rsa.pub',
-                            'userName': app.user.username
-                        }
-                        yaml.dump(credentials, f, Dumper=utils.YamlDumper, default_flow_style=False)
-                        yaml.dump(topology, f, Dumper=utils.YamlDumper, default_flow_style=False)
-
-                drip_manager_service = DripManagerService(utils.getPropertyFromConfigFile("DRIP_MANAGER_API", "url"))
-                drip_manager_response = drip_manager_service.upload_tosca(request.user, all_topology_file, specific_topology_files)
-
-                if drip_manager_response.status_code == 200:
-
-                    action_number = drip_manager_response.text[drip_manager_response.text.find('Action number: ')+15:]
-
-                    ssh_key_document = SwitchDocument.objects.filter(user=request.user, document_type=SwitchDocumentType.objects.get(name="PUBLIC_SSH_KEY")).first()
-                    drip_manager_response = drip_manager_service.conf_user_key(request.user, ssh_key_document, action_number)
-
-                    if drip_manager_response.status_code == 200:
-                        conf_script_file = os.path.join(settings.MEDIA_ROOT, 'webssh_server.sh')
-                        shell_script = "#!/bin/bash\n" \
-                                       "mkdir webssh_server\n" \
-                                       "cd webssh_server\n" \
-                                       "apt-get update\n" \
-                                       "apt-get -y install nodejs nodejs-legacy npm\n" \
-                                       "npm install express pty.js socket.io\n" \
-                                       "# wget http://" + get_current_site(request).domain + "/static/js/webssh_server.js\n" \
-                                        "wget https://dl.dropboxusercontent.com/u/46267592/webssh_server.js\n" \
-                                                                            "node webssh_server.js &\n"
-                        with open(conf_script_file, 'w') as f:
-                            f.write(shell_script)
-
-                        drip_manager_response = drip_manager_service.conf_script(request.user, conf_script_file, action_number)
-
-                        if drip_manager_response.status_code == 200:
-                            drip_manager_response = drip_manager_service.execute(request.user, action_number)
-                            if drip_manager_response.status_code == 200:
-                                root = ET.fromstring(drip_manager_response.text)
-                                provision_output_tosca_files = root.findall("./file")
-                                # TODO: At the moment the provisioner doesn't return a tosca compliance file, instead it returns a list of yaml files with the infrastructure topologies
-                                for tosca_file in provision_output_tosca_files:
-                                    tosca_content = yaml.load(tosca_file.text.replace("\\n", "\n"))
-
-                                    provisioner_output_tosca_file = os.path.join(settings.MEDIA_ROOT, 'documents',
-                                                hashlib.md5(request.user.username).hexdigest(), 'apps', str(app.uuid),
-                                                'dripProvisioner', 'outputs', str(uuid.uuid4()) + '.yaml')
-                                    if not os.path.exists(os.path.dirname(provisioner_output_tosca_file)):
-                                        os.makedirs(os.path.dirname(provisioner_output_tosca_file))
-                                    with open(provisioner_output_tosca_file, 'w') as f:
-                                        yaml.dump(tosca_content, f, Dumper=utils.YamlDumper, default_flow_style=False)
-
-                                    # Update vm instances to register their public ip addresses
-                                    for vm_provisioned in tosca_content['components']:
-                                        vm_component = ComponentInstance.objects.get(uuid=vm_provisioned['name'])
-                                        vm_component.title += ' (' + vm_provisioned['public_address'] + ')'
-                                        del vm_provisioned['type']
-                                        vm_component.properties = yaml.dump(vm_provisioned, Dumper=utils.YamlDumper, default_flow_style=False)
-                                        vm_component.save()
-
-                                drip_manager_response = drip_manager_service.setup_docker_orchestrator(request.user, action_number, "kubernetes")
-
-                                if drip_manager_response.status_code == 200:
-                                    root = ET.fromstring(drip_manager_response.text)
-                                    kubernetes_config = yaml.load(root.find("./file").text.replace("\\n", "\n"))
-                                    kubernetes_config_file = os.path.join(settings.MEDIA_ROOT, 'documents',
-                                                hashlib.md5(request.user.username).hexdigest(), 'apps',
-                                                str(app.uuid), 'dripDeployer', 'outputs', str(uuid.uuid4()) + '.yaml')
-                                    if not os.path.exists(os.path.dirname(kubernetes_config_file)):
-                                        os.makedirs(os.path.dirname(kubernetes_config_file))
-                                    with open(kubernetes_config_file, 'w') as f:
-                                        yaml.dump(kubernetes_config, f, Dumper=utils.YamlDumper, default_flow_style=False)
-
-                                    result = 'ok'
-                                    details.append('provision done correctly')
-
-                                    app.status = 2
-                                    app.save()
-
-                if drip_manager_response.status_code != 200:
-                    result = 'error'
-                    details.append('provision has failed')
+            # TODO: What exactly does the UI have to show after this? Probably some changes to VM components?
+            details.append('Application provisioned')
+            result = 'OK'
 
         provision_vi_result = {
             'result': result,
