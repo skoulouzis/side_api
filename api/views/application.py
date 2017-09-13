@@ -149,6 +149,9 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         # drip credentials
         drip_host = 'https://drip.vlan400.uvalight.net:8443/drip-api'
         drip_credentials_endpoint = '/user/v1.0/credentials/cloud/'
+        secret_key = "key"
+        cloud_provider = "ec2"
+        acces_key = "key"
 
 
         # ID and timestamp feel like something that DRIP should return not something I should provide!
@@ -176,6 +179,8 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         drip_host = 'https://drip.vlan400.uvalight.net:8443/drip-api'
         drip_tosca_endpoint = '/user/v1.0/tosca'
         drip_plan_endpoint = '/user/v1.0/planner/plan/'
+        drip_username = 'matej'
+        drip_password = 'DRIPPASSWORD'
         # TODO: This will be removed once DRIP user registration is complete.
 
 
@@ -242,6 +247,9 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         drip_provisioner_endpoint = '/user/v1.0/provisioner/provision'
         drip_keyID_store_endpoint = '/user/v1.0/keys/ids'
         drip_cloud_credentials_ids ='/user/v1.0/credentials/cloud/ids'
+        drip_username = 'matej'
+        drip_password = 'DRIPPASSWORD'
+
         # TODO: This will be removed once DRIP user registration is complete.
 
 

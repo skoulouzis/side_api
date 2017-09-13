@@ -1636,6 +1636,11 @@ class DSTInstance(models.Model):
         def __init__(self):
             pass
 
+    @classmethod
+    def create(cls, service_id):
+        instance = cls(dst_service_id=service_id)
+        return instance
+
 
 class DSTRequest(models.Model):
     dst_instance_id = models.CharField(max_length=255, blank=True)
