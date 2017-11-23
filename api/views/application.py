@@ -169,7 +169,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     @detail_route(methods=['get'], permission_classes=[])
     def tosca_json(self, request, pk=None, *args, **kwargs):
         # NOCOMMIT: This code is shit. Who wrote this? Matej? He should be fired!
-        tosca_dictionary = {}
+        tosca = {}
         tosca_node_templates = {}
         tosca_app_items = ComponentInstance.objects.filter(graph_id=pk)
         for component in tosca_app_items:
@@ -209,8 +209,11 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                 }
 
         # tosca_topology_template = {'node_temoplates': "AlertChecker"}
-        tosca_dictionary["topology_template"] = {'node_templates': tosca_node_templates}
-        tosca_data = {'data': tosca_dictionary}
+        # tosca_dictionary["topology_template"] = {'node_templates': tosca_node_templates}
+        app = Application.objects.filter(id=pk).first()
+        tosca = app.get_tosca()
+        tosca["topology_template"] = {'node_templates': tosca_node_templates}
+        tosca_data = {'data': tosca}
         return JsonResponse(tosca_data)
 
     @detail_route(methods=['get'], permission_classes=[])
