@@ -464,40 +464,39 @@ class Application(GraphBase):
         if repositories:
             data['repositories'] = repositories
 
-        data['topology_template']={}
-        node_templates = data['topology_template'].setdefault('node_templates', {})
-
-        groups = {}
-
-        instances = ComponentInstance.objects.filter(graph=self).select_subclasses()
-        for instance in instances:
-            graph_obj = instance.get_tosca()
-            if instance.component.type.get_base_type().title == 'Component':
-                node_templates.update(graph_obj)
-            # elif instance.component.type.title == 'External Component':
-            #     external.append(graph_obj)
-            elif instance.component.type.get_base_type().title == 'Component Group':
-                 groups.update(graph_obj)
-            elif instance.component.type.get_base_type().title == 'Component Link':
-                node_templates.update(graph_obj)
-            # elif instance.component.type.title == 'Network':
-            #     network.append(graph_obj)
-            elif instance.component.type.get_base_type().title == 'Virtual Machine':
-                node_templates.update(graph_obj)
-            elif instance.component.type.get_base_type().title == 'Virtual Network':
-                 node_templates.update(graph_obj)
-            elif instance.component.type.switch_class.title == 'switch.Attribute':
-                if instance.component.type.title == 'Monitoring Agent':
-                    node_templates.update(graph_obj)
-
-        if groups:
-            data['groups'] = groups
+        # TODO: move the instance generation from tosca here. 
+        # data['topology_template']={}
+        # node_templates = data['topology_template'].setdefault('node_templates', {})
+        #
+        # groups = {}
+        #
+        # instances = ComponentInstance.objects.filter(graph=self).select_subclasses()
+        # for instance in instances:
+        #     graph_obj = instance.get_tosca()
+        #     if instance.component.type.get_base_type().title == 'Component':
+        #         node_templates.update(graph_obj)
+        #     # elif instance.component.type.title == 'External Component':
+        #     #     external.append(graph_obj)
+        #     elif instance.component.type.get_base_type().title == 'Component Group':
+        #          groups.update(graph_obj)
+        #     elif instance.component.type.get_base_type().title == 'Component Link':
+        #         node_templates.update(graph_obj)
+        #     # elif instance.component.type.title == 'Network':
+        #     #     network.append(graph_obj)
+        #     elif instance.component.type.get_base_type().title == 'Virtual Machine':
+        #         node_templates.update(graph_obj)
+        #     elif instance.component.type.get_base_type().title == 'Virtual Network':
+        #          node_templates.update(graph_obj)
+        #     elif instance.component.type.switch_class.title == 'switch.Attribute':
+        #         if instance.component.type.title == 'Monitoring Agent':
+        #             node_templates.update(graph_obj)
+        #
+        # if groups:
+        #     data['groups'] = groups
 
         data['tosca_definitions_version'] = "tosca_simple_yaml_1_0"
 
-        return {
-            'data': data
-        }
+        return  data
 
     def get_status(self, status_string):
         status_dict = {

@@ -100,7 +100,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     @detail_route(methods=['get'], permission_classes=[])
     def tosca(self, request, pk=None, *args, **kwargs):
         # NOCOMMIT: This code is shit. Who wrote this? Matej? He should be fired!
-        tosca_dictionary = {}
+        tosca = {}
         tosca_node_templates = {}
         tosca_app_items = ComponentInstance.objects.filter(graph_id=pk)
         for component in tosca_app_items:
@@ -137,10 +137,12 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                 }
 
         # tosca_topology_template = {'node_temoplates': "AlertChecker"}
-        tosca_dictionary["topology_template"] = {'node_templates': tosca_node_templates}
-        tosca_data = {'data': tosca_dictionary}
+        # tosca_dictionary["topology_template"] = {'node_templates': tosca_node_templates}
+        app = Application.objects.filter(id=pk).first()
+        tosca = app.get_tosca()
+        tosca["topology_template"] = {'node_templates': tosca_node_templates}
 
-        tosca_yml = yaml.round_trip_dump(tosca_dictionary,  explicit_start=True)
+        tosca_yml = yaml.round_trip_dump(tosca,  explicit_start=True)
         return HttpResponse(tosca_yml, content_type='text/plain')
 
         # Old Tosca Generation. Does not work correctly.
@@ -213,7 +215,6 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
 
     @detail_route(methods=['get'], permission_classes=[])
     def validate(self, request, pk=None, *args, **kwargs):
-        # TODO: Implement validation from DRIP
         # TODO: Move to Application Model
         details = []
         app = Application.objects.filter(id=pk).first()
