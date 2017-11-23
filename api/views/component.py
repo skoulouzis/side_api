@@ -51,6 +51,7 @@ class ComponentClassViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
 class ComponentViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     serializer_class = ComponentSerializer
 
+
     def get_queryset(self):
         is_core_component = self.request.query_params.get('is_core_component', None)
         is_template_component = self.request.query_params.get('is_template_component', None)
@@ -93,9 +94,9 @@ class ComponentGraphView(PaginateByMaxMixin, APIView):
     API endpoint that allows SwitchApps to be CRUDed.
     """
     serializer_class = ComponentSerializer
-    authentication_classes = (TokenAuthentication,)
+    # authentication_classes = (TokenAuthentication,)
     # permission_classes = (IsAuthenticated, BelongsToUser,)
-    permission_classes = (IsAuthenticated,)
+    # permission_classes = (IsAuthenticated,)
     parser_classes = (JSONParser,)
 
     def get(self, request, pk=None):

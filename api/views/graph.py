@@ -3,6 +3,7 @@ from rest_framework.decorators import detail_route
 from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
 from rest_framework_extensions.mixins import PaginateByMaxMixin
+from django.http import JsonResponse
 
 from api.models import *
 from api.serializers import *
@@ -19,6 +20,7 @@ class GraphViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
 
 class InstanceViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     serializer_class = InstanceSerializer
+    # resource_name = False
 
     @detail_route(methods=['post'])
     def link(self, request, pk=None):
@@ -30,6 +32,10 @@ class InstanceViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         target = ComponentPort.objects.filter(uuid=target_id, instance__graph_id=graph_id).first()
         link.source = source
         link.target = target
+        source_instance = ComponentInstance.objects.filter(id=source.instance_id).first()
+        target_instance = ComponentInstance.objects.filter(id=target.instance_id).first()
+        link_title = source_instance.title + target_instance.title
+        link.title = link_title
         link.save()
         serializer = self.get_serializer(link, many=False)
         return Response(serializer.data)
@@ -59,7 +65,6 @@ class InstanceViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                     port.save()
                     new_ports.remove(new_port)
                     old_ports.remove(port)
-                    break
 
         for port in old_ports:
             port.delete()
@@ -79,6 +84,7 @@ class InstanceViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                 queryset = ComponentInstance.objects.filter(graph_id=graph_id, uuid=uuid)
         else:
             queryset = ComponentInstance.objects.filter()
+        qs = InstanceSerializer(queryset)
         return queryset
 
     def perform_destroy(self, instance):
@@ -109,9 +115,20 @@ class InstanceViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
 
 class PortViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     serializer_class = PortSerializer
-    authentication_classes = (TokenAuthentication,)
-    permission_classes = (IsAuthenticated,)
-    queryset = ComponentPort.objects.all()
+    # authentication_classes = (TokenAuthentication,)
+    # permission_classes = (IsAuthenticated,)
+    # queryset = ComponentPort.objects.all()
+
+    def get_queryset(self):
+        port_id = self.request.query_params.get('port_id', None)
+        instance_id = self.request.query_params.get('instance_id', None)
+        if port_id is not None:
+            queryset = ComponentPort.objects.filter(pk=port_id)
+        elif instance_id is not None:
+            queryset = ComponentPort.objects.filter(instance=instance_id)
+        else:
+            queryset = ComponentPort.objects.filter()
+        return queryset
 
     def perform_create(self, serializer):
         instance = dict(self.request.data.get('instance', None))

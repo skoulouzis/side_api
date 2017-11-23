@@ -122,15 +122,24 @@ DATABASES = {
     #     'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
     # },
 
+    # 'default': {
+    #     'ENGINE': 'django.db.backends.mysql',
+    #     'NAME': 'XXXX',
+    #     'USER': 'XXXX',
+    #     'PASSWORD': 'XXXX',
+    #     'HOST': 'XXXX',
+    #     'PORT': 'XXXX',
+    # }
+    # NOCOMMIT: Passwords
+
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'XXXX',
-        'USER': 'XXXX',
-        'PASSWORD': 'XXXX',
-        'HOST': 'XXXX',
-        'PORT': 'XXXX',
+        'NAME': 'side_production',
+        'USER': 'side_cardiff',
+        'PASSWORD': '4p7B7brsnzmnt2bf',
+        'HOST': '127.0.0.1',
+        'PORT': '3306',
     }
-
 
 
 }

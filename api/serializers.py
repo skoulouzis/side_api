@@ -2,7 +2,7 @@ import json
 
 from rest_framework import serializers
 
-from api.models import ComponentTypeProperty
+from api.models import ComponentTypeProperty, ComponentPort
 from models import Application, Component, ComponentType, ComponentInstance, NestedComponent, ServiceComponent, ComponentPort, ServiceLink, GraphBase,SwitchDocument, \
     ApplicationInstance, Notification, SwitchDocumentType, DependencyLink, SwitchArtifact, SwitchRepository, ToscaClass, \
     ComponentClass, DataType, DataTypeProperty, DSTUpdate, DSTRequest, DSTInstance
@@ -127,6 +127,14 @@ class ComponentClassSerializer(serializers.ModelSerializer):
         fields = ('id', 'title')
 
 
+class PortSerializer(serializers.ModelSerializer):
+    instance = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
+
+    class Meta:
+        model = ComponentPort
+        fields = ('instance', 'type', 'title', 'uuid')
+
+
 class InstanceSerializer(serializers.ModelSerializer):
     graph = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
     component = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
@@ -138,13 +146,33 @@ class InstanceSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ComponentInstance
-        fields = ('id', 'uuid', 'title', 'mode', 'properties', 'artifacts', 'graph', 'editable', 'deleteable', 'component', 'last_x', 'last_y', 'ports')
+        fields = ('id', 'title', 'uuid', 'mode', 'properties', 'artifacts', 'graph', 'editable', 'deleteable', 'component', 'last_x', 'last_y', 'ports')
+
 
     def get_editable(self, obj):
         return self.context['request'].user == obj.graph.user
 
     def get_deleteable(self, obj):
         return obj.graph.pk != obj.component.pk
+
+    # def get_included(self, obj):
+    #     component_instance_id = obj.id
+    #     ports = ComponentPort.objects.filter(instance=component_instance_id)
+    #     ports_data = []
+    #     for port in ports:
+    #         port_data = {
+    #             'type': 'switchcomponentports',
+    #             'id': port.id.__str__(),
+    #             'attributes': {
+    #                 'id': port.id.__str__(),
+    #                 'type': port.type,
+    #                 'uuid': port.uuid,
+    #                 'title': port.title,
+    #                 'instance': port.instance.id
+    #                 }
+    #         }
+    #         ports_data.append(port_data)
+    #     return ports_data
 
     def create(self, validated_data):
         uuid = validated_data.get('uuid', None)
@@ -214,14 +242,6 @@ class GraphSerializer(serializers.ModelSerializer):
         fields = ('id', 'title')
 
 
-class PortSerializer(serializers.ModelSerializer):
-    instance = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
-
-    class Meta:
-        model = ComponentPort
-        fields = ('id', 'instance', 'type', 'title', 'uuid')
-
-
 class ServiceLinkSerializer(serializers.ModelSerializer):
     graph = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
     source = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
@@ -239,7 +259,7 @@ class DependencyLinkSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = DependencyLink
-        fields = ('id', 'graph', 'dependant', 'dependency', 'uuid')
+        fields = ('id', 'title', 'graph', 'dependant', 'dependency', 'uuid')
 
 
 class ComponentTypePropertySerializer(serializers.ModelSerializer):

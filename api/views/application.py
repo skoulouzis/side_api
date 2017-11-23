@@ -5,7 +5,7 @@ import requests
 
 from requests.auth import HTTPBasicAuth
 
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.contrib.sites.shortcuts import get_current_site
 from django.db.models import Q
 from rest_framework import viewsets, status
@@ -23,7 +23,9 @@ from rest_framework.permissions import IsAuthenticated
 from side_api import settings, utils
 from api.services import JenaFusekiService, DripManagerService
 import json
-
+import ruamel.yaml as yaml
+from ruamel.yaml.scalarstring import SingleQuotedScalarString as SQ
+from ruamel.yaml.scalarstring import DoubleQuotedScalarString as DQ
 
 # TODO: Permissions were nuked in most classes, as I was testing this. Uncomment!
 
@@ -95,17 +97,119 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @detail_route(methods=['get','post'], permission_classes=[])
+    @detail_route(methods=['get'], permission_classes=[])
     def tosca(self, request, pk=None, *args, **kwargs):
+        # NOCOMMIT: This code is shit. Who wrote this? Matej? He should be fired!
+        tosca_dictionary = {}
+        tosca_node_templates = {}
+        tosca_app_items = ComponentInstance.objects.filter(graph_id=pk)
+        for component in tosca_app_items:
+            if component.component_id > 50:
+                component_type_id = Component.objects.filter(graphbase_ptr_id=component.component_id).first().type_id
+                component_tosca_class_id = ComponentType.objects.filter(id=component_type_id).first().tosca_class_id
+                component_tosca_class = ToscaClass.objects.filter(id=component_tosca_class_id).first()
+                tosca_container_name = component_tosca_class.prefix + '.' + component_tosca_class.name
+                artifacts = yaml.load(component.artifacts, Loader=yaml.Loader)
+                properties = yaml.load(component.properties, Loader=yaml.Loader)
+                # TODO: This is hardcoded value. So it obviously only works for an instance that is running on our servers!
+                # Luckily noone is going to use this anyway...
+                properties['TOSCA'] = DQ("http://i213.cscloud.cf.ac.uk:7001/api/switchapps/" + pk + "/tosca")
+                # TODO: At this point Monitoring Proxy is a hardoced name. Needs changing. Lazy.
+                properties['MONITORING_PROXY'] = DQ("Monitoring Proxy")
+                del properties['ports_mapping']
+                instance_ports = ComponentPort.objects.filter(instance_id=component.id, type="out")
+                component_requirements = []
+                for instance_port in instance_ports:
+                    component_requirements_port_id = ComponentLink.objects.filter(source_id=instance_port.id).first().target_id
+                    component_requirements_instance_id = ComponentPort.objects.filter(id=component_requirements_port_id).first().instance_id
+                    component_requirements_instance = ComponentInstance.objects.filter(id=component_requirements_instance_id).first()
+                    component_requirement_title = component_requirements_instance.title
+                    component_requirements.append(component_requirement_title)
+
+                tosca_node_templates[DQ(component.title)] = {
+                    'type': SQ(tosca_container_name),
+                    'artifacts': artifacts,
+                    'properties': {
+                        'Environment_variables': properties,
+                        'scaling_mode': component.mode
+                    },
+                    'requirements': component_requirements
+                }
+
+        # tosca_topology_template = {'node_temoplates': "AlertChecker"}
+        tosca_dictionary["topology_template"] = {'node_templates': tosca_node_templates}
+        tosca_data = {'data': tosca_dictionary}
+
+        tosca_yml = yaml.round_trip_dump(tosca_dictionary,  explicit_start=True)
+        return HttpResponse(tosca_yml, content_type='text/plain')
+
+        # Old Tosca Generation. Does not work correctly.
+        # if request.method == 'GET':
+        #     app = Application.objects.filter(id=pk).first()
+        #     tosca = app.get_tosca()
+        #     tosca_yml = yaml.safe_dump(tosca, default_flow_style=False)
+        #     return JsonResponse(tosca)
+        # elif request.method == 'POST':
+        #     app = Application.objects.filter(id=pk).first()
+        #     tosca = yaml.load(request.body).get('data', None)
+        #     app.tosca_update(tosca)
+        #     return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @detail_route(methods=['get', 'post'], permission_classes=[])
+    def toscaY(self, request, pk=None, *args, **kwargs):
         if request.method == 'GET':
             app = Application.objects.filter(id=pk).first()
             tosca = app.get_tosca()
-            return JsonResponse(tosca)
-        elif request.method == 'POST':
-            app = Application.objects.filter(id=pk).first()
-            tosca = yaml.load(request.body).get('data', None)
-            app.tosca_update(tosca)
-            return Response(status=status.HTTP_204_NO_CONTENT)
+            tosca_data = tosca['data']
+            tosca_yml = yaml.safe_dump(tosca_data, default_flow_style=False)
+            return HttpResponse(tosca_yml, content_type='text/plain')
+
+    @detail_route(methods=['get'], permission_classes=[])
+    def tosca_json(self, request, pk=None, *args, **kwargs):
+        # NOCOMMIT: This code is shit. Who wrote this? Matej? He should be fired!
+        tosca_dictionary = {}
+        tosca_node_templates = {}
+        tosca_app_items = ComponentInstance.objects.filter(graph_id=pk)
+        for component in tosca_app_items:
+            if component.component_id > 50:
+                component_type_id = Component.objects.filter(graphbase_ptr_id=component.component_id).first().type_id
+                component_tosca_class_id = ComponentType.objects.filter(id=component_type_id).first().tosca_class_id
+                component_tosca_class = ToscaClass.objects.filter(id=component_tosca_class_id).first()
+                tosca_container_name = component_tosca_class.prefix + '.' + component_tosca_class.name
+                artifacts = yaml.load(component.artifacts, Loader=yaml.Loader)
+                properties = yaml.load(component.properties, Loader=yaml.Loader)
+                # TODO: This is hardcoded value. So it obviously only works for an instance that is running on our servers!
+                # Luckily noone is going to use this anyway...
+                properties['TOSCA'] = DQ("http://i213.cscloud.cf.ac.uk:7001/api/switchapps/" + pk + "/tosca")
+                # TODO: At this point Monitoring Proxy is a hardoced name. Needs changing. Lazy.
+                properties['MONITORING_PROXY'] = DQ("Monitoring Proxy")
+                del properties['ports_mapping']
+                instance_ports = ComponentPort.objects.filter(instance_id=component.id, type="out")
+                component_requirements = []
+                for instance_port in instance_ports:
+                    component_requirements_port_id = ComponentLink.objects.filter(
+                        source_id=instance_port.id).first().target_id
+                    component_requirements_instance_id = ComponentPort.objects.filter(
+                        id=component_requirements_port_id).first().instance_id
+                    component_requirements_instance = ComponentInstance.objects.filter(
+                        id=component_requirements_instance_id).first()
+                    component_requirement_title = component_requirements_instance.title
+                    component_requirements.append(component_requirement_title)
+
+                tosca_node_templates[DQ(component.title)] = {
+                    'type': SQ(tosca_container_name),
+                    'artifacts': artifacts,
+                    'properties': {
+                        'Environment_variables': properties,
+                        'scaling_mode': component.mode
+                    },
+                    'requirements': component_requirements
+                }
+
+        # tosca_topology_template = {'node_temoplates': "AlertChecker"}
+        tosca_dictionary["topology_template"] = {'node_templates': tosca_node_templates}
+        tosca_data = {'data': tosca_dictionary}
+        return JsonResponse(tosca_data)
 
     @detail_route(methods=['get'], permission_classes=[])
     def validate(self, request, pk=None, *args, **kwargs):
@@ -116,7 +220,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
 
         for instance in app.get_instances():
             if "SET_ITS_VALUE" in str(instance.properties):
-              details.append("Component '"  + instance.title + "' needs all its properties to be set.")
+                details.append("Component '" + instance.title + "' needs all its properties to be set.")
 
         if len(details)==0:
             result = 'ok'
@@ -178,9 +282,9 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         # TODO Think about making this more transparent. This should be something that is stored in the application?
         drip_host = 'https://drip.vlan400.uvalight.net:8443/drip-api'
         drip_tosca_endpoint = '/user/v1.0/tosca'
-        drip_plan_endpoint = '/user/v1.0/planner/plan/'
+        drip_plan_endpoint = '/user/v1.0/planner/plan'
         drip_username = 'matej'
-        drip_password = 'DRIPPASSWORD'
+        drip_password = 'switch-1nt3gr4t1on'
         # TODO: This will be removed once DRIP user registration is complete.
 
 
@@ -203,26 +307,48 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
 
         # Calling the DRIP API
         else:
-            app_tosca = app.get_tosca()
-            # TODO make this call an actual request not working because of the user missing
-            tosca_id = 1 # requests.post(drip_host + drip_tosca_endpoint + '/post',
-                          #          data=app_tosca,
-                          #          auth=HTTPBasicAuth(drip_username, drip_password))
+            # app_tosca = app.get_tosca()
+            # app_tosca_yaml1 = yaml.safe_dump(app_tosca, default_flow_style=False)
 
-            plan_response = 'OK' # = requests.get(drip_host + drip_plan_endpoint + tosca_id,
-                                                # auth=HTTPBasicAuth(drip_username, drip_password))
-            if plan_response == 'OK':
-                # TODO: Parse plan to get TOSCA ID - need actual access to DRIP
-                plan_id = 2
-                # get new TOSCA
+            with open("BEIA2.yml", 'r') as stream:
+                try:
+                    app_tosca2 = yaml.load(stream)
+                except yaml.YAMLError as exc:
+                    print(exc)
+            app_tosca_yaml2 = yaml.safe_dump(app_tosca2, default_flow_style=False)
+            # app.tosca_update(app_tosca_yaml2)
 
-                # There is a posibility that the planer does not do what was agreed upon. Ie it does not return TOSCA but some random YAMLs.
-                # In that case strangle Spiros and revert back to Frans code.
-                tosca_download_url = drip_host + drip_tosca_endpoint + plan_id
-                planed_tosca_response = 'response'  #  requests.get(drip_host + drip_tosca_endpoint + plan_id, auth=HTTPBasicAuth(drip_username, drip_password))
+            get_tocsa_ids_url = drip_host + drip_tosca_endpoint + '/ids'
+            get_confirm_tosca_ids_1 = requests.get(get_tocsa_ids_url, auth=(drip_username, drip_password), verify=False)
+
+            tosca_post_response = requests.post(drip_host + drip_tosca_endpoint + '/post',
+                                                verify=False,
+                                                data=app_tosca_yaml2,
+                                                auth=('matej', 'switch-1nt3gr4t1on'))
+            tosca_drip_id = tosca_post_response.content
+            get_confirm_tosca_ids_2 = requests.get(drip_host + drip_tosca_endpoint + '/ids',
+                                                   auth=HTTPBasicAuth(drip_username, drip_password),
+                                                   verify=False)
+
+            tosca_from_drip_url = drip_host + drip_tosca_endpoint + '/' + tosca_drip_id + '?format=yml'
+
+            tosca_from_drip = requests.get(tosca_from_drip_url,
+                                           auth=(drip_username, drip_password),
+                                           verify=False)
+
+            plan_response = requests.get(drip_host + drip_plan_endpoint + '/' + tosca_drip_id,
+                                         auth=HTTPBasicAuth(drip_username, drip_password),
+                                         verify=False)
+
+            if plan_response.status_code == 200:
+                plan_id = plan_response.content
+                tosca_download_url = drip_host + '/user/v1.0/planner/' + plan_id + '/?format=yml'
+                plan_yaml = requests.get(tosca_download_url,
+                                         auth=HTTPBasicAuth(drip_username, drip_password),
+                                         verify=False)
+
                 # new_tosca = yaml.load(planed_tosca_response.body).get('data', None)
                 new_tosca = app_tosca  # TODO Placeholder! Remove!
-
 
                 # Update application with new TOSCA
                 app.tosca_update(new_tosca)
@@ -336,7 +462,8 @@ class ApplicationGraphView(PaginateByMaxMixin, APIView):
 
     def get(self, request, pk=None):
         app = Application.objects.filter(id=pk).first()
-        return Response(app.get_graph())
+        response = app.get_graph()
+        return Response(response)
 
     def post(self, request, pk=None):
         app = Application.objects.filter(id=pk).first()

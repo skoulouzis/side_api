@@ -50,6 +50,7 @@ class GraphBase(models.Model):
                 print e.message
 
         # I think this is wrong. It might be tre reason why the links do not keep.
+        # Great job for noting it's wrong, but not why.
         for dependency_link in self.service_links.all():
             try:
                 graph_obj = dependency_link.get_graph()
@@ -448,11 +449,11 @@ class Application(GraphBase):
             data_types.update(data_type.get_tosca())
 
         node_types = {}
+        # TODO: Change this so that only relevant types remain in TOSCA
         for node_type in ComponentType.objects.all():
             node_types.update(node_type.get_tosca())
 
         data = {}
-        data['tosca_definitions_version'] = "tosca_simple_yaml_1_0"
         data['description'] = self.description
         if artifact_types:
             data['artifact_types'] = artifact_types
@@ -491,6 +492,8 @@ class Application(GraphBase):
 
         if groups:
             data['groups'] = groups
+
+        data['tosca_definitions_version'] = "tosca_simple_yaml_1_0"
 
         return {
             'data': data
@@ -1345,7 +1348,7 @@ class ComponentLink(ComponentInstance):
 
     def get_label(self):
         if self.source is not None and self.target is not None:
-            return self.source.instance.title.lower().replace(" ","_") + ":" + self.target.instance.title.lower().replace(" ","_")
+            return self.source.instance.title.lower().replace(" ", "_") + ":" + self.target.instance.title.lower().replace(" ","_")
         else:
             return 'connection'
 
