@@ -5,7 +5,7 @@ from rest_framework import serializers
 from api.models import ComponentTypeProperty, ComponentPort
 from models import Application, Component, ComponentType, ComponentInstance, NestedComponent, ServiceComponent, ComponentPort, ServiceLink, GraphBase,SwitchDocument, \
     ApplicationInstance, Notification, SwitchDocumentType, DependencyLink, SwitchArtifact, SwitchRepository, ToscaClass, \
-    ComponentClass, DataType, DataTypeProperty, DSTUpdate, DSTRequest, DSTInstance
+    ComponentClass, DataType, DataTypeProperty
 from django.contrib.auth.models import User
 
 
@@ -288,21 +288,3 @@ class DataTypePropertySerializer(serializers.ModelSerializer):
         model = DataTypeProperty
         fields = ('id', 'name', 'default_value', 'required', 'data_type', 'collection_type', 'parent_data_type')
 
-
-class DSTInstanceSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = DSTInstance
-        fields = '__all__'
-
-
-class DSTRequestSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = DSTRequest
-        fields = '__all__'
-
-
-class DSTUpdateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = DSTUpdate
-        fields = '__all__'

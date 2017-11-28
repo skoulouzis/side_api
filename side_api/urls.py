@@ -28,7 +28,6 @@ from api.views.component import ComponentViewSet, ComponentTypeViewSet, Componen
 from api.views.graph import GraphViewSet, InstanceViewSet, PortViewSet, ServiceLinkViewSet, DependencyLinkViewSet
 from api.views.knowledgebase import providers_list, providers_detail, ProviderViewSet
 from rest_framework_swagger.views import get_swagger_view
-from api.views.DSTViews import DSTInstanceRequest
 
 router = routers.DefaultRouter(trailing_slash=False)
 router.register("users", UserViewSet, base_name="user")
@@ -51,7 +50,6 @@ router.register("switchnotifications", NotificationViewSet, base_name="switchnot
 router.register("switchartifacts", SwitchArtifactViewSet, base_name="switchartifacts")
 router.register("switchrepositories", SwitchRepositoryViewSet, base_name="switchrepositories")
 router.register("providers", ProviderViewSet, base_name="providers")
-router.register("dst", DSTInstanceRequest, base_name="dstinstance")
 
 schema_view = get_swagger_view(title='SIDE API')
 

@@ -99,76 +99,14 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
 
     @detail_route(methods=['get'], permission_classes=[])
     def tosca(self, request, pk=None, *args, **kwargs):
-        # NOCOMMIT: This code is shit. Who wrote this? Matej? He should be fired!
-        tosca = {}
-        tosca_node_templates = {}
-        tosca_app_items = ComponentInstance.objects.filter(graph_id=pk)
-        for component in tosca_app_items:
-            if component.component_id > 50:
-                component_type_id = Component.objects.filter(graphbase_ptr_id=component.component_id).first().type_id
-                component_tosca_class_id = ComponentType.objects.filter(id=component_type_id).first().tosca_class_id
-                component_tosca_class = ToscaClass.objects.filter(id=component_tosca_class_id).first()
-                tosca_container_name = component_tosca_class.prefix + '.' + component_tosca_class.name
-                artifacts = yaml.load(component.artifacts, Loader=yaml.Loader)
-                properties = yaml.load(component.properties, Loader=yaml.Loader)
-                # TODO: This is hardcoded value. So it obviously only works for an instance that is running on our servers!
-                # Luckily noone is going to use this anyway...
-                properties['TOSCA'] = DQ("http://i213.cscloud.cf.ac.uk:7001/api/switchapps/" + pk + "/tosca")
-                # TODO: At this point Monitoring Proxy is a hardoced name. Needs changing. Lazy.
-                properties['MONITORING_PROXY'] = DQ("Monitoring Proxy")
-                del properties['ports_mapping']
-                instance_ports = ComponentPort.objects.filter(instance_id=component.id, type="out")
-                component_requirements = []
-                for instance_port in instance_ports:
-                    component_requirements_port_id = ComponentLink.objects.filter(source_id=instance_port.id).first().target_id
-                    component_requirements_instance_id = ComponentPort.objects.filter(id=component_requirements_port_id).first().instance_id
-                    component_requirements_instance = ComponentInstance.objects.filter(id=component_requirements_instance_id).first()
-                    component_requirement_title = component_requirements_instance.title
-                    component_requirements.append(component_requirement_title)
 
-                tosca_node_templates[DQ(component.title)] = {
-                    'type': SQ(tosca_container_name),
-                    'artifacts': artifacts,
-                    'properties': {
-                        'Environment_variables': properties,
-                        'scaling_mode': component.mode
-                    },
-                    'requirements': component_requirements
-                }
-
-        # tosca_topology_template = {'node_temoplates': "AlertChecker"}
-        # tosca_dictionary["topology_template"] = {'node_templates': tosca_node_templates}
-        app = Application.objects.filter(id=pk).first()
-        tosca = app.get_tosca()
-        tosca["topology_template"] = {'node_templates': tosca_node_templates}
-
+        tosca = self.get_tosca_dictionary(request, pk)
         tosca_yml = yaml.round_trip_dump(tosca,  explicit_start=True)
         return HttpResponse(tosca_yml, content_type='text/plain')
 
-        # Old Tosca Generation. Does not work correctly.
-        # if request.method == 'GET':
-        #     app = Application.objects.filter(id=pk).first()
-        #     tosca = app.get_tosca()
-        #     tosca_yml = yaml.safe_dump(tosca, default_flow_style=False)
-        #     return JsonResponse(tosca)
-        # elif request.method == 'POST':
-        #     app = Application.objects.filter(id=pk).first()
-        #     tosca = yaml.load(request.body).get('data', None)
-        #     app.tosca_update(tosca)
-        #     return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @detail_route(methods=['get', 'post'], permission_classes=[])
-    def toscaY(self, request, pk=None, *args, **kwargs):
-        if request.method == 'GET':
-            app = Application.objects.filter(id=pk).first()
-            tosca = app.get_tosca()
-            tosca_data = tosca['data']
-            tosca_yml = yaml.safe_dump(tosca_data, default_flow_style=False)
-            return HttpResponse(tosca_yml, content_type='text/plain')
+    def get_tosca_dictionary(self, request, pk=None):
 
-    @detail_route(methods=['get'], permission_classes=[])
-    def tosca_json(self, request, pk=None, *args, **kwargs):
-        # NOCOMMIT: This code is shit. Who wrote this? Matej? He should be fired!
         tosca = {}
         tosca_node_templates = {}
         tosca_app_items = ComponentInstance.objects.filter(graph_id=pk)
@@ -185,18 +123,23 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                 properties['TOSCA'] = DQ("http://i213.cscloud.cf.ac.uk:7001/api/switchapps/" + pk + "/tosca")
                 # TODO: At this point Monitoring Proxy is a hardoced name. Needs changing. Lazy.
                 properties['MONITORING_PROXY'] = DQ("Monitoring Proxy")
-                del properties['ports_mapping']
+
+                # TODO: This is a mess refactor!
                 instance_ports = ComponentPort.objects.filter(instance_id=component.id, type="out")
                 component_requirements = []
+
                 for instance_port in instance_ports:
-                    component_requirements_port_id = ComponentLink.objects.filter(
-                        source_id=instance_port.id).first().target_id
-                    component_requirements_instance_id = ComponentPort.objects.filter(
-                        id=component_requirements_port_id).first().instance_id
-                    component_requirements_instance = ComponentInstance.objects.filter(
-                        id=component_requirements_instance_id).first()
-                    component_requirement_title = component_requirements_instance.title
-                    component_requirements.append(component_requirement_title)
+                    out_port_destinations = ComponentLink.objects.filter(source_id=instance_port.id)
+                    for port_destination in out_port_destinations:
+                        component_requirements_port_id = port_destination.target_id
+                        component_requirements_instance_id = ComponentPort.objects.filter(
+                            id=component_requirements_port_id).first().instance_id
+                        component_requirements_instance = ComponentInstance.objects.filter(
+                            id=component_requirements_instance_id).first()
+                        component_requirement_title = component_requirements_instance.title
+                        component_requirements.append(component_requirement_title)
+                if not component_requirements:
+                    component_requirements = None
 
                 tosca_node_templates[DQ(component.title)] = {
                     'type': SQ(tosca_container_name),
@@ -205,14 +148,20 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                         'Environment_variables': properties,
                         'scaling_mode': component.mode
                     },
-                    'requirements': component_requirements
+                    'requirements': [
+                        {'dependency': component_requirements}
+                    ]
                 }
-
-        # tosca_topology_template = {'node_temoplates': "AlertChecker"}
-        # tosca_dictionary["topology_template"] = {'node_templates': tosca_node_templates}
         app = Application.objects.filter(id=pk).first()
+        # TODO: Remove unneeded definitions from node types. (Noo think of the children!)
         tosca = app.get_tosca()
         tosca["topology_template"] = {'node_templates': tosca_node_templates}
+        return tosca
+
+    @detail_route(methods=['get'], permission_classes=[])
+    def tosca_json(self, request, pk=None, *args, **kwargs):
+
+        tosca = self.get_tosca_dictionary(request, pk)
         tosca_data = {'data': tosca}
         return JsonResponse(tosca_data)
 
