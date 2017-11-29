@@ -130,7 +130,8 @@ DATABASES = {
     #     'HOST': 'XXXX',
     #     'PORT': 'XXXX',
     # }
-    # NOCOMMIT: Passwords
+    # TODO: Change the password of the DB, as this has been published several times to git...
+    
 
     'default': {
         'ENGINE': 'django.db.backends.mysql',

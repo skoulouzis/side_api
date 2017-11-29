@@ -97,16 +97,11 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @detail_route(methods=['get'], permission_classes=[])
-    def tosca(self, request, pk=None, *args, **kwargs):
-
-        tosca = self.get_tosca_dictionary(request, pk)
-        tosca_yml = yaml.round_trip_dump(tosca,  explicit_start=True)
-        return HttpResponse(tosca_yml, content_type='text/plain')
-
-
     def get_tosca_dictionary(self, request, pk=None):
-
+        # TODO: This should be moved to app where the rest of TOSCA generation is.
+        # Actually it would make even more sense to have this inside the Serializers...
+        # Ok this will actuall make a lot of sense. Might try this...
+        # TODO: We have no way of actually parsing the TOASCA atm. Is it needed?
         tosca = {}
         tosca_node_templates = {}
         tosca_app_items = ComponentInstance.objects.filter(graph_id=pk)
@@ -119,7 +114,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                 artifacts = yaml.load(component.artifacts, Loader=yaml.Loader)
                 properties = yaml.load(component.properties, Loader=yaml.Loader)
                 # TODO: This is hardcoded value. So it obviously only works for an instance that is running on our servers!
-                # Luckily noone is going to use this anyway...
+                # Luckily no one is going to use this anyway...
                 properties['TOSCA'] = DQ("http://i213.cscloud.cf.ac.uk:7001/api/switchapps/" + pk + "/tosca")
                 # TODO: At this point Monitoring Proxy is a hardoced name. Needs changing. Lazy.
                 properties['MONITORING_PROXY'] = DQ("Monitoring Proxy")
@@ -153,10 +148,17 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                     ]
                 }
         app = Application.objects.filter(id=pk).first()
-        # TODO: Remove unneeded definitions from node types. (Noo think of the children!)
+        # TODO: Remove unneeded definitions from node types. (Nooo! Think of the children!)
         tosca = app.get_tosca()
         tosca["topology_template"] = {'node_templates': tosca_node_templates}
         return tosca
+
+    @detail_route(methods=['get'], permission_classes=[])
+    def tosca(self, request, pk=None, *args, **kwargs):
+
+        tosca = self.get_tosca_dictionary(request, pk)
+        tosca_yml = yaml.round_trip_dump(tosca,  explicit_start=True)
+        return HttpResponse(tosca_yml, content_type='text/plain')
 
     @detail_route(methods=['get'], permission_classes=[])
     def tosca_json(self, request, pk=None, *args, **kwargs):
@@ -232,14 +234,13 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
 
     @detail_route(methods=['get'], permission_classes=[])
     def plan(self, request, pk=None, *args, **kwargs):
-        # TODO Think about making this more transparent. This should be something that is stored in the application?
+        # TODO: Think about making this more transparent. This should be something that is stored in the application?
         drip_host = 'https://drip.vlan400.uvalight.net:8443/drip-api'
         drip_tosca_endpoint = '/user/v1.0/tosca'
         drip_plan_endpoint = '/user/v1.0/planner/plan'
         drip_username = 'matej'
         drip_password = 'switch-1nt3gr4t1on'
-        # TODO: This will be removed once DRIP user registration is complete.
-
+        # TODO: This will be removed once DRIP user registration is complete. aka never.
 
         result = 'error'
         details = []
@@ -296,15 +297,8 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
             if plan_response.status_code == 200:
                 plan_id = plan_response.content
                 tosca_download_url = drip_host + '/user/v1.0/planner/' + plan_id + '/?format=yml'
-                plan_yaml = requests.get(tosca_download_url,
-                                         auth=HTTPBasicAuth(drip_username, drip_password),
-                                         verify=False)
 
-                # new_tosca = yaml.load(planed_tosca_response.body).get('data', None)
-                new_tosca = app_tosca  # TODO Placeholder! Remove!
-
-                # Update application with new TOSCA
-                app.tosca_update(new_tosca)
+                # TODO: Parse the response form planner and integrate it into the system
 
                 result = 'OK'
                 details.append('plan done correctly')
