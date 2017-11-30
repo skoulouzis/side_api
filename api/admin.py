@@ -25,6 +25,10 @@ class DataTypeAdmin(admin.ModelAdmin):
     ]
 
 
+class ComponentInstanceAdmin(admin.ModelAdmin):
+    list_display = ('id', 'title')
+    list_display_links = ('id', 'title')
+
 admin.site.register(Application)
 admin.site.register(Component)
 admin.site.register(ComponentType, ComponentTypeAdmin)
@@ -40,6 +44,6 @@ admin.site.register(ServiceComponent)
 admin.site.register(SwitchDocument)
 admin.site.register(SwitchDocumentType)
 admin.site.register(Notification)
-admin.site.register(ComponentInstance)
+admin.site.register(ComponentInstance, ComponentInstanceAdmin)
 admin.site.register(ComponentLink)
 admin.site.register(ComponentPort)
