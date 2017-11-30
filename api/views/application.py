@@ -118,7 +118,8 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                 properties['TOSCA'] = DQ("http://i213.cscloud.cf.ac.uk:7001/api/switchapps/" + pk + "/tosca")
                 # TODO: At this point Monitoring Proxy is a hardoced name. Needs changing. Lazy.
                 properties['MONITORING_PROXY'] = DQ("Monitoring Proxy")
-
+                ports_map = properties['ports_mapping']
+                del properties['ports_mapping']
                 # TODO: This is a mess refactor!
                 instance_ports = ComponentPort.objects.filter(instance_id=component.id, type="out")
                 component_requirements = []
@@ -141,6 +142,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                     'artifacts': artifacts,
                     'properties': {
                         'Environment_variables': properties,
+                        'ports_mapping': ports_map,
                         'scaling_mode': component.mode
                     },
                     'requirements': [
