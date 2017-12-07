@@ -180,7 +180,7 @@ class DependencyLinkViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         graph = dict(self.request.data.get('graph', None))
-        dependant = dict(self.request.data.get('source', None))
-        dependency = dict(self.request.data.get('target', None))
+        dependant = dict(self.request.data.get('dependant', None))
+        dependency = dict(self.request.data.get('dependency', None))
         if 'id' in graph and 'id' in dependant and 'id' in dependency:
             serializer.save(graph_id=graph['id'], dependant_id=dependant['id'], dependency_id=dependency['id'])

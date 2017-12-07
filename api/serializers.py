@@ -259,7 +259,7 @@ class DependencyLinkSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = DependencyLink
-        fields = ('id', 'title', 'graph', 'dependant', 'dependency', 'uuid')
+        fields = ('id', 'graph', 'dependant', 'dependency', 'uuid')
 
 
 class ComponentTypePropertySerializer(serializers.ModelSerializer):

@@ -102,9 +102,14 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         # Actually it would make even more sense to have this inside the Serializers...
         # Ok this will actuall make a lot of sense. Might try this...
         # TODO: We have no way of actually parsing the TOASCA atm. Is it needed?
+        # TODO: There is no actual validation at this point. So add validation call.
         tosca = {}
         tosca_node_templates = {}
         tosca_app_items = ComponentInstance.objects.filter(graph_id=pk)
+        #TODO: Compleate hack. There is no way this should make it to the final version.
+
+        monitoring_adapter_instance = tosca_app_items.filter(component_id=244).first()
+        monitoring_adapter_name = monitoring_adapter_instance.title
         for component in tosca_app_items:
             if component.component_id > 50:
                 component_type_id = Component.objects.filter(graphbase_ptr_id=component.component_id).first().type_id
@@ -116,8 +121,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                 # TODO: This is hardcoded value. So it obviously only works for an instance that is running on our servers!
                 # Luckily no one is going to use this anyway...
                 properties['TOSCA'] = DQ("http://i213.cscloud.cf.ac.uk:7001/api/switchapps/" + pk + "/tosca")
-                # TODO: At this point Monitoring Proxy is a hardoced name. Needs changing. Lazy.
-                properties['MONITORING_PROXY'] = DQ("Monitoring Proxy")
+
                 ports_map = {}
                 if 'ports_mapping' in properties:
                     ports_map = properties['ports_mapping']
@@ -125,7 +129,12 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                 # TODO: This is a mess refactor!
                 instance_ports = ComponentPort.objects.filter(instance_id=component.id, type="out")
                 component_requirements = []
-
+                connected_services = ServiceLink.objects.filter(target_id=component.id)
+                for service in connected_services:
+                    service_instance = tosca_app_items.filter(id=service.source_id).first()
+                    if service_instance.component_id == 5:
+                        properties['MONITORING_PROXY'] = DQ(monitoring_adapter_name)
+                        component_requirements.append(monitoring_adapter_name)
                 for instance_port in instance_ports:
                     out_port_destinations = ComponentLink.objects.filter(source_id=instance_port.id)
                     for port_destination in out_port_destinations:

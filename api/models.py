@@ -464,7 +464,9 @@ class Application(GraphBase):
         if repositories:
             data['repositories'] = repositories
 
-        # TODO: move the instance generation from tosca here. 
+        # TODO: move the instance generation from tosca here.
+
+
         # data['topology_template']={}
         # node_templates = data['topology_template'].setdefault('node_templates', {})
         #
