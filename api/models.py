@@ -140,7 +140,7 @@ class GraphBase(models.Model):
                     port.save()
                     port_translations[old_port_pk] = port.pk
 
-            elif instance.component.type.switch_class.title == 'switch.VirtualResource' or instance.component.type.switch_class.title == 'switch.Attribute' or instance.component.type.switch_class.title == 'switch.DST':
+            elif instance.component.type.switch_class.title == 'switch.VirtualResource' or instance.component.type.switch_class.title == 'switch.Attribute':
                 update_vm = False
                 instance_properties = yaml.load(instance.properties.replace("\\n", "\n"))
                 if 'name' in instance_properties and instance_properties['name'] == str(old_uuid):
@@ -235,7 +235,6 @@ class Application(GraphBase):
     public_editable = models.BooleanField(default=False)
     # Status: 0 no plan virtual infrastructure; 1 planned; 2 provisioned; 3 deployed
     status = models.IntegerField(default=0)
-    drip_plan_id = models.CharField(max_length=255, blank=True)
 
     class JSONAPIMeta:
         def __init__(self):
@@ -895,7 +894,7 @@ class ComponentType(models.Model):
     icon_name = models.CharField(max_length=1024, blank=True)
     icon_style = models.CharField(max_length=1024, blank=True)
     icon_class = models.CharField(max_length=1024, blank=True)
-    icon_svg = models.CharField(max_length=1024, blank=True)
+    icon_svg = models.CharField(max_length=2048, blank=True)
     icon_code = models.CharField(max_length=255, blank=True)
     icon_colour = models.CharField(max_length=255, blank=True)
     tosca_class = models.ForeignKey(ToscaClass, null=True, blank=True, limit_choices_to={'type': ToscaClass.NODE_TYPE})

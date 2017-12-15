@@ -100,17 +100,22 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     def get_tosca_dictionary(self, request, pk=None):
         # TODO: This should be moved to app where the rest of TOSCA generation is.
         # Actually it would make even more sense to have this inside the Serializers...
-        # Ok this will actuall make a lot of sense. Might try this...
+        # Ok this will actually make a lot of sense. Might try this...
         # TODO: We have no way of actually parsing the TOASCA atm. Is it needed?
         # TODO: There is no actual validation at this point. So add validation call.
         tosca = {}
         tosca_node_templates = {}
+        application_networks = {}
+        application_volumens = {}
         tosca_app_items = ComponentInstance.objects.filter(graph_id=pk)
         #TODO: Compleate hack. There is no way this should make it to the final version.
-
         monitoring_adapter_instance = tosca_app_items.filter(component_id=244).first()
-        monitoring_adapter_name = monitoring_adapter_instance.title
+        monitoring_adapter_name = ""
+        if monitoring_adapter_instance is not None:
+            monitoring_adapter_name = monitoring_adapter_instance.title
+
         for component in tosca_app_items:
+            # IDs lower than 50 are "NFR" systems.
             if component.component_id > 50:
                 component_type_id = Component.objects.filter(graphbase_ptr_id=component.component_id).first().type_id
                 component_tosca_class_id = ComponentType.objects.filter(id=component_type_id).first().tosca_class_id
@@ -122,19 +127,53 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                 # Luckily no one is going to use this anyway...
                 properties['TOSCA'] = DQ("http://i213.cscloud.cf.ac.uk:7001/api/switchapps/" + pk + "/tosca")
 
+                #TODO: This is now found in a seperate "service" - The names of SIDE components are wrong! WRONG!
                 ports_map = {}
                 if 'ports_mapping' in properties:
                     ports_map = properties['ports_mapping']
                     del properties['ports_mapping']
-                # TODO: This is a mess refactor!
-                instance_ports = ComponentPort.objects.filter(instance_id=component.id, type="out")
-                component_requirements = []
+
+                component_properties = {}
+                component_requirements = {}
+                component_dependencies = []
+                component_networks = []
+                component_volumes = []
+                component_variables = {}
                 connected_services = ServiceLink.objects.filter(target_id=component.id)
+
+                # TODO: MIght make sense to have some try - catch or something to see if yaml is correct....
                 for service in connected_services:
                     service_instance = tosca_app_items.filter(id=service.source_id).first()
                     if service_instance.component_id == 5:
-                        properties['MONITORING_PROXY'] = DQ(monitoring_adapter_name)
-                        component_requirements.append(monitoring_adapter_name)
+                        if monitoring_adapter_instance is not None:
+                            properties['MONITORING_PROXY'] = DQ(monitoring_adapter_name)
+                            component_dependencies.append(monitoring_adapter_name)
+                            component_networks.append("monitoring_v2")
+                    if service_instance.component_id == 31:
+                        component_networks.append(service_instance.title)
+                        application_networks[service_instance.title] = yaml.load(service_instance.properties, Loader=yaml.Loader)
+                    if service_instance.component_id == 23:
+                        component_volumes.append(service_instance.title)
+                        application_volumens[service_instance.title] = yaml.load(service_instance.properties, Loader=yaml.Loader)
+                    if service_instance.component_id == 24:
+                        ports_map = yaml.load(service_instance.properties, Loader=yaml.Loader)
+                    if service_instance.component_id == 25:
+                        component_variables = yaml.load(service_instance.properties, Loader=yaml.Loader)
+                    # TODO: add the same logic for Alarm_trigger if applicable.
+
+                if component_volumes:
+                    component_requirements['volumes'] = component_volumes
+                if component_networks:
+                    component_requirements['networks'] = component_networks
+                if component_variables:
+                    component_properties['Environment_variables'] = component_variables
+                if ports_map:
+                    component_properties['ports_mapping'] = ports_map
+                component_properties['scaling_mode'] = component.mode
+
+                # TODO: Change the logic of this to make it based on dependancy connections! Because this is a mess!
+                # This can wait!
+                instance_ports = ComponentPort.objects.filter(instance_id=component.id, type="out")
                 for instance_port in instance_ports:
                     out_port_destinations = ComponentLink.objects.filter(source_id=instance_port.id)
                     for port_destination in out_port_destinations:
@@ -144,26 +183,28 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                         component_requirements_instance = ComponentInstance.objects.filter(
                             id=component_requirements_instance_id).first()
                         component_requirement_title = component_requirements_instance.title
-                        component_requirements.append(component_requirement_title)
-                if not component_requirements:
-                    component_requirements = None
+                        component_dependencies.append(component_requirement_title)
+
+                if component_dependencies:
+                    component_requirements['dependency'] = component_dependencies
+
+                # TODO: add hardware requirements
 
                 tosca_node_templates[DQ(component.title)] = {
                     'type': SQ(tosca_container_name),
                     'artifacts': artifacts,
-                    'properties': {
-                        'Environment_variables': properties,
-                        'ports_mapping': ports_map,
-                        'scaling_mode': component.mode
-                    },
-                    'requirements': [
-                        {'dependency': component_requirements}
-                    ]
+                    'properties': component_properties,
+                    'requirements': component_requirements
+
                 }
         app = Application.objects.filter(id=pk).first()
         # TODO: Remove unneeded definitions from node types. (Nooo! Think of the children!)
         tosca = app.get_tosca()
-        tosca["topology_template"] = {'node_templates': tosca_node_templates}
+        tosca["topology_template"] = {
+            'node_templates': tosca_node_templates,
+            'network_templates': application_networks,
+            'volume_templates': application_volumens
+            }
         return tosca
 
     @detail_route(methods=['get'], permission_classes=[])
@@ -182,7 +223,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
 
     @detail_route(methods=['get'], permission_classes=[])
     def validate(self, request, pk=None, *args, **kwargs):
-        # TODO: Move to Application Model
+        # TODO: Make V2
         details = []
         app = Application.objects.filter(id=pk).first()
 
