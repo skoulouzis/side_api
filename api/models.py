@@ -534,23 +534,40 @@ class Application(GraphBase):
 
         component_monitoring_server = Component.objects.get(title='monitoring_server',
                                                             type__title='SWITCH.MonitoringServer')
+        component_monitoring_adapter = Component.objects.get(title='Monitoring_Adapter_v2',
+                                                             type__title= 'LOKSORR.Monitoring_Adapter_v2')
 
+
+        # adapter 1200,120
+        # server 1500, 120
         app_graph_dimensions = self.get_current_graph_dimensions()
-        base_instance = component_monitoring_server.get_base_instance()
+        base_instance_server = component_monitoring_server.get_base_instance()
         graph_monitoring_server = NestedComponent.objects.create(
             component=component_monitoring_server,
-            graph=self, title=component_monitoring_server.title, mode=base_instance.mode,
-            properties=base_instance.properties, artifacts=base_instance.artifacts,
-            last_x=app_graph_dimensions.get('mid_x'),
-            last_y=app_graph_dimensions.get('top_y') - 150)
+            graph=self, title=component_monitoring_server.title, mode=base_instance_server.mode,
+            properties=base_instance_server.properties, artifacts=base_instance_server.artifacts,
+            last_x=1500,
+            last_y=120)
 
-        x_change = base_instance.last_x - graph_monitoring_server.last_x
-        y_change = base_instance.last_y - graph_monitoring_server.last_y
+
+        x_change = base_instance_server.last_x - graph_monitoring_server.last_x
+        y_change = base_instance_server.last_y - graph_monitoring_server.last_y
         component_monitoring_server.clone_instances_in_graph(self, x_change, y_change,
                                                              graph_monitoring_server)
 
-        for monitoring_agent in monitoring_agents:
-            link = ServiceLink.objects.create(graph=self, source=graph_monitoring_server, target=monitoring_agent)
+        base_instance_adapter = component_monitoring_adapter.get_base_instance()
+        graph_monitoring_adapter = NestedComponent.objects.create(
+            component=component_monitoring_adapter,
+            graph=self, title=component_monitoring_adapter.title, mode=base_instance_adapter.mode,
+            properties=base_instance_adapter.properties, artifacts=base_instance_adapter.artifacts,
+            last_x=1200,
+            last_y=120)
+
+        x_change = base_instance_adapter.last_x - graph_monitoring_server.last_x
+        y_change = base_instance_adapter.last_y - graph_monitoring_server.last_y
+        component_monitoring_adapter.clone_instances_in_graph(self, x_change, y_change,
+                                                              graph_monitoring_adapter)
+        link = DependencyLink.objects.create(graph=self, dependant=graph_monitoring_adapter, dependency=graph_monitoring_server)
 
     def tosca_update(self, tosca):
         node_templates = tosca.get("topology_template", None).get("node_templates")

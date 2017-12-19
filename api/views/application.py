@@ -98,11 +98,12 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def get_tosca_dictionary(self, request, pk=None):
+
         # TODO: This should be moved to app where the rest of TOSCA generation is.
         # Actually it would make even more sense to have this inside the Serializers...
         # Ok this will actually make a lot of sense. Might try this...
         # TODO: We have no way of actually parsing the TOASCA atm. Is it needed?
-        # TODO: There is no actual validation at this point. So add validation call.
+        self.validate(request, pk)
         tosca = {}
         tosca_node_templates = {}
         application_networks = {}
@@ -115,7 +116,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
             monitoring_adapter_name = monitoring_adapter_instance.title
 
         for component in tosca_app_items:
-            # IDs lower than 50 are "NFR" systems.
+            # IDs lower than 50 are "NF" systems.
             if component.component_id > 50:
                 component_type_id = Component.objects.filter(graphbase_ptr_id=component.component_id).first().type_id
                 component_tosca_class_id = ComponentType.objects.filter(id=component_type_id).first().tosca_class_id
@@ -138,6 +139,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                 component_dependencies = []
                 component_networks = []
                 component_volumes = []
+                component_constraints = {}
                 component_variables = {}
                 connected_services = ServiceLink.objects.filter(target_id=component.id)
 
@@ -149,6 +151,8 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                             properties['MONITORING_PROXY'] = DQ(monitoring_adapter_name)
                             component_dependencies.append(monitoring_adapter_name)
                             component_networks.append("monitoring_v2")
+                    if service_instance.component_id == 6:
+                        component_constraints = yaml.load(service_instance.properties, Loader=yaml.Loader)
                     if service_instance.component_id == 31:
                         component_networks.append(service_instance.title)
                         application_networks[service_instance.title] = yaml.load(service_instance.properties, Loader=yaml.Loader)
@@ -160,6 +164,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                     if service_instance.component_id == 25:
                         component_variables = yaml.load(service_instance.properties, Loader=yaml.Loader)
                     # TODO: add the same logic for Alarm_trigger if applicable.
+                    # TODO: Same logic for hw_requirements
 
                 if component_volumes:
                     component_requirements['volumes'] = component_volumes
@@ -167,6 +172,8 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                     component_requirements['networks'] = component_networks
                 if component_variables:
                     component_properties['Environment_variables'] = component_variables
+                if component_constraints:
+                    component_properties['Constraints'] = component_constraints
                 if ports_map:
                     component_properties['ports_mapping'] = ports_map
                 component_properties['scaling_mode'] = component.mode
@@ -184,7 +191,10 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                             id=component_requirements_instance_id).first()
                         component_requirement_title = component_requirements_instance.title
                         component_dependencies.append(component_requirement_title)
-
+                dependency_links = DependencyLink.objects.filter(dependant_id=component.id)
+                for dependency_link in dependency_links:
+                    component_requirements_instance = dependency_link.dependency
+                    component_dependencies.append(component_requirements_instance.title)
                 if component_dependencies:
                     component_requirements['dependency'] = component_dependencies
 
@@ -227,11 +237,13 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         details = []
         app = Application.objects.filter(id=pk).first()
 
-        for instance in app.get_instances():
-            if "SET_ITS_VALUE" in str(instance.properties):
-                details.append("Component '" + instance.title + "' needs all its properties to be set.")
+        # for instance in app.get_instances():
+        #    if "SET_ITS_VALUE" in str(instance.properties):
+        #       details.append("Component '" + instance.title + "' needs all its properties to be set.")
 
-        if len(details)==0:
+        if app.needs_monitoring_server():
+            app.create_monitoring_server()
+        if len(details) == 0:
             result = 'ok'
             details.append('validation done correctly')
         else:
@@ -306,37 +318,24 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         if app.get_status('Planed'):
             details.append('application has already a planned infrastructure')
         # TODO: move this to validation.
-        elif not app.validate_requirements():
-            result = 'error'
-            details.append('Please make sure to define hardware requirements for all software components')
-        elif not self.validation_done(pk):
-            #bla bla
-            details.append('Please make sure that the application is valid before to plan the virtual infrastructure')
+        # elif not app.validate_requirements():
+        #     result = 'error'
+        #     details.append('Please make sure to define hardware requirements for all software components')
+        # elif not self.validation_done(pk):
+        #     #bla bla
+        #     details.append('Please make sure that the application is valid before to plan the virtual infrastructure')
 
         # Calling the DRIP API
         else:
-            # app_tosca = app.get_tosca()
-            # app_tosca_yaml1 = yaml.safe_dump(app_tosca, default_flow_style=False)
 
-            with open("BEIA2.yml", 'r') as stream:
-                try:
-                    app_tosca2 = yaml.load(stream)
-                except yaml.YAMLError as exc:
-                    print(exc)
-            app_tosca_yaml2 = yaml.safe_dump(app_tosca2, default_flow_style=False)
-            # app.tosca_update(app_tosca_yaml2)
-
-            get_tocsa_ids_url = drip_host + drip_tosca_endpoint + '/ids'
-            get_confirm_tosca_ids_1 = requests.get(get_tocsa_ids_url, auth=(drip_username, drip_password), verify=False)
+            app_tosca_yaml = self.tosca(request, pk)
 
             tosca_post_response = requests.post(drip_host + drip_tosca_endpoint + '/post',
                                                 verify=False,
-                                                data=app_tosca_yaml2,
+                                                data=app_tosca_yaml,
                                                 auth=('matej', 'switch-1nt3gr4t1on'))
             tosca_drip_id = tosca_post_response.content
-            get_confirm_tosca_ids_2 = requests.get(drip_host + drip_tosca_endpoint + '/ids',
-                                                   auth=HTTPBasicAuth(drip_username, drip_password),
-                                                   verify=False)
+
 
             tosca_from_drip_url = drip_host + drip_tosca_endpoint + '/' + tosca_drip_id + '?format=yml'
 

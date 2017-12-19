@@ -12,8 +12,8 @@ from rest_framework.permissions import IsAuthenticated
 
 class ComponentTypeViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     serializer_class = ComponentTypeSerializer
-    authentication_classes = (TokenAuthentication,)
-    permission_classes = (IsAuthenticated,)
+    # authentication_classes = (TokenAuthentication,)
+    # permission_classes = (IsAuthenticated,)
     queryset = ComponentType.objects.all()
 
     def get_queryset(self):
@@ -31,8 +31,8 @@ class ComponentTypeViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
 
 class ComponentTypePropertyViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     serializer_class = ComponentTypePropertySerializer
-    authentication_classes = (TokenAuthentication,)
-    permission_classes = (IsAuthenticated,)
+    # authentication_classes = (TokenAuthentication,)
+    # permission_classes = (IsAuthenticated,)
     queryset = ComponentTypeProperty.objects.all()
 
     def perform_create(self, serializer):
@@ -43,8 +43,8 @@ class ComponentTypePropertyViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
 
 class ComponentClassViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     serializer_class = ComponentClassSerializer
-    authentication_classes = (TokenAuthentication,)
-    permission_classes = (IsAuthenticated,)
+    # authentication_classes = (TokenAuthentication,)
+    # permission_classes = (IsAuthenticated,)
     queryset = ComponentClass.objects.all()
 
 

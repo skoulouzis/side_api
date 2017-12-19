@@ -19,7 +19,7 @@ from api.services import DripManagerService
 
 class UserViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     serializer_class = UserSerializer
-    authentication_classes = (TokenAuthentication,)
+    # authentication_classes = (TokenAuthentication,)
     User = get_user_model()
     queryset = User.objects.all()
     filter_backends = (DjangoFilterBackend, SearchFilter)
@@ -68,8 +68,8 @@ class UserViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
 
 
 class SwitchDocumentViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
-    permission_classes = (IsAuthenticated, )
-    authentication_classes = (TokenAuthentication,)
+    # permission_classes = (IsAuthenticated, )
+    # authentication_classes = (TokenAuthentication,)
     serializer_class = SwitchDocumentSerializer
     queryset = SwitchDocument.objects.all()
     parser_classes = (JSONParser,FormParser,MultiPartParser,)
@@ -89,8 +89,8 @@ class SwitchDocumentViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
 
 class SwitchDocumentTypeViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     serializer_class = SwitchDocumentTypeSerializer
-    authentication_classes = (TokenAuthentication,)
-    permission_classes = (IsAuthenticated,)
+    #authentication_classes = (TokenAuthentication,)
+    #permission_classes = (IsAuthenticated,)
     queryset = SwitchDocumentType.objects.all()
     parser_classes = (JSONParser,)
 
