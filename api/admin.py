@@ -30,6 +30,7 @@ class ComponentInstanceAdmin(admin.ModelAdmin):
     list_display_links = ('id', 'title')
 
 admin.site.register(Application)
+admin.site.register(SwitchArtifact)
 admin.site.register(Component)
 admin.site.register(ComponentType, ComponentTypeAdmin)
 admin.site.register(ComponentTypeProperty)
