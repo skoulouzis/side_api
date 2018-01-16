@@ -140,6 +140,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                 component_networks = []
                 component_volumes = []
                 component_constraints = {}
+                component_infrastructure_requirements = {}
                 component_variables = {}
                 connected_services = ServiceLink.objects.filter(target_id=component.id)
 
@@ -153,6 +154,8 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                             component_networks.append("monitoring_v2")
                     if service_instance.component_id == 6:
                         component_constraints = yaml.load(service_instance.properties, Loader=yaml.Loader)
+                    if service_instance.component_id == 8:
+                        component_infrastructure_requirements = yaml.load(service_instance.properties, Loader=yaml.Loader)
                     if service_instance.component_id == 31:
                         component_networks.append(service_instance.title)
                         application_networks[service_instance.title] = yaml.load(service_instance.properties, Loader=yaml.Loader)
@@ -172,6 +175,8 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                     component_requirements['networks'] = component_networks
                 if component_variables:
                     component_properties['Environment_variables'] = component_variables
+                if component_infrastructure_requirements:
+                    component_properties['Infrastructure_requirements'] = component_infrastructure_requirements
                 if component_constraints:
                     component_properties['Constraints'] = component_constraints
                 if ports_map:
