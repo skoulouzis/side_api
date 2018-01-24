@@ -1650,7 +1650,7 @@ class SwitchDocument(models.Model):
 class DRIPIDs(models.Model):
     application = models.ForeignKey(Application, related_name='application')
     tosca_ID = models.CharField(max_length=255, blank=True)
-    plan_ID =  models.CharField(max_length=255, blank=True)
+    plan_ID = models.CharField(max_length=255, blank=True)
     provision_ID = models.CharField(max_length=255, blank=True)
     deployment_ID = models.CharField(max_length=255, blank=True)
 
