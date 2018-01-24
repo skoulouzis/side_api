@@ -2,7 +2,8 @@ import os
 import re
 import xml.etree.ElementTree as ET
 import requests
-
+import datetime
+import string
 from requests.auth import HTTPBasicAuth
 
 from django.http import JsonResponse, HttpResponse
@@ -230,6 +231,31 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         return HttpResponse(tosca_yml, content_type='text/plain')
 
     @detail_route(methods=['get'], permission_classes=[])
+    def get_monitoring_url(self, request, pk=None, *args, **kwargs):
+        # Screw this!
+        chartName = request.GET.get('chartName', '')
+        secondTime = datetime.datetime.now()
+        firstTime = secondTime - datetime.timedelta(minutes=60)
+        secondTime_String = secondTime.strftime("%Y-%m-%d %H:%M:%S")
+        firstTime_String = firstTime.strftime("%Y-%m-%d %H:%M:%S")
+        tosca_app_items = ComponentInstance.objects.filter(graph_id=pk)
+        containerID = "f7a1ed4f3bd94ce3b942dbb75477a806"
+        jcatascopija_adress = "http://194.249.1.175:8080"
+        # "http://194.249.0.44:8080/JCatascopia-Web/restAPI/metrics/8e62a0612a404367be02c2b19a563fb0:"
+        # +chartName + "?firstTime=2017-12-21%2009:20:00&secondTime=2017-12-21%2017:35:04",
+        url = jcatascopija_adress \
+            + "/JCatascopia-Web/restAPI/metrics/" \
+            + containerID \
+            + ":" + chartName \
+            + "?firstTime=" + firstTime_String \
+            + "&secondTime=" + secondTime_String
+
+        monitoring_dic = {
+            "url": url
+        }
+        return JsonResponse(monitoring_dic)
+
+    @detail_route(methods=['get'], permission_classes=[])
     def tosca_json(self, request, pk=None, *args, **kwargs):
 
         tosca = self.get_tosca_dictionary(request, pk)
@@ -241,6 +267,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         # TODO: Make V2
         details = []
         app = Application.objects.filter(id=pk).first()
+        DRIP_IDs = DRIPIDs.objects.create(application=app)
 
         # for instance in app.get_instances():
         #    if "SET_ITS_VALUE" in str(instance.properties):
@@ -302,6 +329,12 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         #               auth=HTTPBasicAuth(drip_username, drip_password))
 
         # store data to a new model
+
+    @detail_route(methods=['get'], permission_classes=[])
+    def get_DRIP_IDs(self, request, pk=None, *args, **kwargs):
+        DRIP_IDs = DRIPIDs.objects.first(application=pk).first()
+        Serialized_IDs = DRIPIDSerializer(DRIP_IDs)
+        return JsonResponse(Serialized_IDs)
 
     @detail_route(methods=['get'], permission_classes=[])
     def plan(self, request, pk=None, *args, **kwargs):

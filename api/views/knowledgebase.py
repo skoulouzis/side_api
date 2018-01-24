@@ -27,8 +27,8 @@ class ProviderViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 def get_provider_details(pk):
-    r = requests.get('http://elab.lab.uvalight.net:8080/profiles/' + pk)
-    json_data = r.json()
+    #r = requests.get('http://elab.lab.uvalight.net:8080/profiles/' + pk)
+    json_data = {"bb": "cc"}
 
     attributes = json_data['cloud profile']['cloud platform']
     attributes['accessed_via'] = attributes.pop('accessed via')
@@ -92,14 +92,34 @@ def get_provider_details(pk):
 
 @api_view()
 def providers_list(request):
-    r = requests.get('http://elab.lab.uvalight.net:8080/profiles')
-    json_data = r.json()
+    #r = requests.get('http://elab.lab.uvalight.net:8080/profiles')
+    json_data = {'identifiers': [1, 2]}
 
     response = []
 
-    for pk in json_data['identifiers']:
-        response.append(get_provider_details(pk))
+    # for pk in json_data['identifiers']:
+    #     response.append(get_provider_details(pk))
+    amazon = {
+        'type': 'provider',
+        'id': "3",
+          "attributes": {
+            "name": "amazon",
+            "identifier": "Something",
+            "accessed_via": "something_strange"
+        }
+    }
 
+    EGI = {
+        'type': 'provider',
+        'id': "4",
+        "attributes": {
+            "name": "EGI",
+            "identifier": "Something",
+            "accessed_via": "something_strange"
+        }
+    }
+    response.append(amazon)
+    response.append(EGI)
     return Response(response)
 
 

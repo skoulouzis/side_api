@@ -5,7 +5,7 @@ from rest_framework import serializers
 from api.models import ComponentTypeProperty, ComponentPort
 from models import Application, Component, ComponentType, ComponentInstance, NestedComponent, ServiceComponent, ComponentPort, ServiceLink, GraphBase,SwitchDocument, \
     ApplicationInstance, Notification, SwitchDocumentType, DependencyLink, SwitchArtifact, SwitchRepository, ToscaClass, \
-    ComponentClass, DataType, DataTypeProperty
+    ComponentClass, DataType, DataTypeProperty, DRIPIDs
 from django.contrib.auth.models import User
 
 
@@ -288,3 +288,9 @@ class DataTypePropertySerializer(serializers.ModelSerializer):
         model = DataTypeProperty
         fields = ('id', 'name', 'default_value', 'required', 'data_type', 'collection_type', 'parent_data_type')
 
+
+class DRIPIDSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = DRIPIDs
+        fields = ('application', 'tosca_ID', 'plan_ID', 'provision_ID', 'deployment_ID')

@@ -23,10 +23,11 @@ class ModelMethodTests(TestCase):
         self.test_user.delete()
 
     def test_app_creation_it_does_not_create_app_graph_automatically(self):
-        app = SwitchApp.objects.create(user=self.test_user, title='test_app', uuid=uuid.uuid4(), description='test app',
-                                       public_view=True, public_editable=True, status=0)
+        app = Application.objects.create(user=self.test_user, title='test_app', uuid=uuid.uuid4(),
+                                         description='test app',
+                                         public_view=True, public_editable=True, status=0)
 
-        appGraph = SwitchComponent.objects.filter(app_id=app.id).first()
+        appGraph = Component.objects.filter(app_id=app.id).first()
         self.assertIs(appGraph is None, True)
 
 
@@ -60,7 +61,6 @@ class ViewMethodTests(TestCase):
         response = self.client.get(reverse('switchapps-list'))
 
         self.assertEqual(response.status_code, 200)
-
 
     def test_switchapp_create_view(self):
         """
