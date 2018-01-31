@@ -28,6 +28,9 @@ import ruamel.yaml as yaml
 from ruamel.yaml.scalarstring import SingleQuotedScalarString as SQ
 from ruamel.yaml.scalarstring import DoubleQuotedScalarString as DQ
 
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+
 # TODO: Permissions were nuked in most classes, as I was testing this. Uncomment!
 
 
@@ -267,7 +270,9 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         # TODO: Make V2
         details = []
         app = Application.objects.filter(id=pk).first()
-        DRIP_IDs = DRIPIDs.objects.create(application=app)
+        DRIP_IDs = DRIPIDs.objects.filter(application=app).first()
+        if not DRIP_IDs:
+            DRIP_IDs = DRIPIDs.objects.create(application=app)
 
         # for instance in app.get_instances():
         #    if "SET_ITS_VALUE" in str(instance.properties):
@@ -345,15 +350,15 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         drip_username = 'matej'
         drip_password = 'switch-1nt3gr4t1on'
         # TODO: This will be removed once DRIP user registration is complete. aka never.
-
         result = 'error'
         details = []
         app = Application.objects.get(id=pk)
-        # TODO: move this to validation
-        if app.needs_monitoring_server():
-            app.create_monitoring_server()
+        DRIP_IDs = DRIPIDs.objects.filter(application=app).first()
+        if not DRIP_IDs:
+            DRIP_IDs = DRIPIDs.objects.create(application=app)
 
-        if app.get_status('Planed'):
+
+        if False: #app.get_status('Planed'):
             details.append('application has already a planned infrastructure')
         # TODO: move this to validation.
         # elif not app.validate_requirements():
@@ -367,19 +372,29 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         else:
 
             app_tosca_yaml = self.tosca(request, pk)
+            #Clean old TOSCA
+            if DRIP_IDs.tosca_ID:
+                tosca_id =  DRIP_IDs.tosca_ID
+                delete_adress = drip_host + '/user/v1.0/tosca/' + tosca_id
+                delete_response = requests.delete(delete_adress,
+                                                  auth=HTTPBasicAuth(drip_username, drip_password),
+                                                  verify=False)
 
             tosca_post_response = requests.post(drip_host + drip_tosca_endpoint + '/post',
                                                 verify=False,
                                                 data=app_tosca_yaml,
                                                 auth=('matej', 'switch-1nt3gr4t1on'))
             tosca_drip_id = tosca_post_response.content
+            DRIP_IDs.tosca_ID = tosca_drip_id
+            DRIP_IDs.save()
 
-
-            tosca_from_drip_url = drip_host + drip_tosca_endpoint + '/' + tosca_drip_id + '?format=yml'
-
-            tosca_from_drip = requests.get(tosca_from_drip_url,
-                                           auth=(drip_username, drip_password),
-                                           verify=False)
+            # Clean old plan
+            if DRIP_IDs.plan_ID:
+                plan_id = DRIP_IDs.plan_ID
+                delete_adress = drip_host + '/user/v1.0/planner/' + plan_id
+                delete_response = requests.delete(delete_adress,
+                                                  auth=HTTPBasicAuth(drip_username, drip_password),
+                                                  verify=False)
 
             plan_response = requests.get(drip_host + drip_plan_endpoint + '/' + tosca_drip_id,
                                          auth=HTTPBasicAuth(drip_username, drip_password),
@@ -387,10 +402,13 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
 
             if plan_response.status_code == 200:
                 plan_id = plan_response.content
-                tosca_download_url = drip_host + '/user/v1.0/planner/' + plan_id + '/?format=yml'
-
-                # TODO: Parse the response form planner and integrate it into the system
-
+                DRIP_IDs.plan_ID = plan_id
+                DRIP_IDs.save()
+                plan_yml = requests.get(drip_host + '/user/v1.0/planner/' + plan_id + '/?format=yml',
+                                        auth=HTTPBasicAuth(drip_username, drip_password),
+                                        verify=False)
+                with open('planer2.yml', 'w') as f:
+                    print >> f, plan_yml.content
                 result = 'OK'
                 details.append('plan done correctly')
                 app.status = 1
@@ -405,6 +423,50 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         }
         return JsonResponse(planning_vi_result)
 
+    @list_route(methods=['get'], permission_classes=[])
+    def delete_drip_ids(self, request, pk=None, *args, **kwargs):
+        # Not really an useful method!
+        drip_host = 'https://drip.vlan400.uvalight.net:8443/drip-api'
+        drip_tosca_endpoint = '/user/v1.0/tosca'
+        drip_plan_endpoint = '/user/v1.0/planner/plan'
+        drip_username = 'matej'
+        drip_password = 'switch-1nt3gr4t1on'
+
+        planer_id_response = requests.get(drip_host + '/user/v1.0/planner/ids',
+                                         auth=HTTPBasicAuth(drip_username, drip_password),
+                                         verify=False)
+        print planer_id_response.content
+
+        planer_id_table = yaml.load(planer_id_response.content, Loader=yaml.Loader)
+
+        for plan_id in planer_id_table:
+            print plan_id
+            delete_adress = drip_host + '/user/v1.0/planner/' + plan_id
+            delete_response = requests.delete(delete_adress,
+                                              auth=HTTPBasicAuth(drip_username, drip_password),
+                                              verify=False)
+
+        planer_id_response = requests.get(drip_host + '/user/v1.0/tosca/ids',
+                                          auth=HTTPBasicAuth(drip_username, drip_password),
+                                          verify=False)
+        print planer_id_response.content
+
+        planer_id_table = yaml.load(planer_id_response.content, Loader=yaml.Loader)
+
+        for plan_id in planer_id_table:
+            print plan_id
+            delete_adress = drip_host + '/user/v1.0/tosca/' + plan_id
+            delete_response = requests.delete(delete_adress,
+                                              auth=HTTPBasicAuth(drip_username, drip_password),
+                                              verify=False)
+
+        planning_vi_result = {
+            'result': "OK",
+            'details': "OK"
+        }
+        return JsonResponse(planning_vi_result)
+
+
     @detail_route(methods=['get'], permission_classes=[])
     def provision(self, request, pk=None, *args, **kwargs):
         drip_host = 'https://drip.vlan400.uvalight.net:8443/drip-api'
@@ -412,15 +474,16 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         drip_keyID_store_endpoint = '/user/v1.0/keys/ids'
         drip_cloud_credentials_ids ='/user/v1.0/credentials/cloud/ids'
         drip_username = 'matej'
-        drip_password = 'DRIPPASSWORD'
+        drip_password = 'switch-1nt3gr4t1on'
 
-        # TODO: This will be removed once DRIP user registration is complete.
+        # TODO: ^ This will be removed once DRIP user registration is complete.
 
 
         result = 'error'
         details = []
         app = Application.objects.get(id=pk)
 
+        # TODO: We cuould use the DRIP_IDs to generate this information.
         if not app.get_status('Planed'):
             details.append('virtual infrastructure has not been planned yet')
         elif app.get_status('Provisioned'):
@@ -430,26 +493,27 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         elif not self.validation_done(pk):
             details.append('Please make sure that the application is valid before provisioning virtual infrastructure')
         else:
-            # get the tosca file of the application post it to DRIP
-            app_tosca = app.get_tosca()
-            tosca_id = 1  # requests.post(drip_host + drip_tosca_endpoint + '/post',
-                                #         data=app_tosca,
-                                #         auth=HTTPBasicAuth(drip_username, drip_password))
+            DRIP_IDs = DRIPIDs.objects.filter(application=app).first()
 
-            drip_cloud_credentials_ids = requests.get(drip_host + drip_cloud_credentials_ids, auth=HTTPBasicAuth(drip_username, drip_password))
-            vm_user_key_pair_ids = requests.get(drip_host + drip_keyID_store_endpoint, auth=HTTPBasicAuth(drip_username, drip_password))
+            # TODO: Get available credentials IDs
+            drip_credentials_response = requests.get(drip_host + drip_cloud_credentials_ids,
+                                                     auth=HTTPBasicAuth(drip_username, drip_password),
+                                                     verify=False)
+            # TODO: Parse yaml to list (Needed?)
+            drip_credentials_ids = drip_credentials_response.content
+
+            plan_id = DRIP_IDs.plan_ID
 
             provision_json = {
-                "cloudCredentialsIDs": drip_cloud_credentials_ids,
-                "planID": tosca_id,
-                "userKeyPairIDs": vm_user_key_pair_ids
+                "cloudCredentialsIDs": ["5a6f88c9e4b01f03ba0c1658"],
+                "planID": plan_id
             }
 
             provision_response = requests.post(drip_host + drip_provisioner_endpoint,
                                                json=provision_json,
-                                               auth=HTTPBasicAuth(drip_username, drip_password))
+                                               auth=HTTPBasicAuth(drip_username, drip_password),
+                                               verify=False)
 
-            # TODO: What exactly does the UI have to show after this? Probably some changes to VM components?
             details.append('Application provisioned')
             result = 'OK'
 

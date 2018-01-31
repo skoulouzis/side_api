@@ -1659,6 +1659,3 @@ class DRIPIDs(models.Model):
             pass
 
         resource_name = "DRIPIDs"
-
-    def __unicode__(self):
-        return str(self.description) + ' (' + self.file.name + ')'
