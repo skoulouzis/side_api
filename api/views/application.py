@@ -32,7 +32,7 @@ from requests.packages.urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 # TODO: Permissions were nuked in most classes, as I was testing this. Uncomment!
-
+TESTING = True
 
 class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     """
@@ -341,13 +341,16 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         Serialized_IDs = DRIPIDSerializer(DRIP_IDs)
         return JsonResponse(Serialized_IDs)
 
-    def upload_tosca(self, request, pk,  DRIP_IDs):
+    def upload_tosca(self, request, pk):
+        # Request could be taken out if all the called functions remove it. (Nome of them uses it!)
         dripAPI = DripApi.objects.first()
-
         app_tosca_yaml = self.tosca(request, pk)
+        app = Application.objects.get(id=pk)
+        dripIDs = DRIPIDs.objects.filter(application=app).first()
+
         # Clean old TOSCA
-        if DRIP_IDs.tosca_ID:
-            tosca_id = DRIP_IDs.tosca_ID
+        if dripIDs.tosca:
+            tosca_id = dripIDs.tosca
             delete_response = requests.delete(dripAPI.address + 'tosca/' + tosca_id,
                                               auth=HTTPBasicAuth(dripAPI.username, dripAPI.password),
                                               verify=False)
@@ -357,10 +360,39 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                                             data=app_tosca_yaml,
                                             auth=(dripAPI.username, dripAPI.password))
 
-        tosca_drip_id = tosca_post_response.content
-        DRIP_IDs.tosca_ID = tosca_drip_id
-        DRIP_IDs.save()
+        tosca_id = tosca_post_response.content
+        dripIDs.tosca = tosca_id
+        dripIDs.save()
 
+    def generate_plan_from_tosca(self, request, pk):
+        dripAPI = DripApi.objects.first()
+        app = Application.objects.get(id=pk)
+        dripIDs = DRIPIDs.objects.filter(application=app).first()
+        result = False
+        if dripIDs.plan:
+            delete_response = requests.delete(dripAPI.address + 'planner/' + dripIDs.plan,
+                                              auth=HTTPBasicAuth(dripAPI.username, dripAPI.password),
+                                              verify=False)
+
+        plan_response = requests.get(dripAPI.address + 'planner/plan/' + dripIDs.tosca,
+                                     auth=HTTPBasicAuth(dripAPI.username, dripAPI.password),
+                                     verify=False)
+
+        if plan_response.status_code == 200:
+            plan_id = plan_response.content
+            dripIDs.plan = plan_id
+            dripIDs.save()
+            plan_yml = requests.get(dripAPI.address + '/planner/' + plan_id + '/?format=yml',
+                                    auth=HTTPBasicAuth(dripAPI.username, dripAPI.password),
+                                    verify=False)
+            if TESTING:
+                planner_yml_filename = 'planner_' + app.id.__str__() + '.yml'
+                with open(planner_yml_filename, 'w') as f:
+                    print >> f, plan_yml.content
+
+            result = True
+
+        return result
 
 
     @detail_route(methods=['get'], permission_classes=[])
@@ -393,33 +425,13 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         # Calling the DRIP API
         else:
 
-            self.upload_tosca(request, pk,  DRIP_IDs)
+            self.upload_tosca(request, pk)
+            plan_result = self.generate_plan_from_tosca(request, pk)
 
-            # Clean old plan
-            if DRIP_IDs.plan_ID:
-                plan_id = DRIP_IDs.plan_ID
-                delete_adress = drip_host + '/user/v1.0/planner/' + plan_id
-                delete_response = requests.delete(delete_adress,
-                                                  auth=HTTPBasicAuth(drip_username, drip_password),
-                                                  verify=False)
-
-            plan_response = requests.get(drip_host + drip_plan_endpoint + '/' + tosca_drip_id,
-                                         auth=HTTPBasicAuth(drip_username, drip_password),
-                                         verify=False)
-
-            if plan_response.status_code == 200:
-                plan_id = plan_response.content
-                DRIP_IDs.plan_ID = plan_id
-                DRIP_IDs.save()
-                plan_yml = requests.get(drip_host + '/user/v1.0/planner/' + plan_id + '/?format=yml',
-                                        auth=HTTPBasicAuth(drip_username, drip_password),
-                                        verify=False)
-                with open('planer2.yml', 'w') as f:
-                    print >> f, plan_yml.content
+            if plan_result:
                 result = 'OK'
-                details.append('plan done correctly')
+                details.append('Plan generated successfully')
                 app.status = 1
-                app.drip_plan_id = 'planID'
                 app.save()
             else:
                 details.append('planning of virtual infrastructure has failed')
