@@ -293,7 +293,7 @@ class DRIPIDSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = DRIPIDs
-        fields = ('application', 'tosca_ID', 'plan_ID', 'provision_ID', 'deployment_ID')
+        fields = ('application', 'tosca', 'plan', 'provision', 'deployment')
 
 
 class DripApiSerializer(serializers.ModelSerializer):

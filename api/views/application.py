@@ -394,19 +394,12 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
 
         return result
 
-
     @detail_route(methods=['get'], permission_classes=[])
     def plan(self, request, pk=None, *args, **kwargs):
-        # TODO: Think about making this more transparent. This should be something that is stored in the application?
-        drip_host = 'https://drip.vlan400.uvalight.net:8443/drip-api'
-        drip_tosca_endpoint = '/user/v1.0/tosca'
-        drip_plan_endpoint = '/user/v1.0/planner/plan'
-        drip_username = 'matej'
-        drip_password = 'switch-1nt3gr4t1on'
-        # TODO: This will be removed once DRIP user registration is complete. aka never.
         result = 'error'
         details = []
         app = Application.objects.get(id=pk)
+
         DRIP_IDs = DRIPIDs.objects.filter(application=app).first()
         if not DRIP_IDs:
             DRIP_IDs = DRIPIDs.objects.create(application=app)
@@ -422,7 +415,6 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         #     #bla bla
         #     details.append('Please make sure that the application is valid before to plan the virtual infrastructure')
 
-        # Calling the DRIP API
         else:
 
             self.upload_tosca(request, pk)
@@ -485,18 +477,20 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         }
         return JsonResponse(planning_vi_result)
 
+    def get_credentials_id(self):
+        dripAPI = DripApi.objects.first()
+
+        drip_credentials_response = requests.get(dripAPI.address + 'credentials/cloud/ids',
+                                                 auth=HTTPBasicAuth(dripAPI.username, dripAPI.password),
+                                                 verify=False)
+        drip_credentials_ids = drip_credentials_response.content
+        # TODO: What do I use this for? Hardcoded.
 
     @detail_route(methods=['get'], permission_classes=[])
     def provision(self, request, pk=None, *args, **kwargs):
-        drip_host = 'https://drip.vlan400.uvalight.net:8443/drip-api'
-        drip_provisioner_endpoint = '/user/v1.0/provisioner/provision'
-        drip_keyID_store_endpoint = '/user/v1.0/keys/ids'
-        drip_cloud_credentials_ids ='/user/v1.0/credentials/cloud/ids'
-        drip_username = 'matej'
-        drip_password = 'switch-1nt3gr4t1on'
+        dripAPI = DripApi.objects.first()
 
         # TODO: ^ This will be removed once DRIP user registration is complete.
-
 
         result = 'error'
         details = []
@@ -512,25 +506,18 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         elif not self.validation_done(pk):
             details.append('Please make sure that the application is valid before provisioning virtual infrastructure')
         else:
-            DRIP_IDs = DRIPIDs.objects.filter(application=app).first()
+            dripIds = DRIPIDs.objects.filter(application=app).first()
 
-            # TODO: Get available credentials IDs
-            drip_credentials_response = requests.get(drip_host + drip_cloud_credentials_ids,
-                                                     auth=HTTPBasicAuth(drip_username, drip_password),
-                                                     verify=False)
-            # TODO: Parse yaml to list (Needed?)
-            drip_credentials_ids = drip_credentials_response.content
-
-            plan_id = DRIP_IDs.plan_ID
+            plan_id = dripIds.plan
 
             provision_json = {
-                "cloudCredentialsIDs": ["5a6f88c9e4b01f03ba0c1658"],
+                "cloudCredentialsIDs": ["5a73214ce4b082de6b5584fc"],
                 "planID": plan_id
             }
 
-            provision_response = requests.post(drip_host + drip_provisioner_endpoint,
+            provision_response = requests.post(dripAPI.address + 'provisioner/provision',
                                                json=provision_json,
-                                               auth=HTTPBasicAuth(drip_username, drip_password),
+                                               auth=HTTPBasicAuth(dripAPI.username, dripAPI.password),
                                                verify=False)
 
             details.append('Application provisioned')
@@ -545,6 +532,19 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
 
     @detail_route(methods=['get'], permission_classes=[])
     def deploy(self, request, pk=None, *args, **kwargs):
+        dripAPI = DripApi.objects.first()
+        app = Application.objects.get(id=pk)
+        dripIds = DRIPIDs.objects.filter(application=app).first()
+
+        #TODO: Convert tosca to docker compose
+        # CONFIGURATION_ID=`curl -k -u $USER_USERNAME:$USER_PASSWORD  $HOST/drip-api/user/v1.0/tosca/transform/$TOSCA_ID/?type=docker_compose`
+        adress = dripAPI.address + 'tosca/transform/' + dripIds.tosca
+        docker_comopse_id = requests.get(dripAPI.address + 'tosca/transform/' + dripIds.tosca + '/?type=docker_compose',
+                                                 auth=HTTPBasicAuth(dripAPI.username, dripAPI.password),
+                                                 verify=False)
+
+        #TODO: use compose to run an application.
+
 
         result = ''
         details = []
