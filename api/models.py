@@ -1659,3 +1659,21 @@ class DRIPIDs(models.Model):
             pass
 
         resource_name = "DRIPIDs"
+
+
+class DripApi(models.Model):
+    host = models.CharField(max_length=255, default='https://drip.vlan400.uvalight.net:8443')
+    header = models.CharField(max_length=255, default='/drip-api/user/v1.0/')
+    username = models.CharField(max_length=255, default='matej')
+    password = models.CharField(max_length=255, default='switch-1nt3gr4t1on')
+
+    @property
+    def address(self):
+        drip_address = self.host + self.header
+        return drip_address
+
+    class JSONAPIMeta:
+        def __init__(self):
+            pass
+
+        resource_name = "DripApi"

@@ -341,6 +341,28 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         Serialized_IDs = DRIPIDSerializer(DRIP_IDs)
         return JsonResponse(Serialized_IDs)
 
+    def upload_tosca(self, request, pk,  DRIP_IDs):
+        dripAPI = DripApi.objects.first()
+
+        app_tosca_yaml = self.tosca(request, pk)
+        # Clean old TOSCA
+        if DRIP_IDs.tosca_ID:
+            tosca_id = DRIP_IDs.tosca_ID
+            delete_response = requests.delete(dripAPI.address + 'tosca/' + tosca_id,
+                                              auth=HTTPBasicAuth(dripAPI.username, dripAPI.password),
+                                              verify=False)
+        # Upload new TOSCA
+        tosca_post_response = requests.post(dripAPI.address + 'tosca' + '/post',
+                                            verify=False,
+                                            data=app_tosca_yaml,
+                                            auth=(dripAPI.username, dripAPI.password))
+
+        tosca_drip_id = tosca_post_response.content
+        DRIP_IDs.tosca_ID = tosca_drip_id
+        DRIP_IDs.save()
+
+
+
     @detail_route(methods=['get'], permission_classes=[])
     def plan(self, request, pk=None, *args, **kwargs):
         # TODO: Think about making this more transparent. This should be something that is stored in the application?
@@ -371,22 +393,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         # Calling the DRIP API
         else:
 
-            app_tosca_yaml = self.tosca(request, pk)
-            #Clean old TOSCA
-            if DRIP_IDs.tosca_ID:
-                tosca_id =  DRIP_IDs.tosca_ID
-                delete_adress = drip_host + '/user/v1.0/tosca/' + tosca_id
-                delete_response = requests.delete(delete_adress,
-                                                  auth=HTTPBasicAuth(drip_username, drip_password),
-                                                  verify=False)
-
-            tosca_post_response = requests.post(drip_host + drip_tosca_endpoint + '/post',
-                                                verify=False,
-                                                data=app_tosca_yaml,
-                                                auth=('matej', 'switch-1nt3gr4t1on'))
-            tosca_drip_id = tosca_post_response.content
-            DRIP_IDs.tosca_ID = tosca_drip_id
-            DRIP_IDs.save()
+            self.upload_tosca(request, pk,  DRIP_IDs)
 
             # Clean old plan
             if DRIP_IDs.plan_ID:
