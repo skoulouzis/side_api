@@ -1667,6 +1667,7 @@ class DripApi(models.Model):
     header = models.CharField(max_length=255, default='/drip-api/user/v1.0/')
     username = models.CharField(max_length=255, default='matej')
     password = models.CharField(max_length=255, default='switch-1nt3gr4t1on')
+    credentials = models.CharField(max_length=255, default='5a972c95e4b0ae6519375f5c')
 
     @property
     def address(self):

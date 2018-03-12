@@ -269,6 +269,9 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
     def validate(self, request, pk=None, *args, **kwargs):
         # TODO: Make V2
         details = []
+        dripAPI = DripApi.objects.first()
+        if not dripAPI:
+            dripAPI = DripApi.objects.create()
         app = Application.objects.filter(id=pk).first()
         DRIP_IDs = DRIPIDs.objects.filter(application=app).first()
         if not DRIP_IDs:
@@ -374,7 +377,7 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                                               auth=HTTPBasicAuth(dripAPI.username, dripAPI.password),
                                               verify=False)
 
-        plan_response = requests.get(dripAPI.address + 'planner/plan/' + dripIDs.tosca,
+        plan_response = requests.get(dripAPI.address + 'planner/plan/' + dripIDs.tosca + '/?preferred_provider=ec2&max_vm=2',
                                      auth=HTTPBasicAuth(dripAPI.username, dripAPI.password),
                                      verify=False)
 
@@ -509,9 +512,10 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
             dripIds = DRIPIDs.objects.filter(application=app).first()
 
             plan_id = dripIds.plan
+            plan_id = "5aa2a585e4b06bf61a810350"
 
             provision_json = {
-                "cloudCredentialsIDs": ["5a73214ce4b082de6b5584fc"],
+                "cloudCredentialsIDs": [dripAPI.credentials],
                 "planID": plan_id
             }
 
@@ -519,6 +523,18 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
                                                json=provision_json,
                                                auth=HTTPBasicAuth(dripAPI.username, dripAPI.password),
                                                verify=False)
+
+            if provision_response.status_code == 200:
+                provision_id = provision_response.content
+                provision_yml = requests.get(dripAPI.address + '/provisioner/' + provision_id,
+                                             auth=HTTPBasicAuth(dripAPI.username, dripAPI.password),
+                                             verify=False)
+
+                if TESTING:
+
+                    provision_yml_filename = 'provision_' + app.id.__str__() + '.yml'
+                    with open(provision_yml_filename, 'w') as f:
+                        print >> f, provision_yml.content
 
             details.append('Application provisioned')
             result = 'OK'
