@@ -511,8 +511,8 @@ class ApplicationViewSet(PaginateByMaxMixin, viewsets.ModelViewSet):
         else:
             dripIds = DRIPIDs.objects.filter(application=app).first()
 
-            plan_id = dripIds.plan
-            plan_id = "5aa2a585e4b06bf61a810350"
+            plan_id = dripIds.demo_plan
+            #plan_id = "5aa2a585e4b06bf61a810350"
 
             provision_json = {
                 "cloudCredentialsIDs": [dripAPI.credentials],

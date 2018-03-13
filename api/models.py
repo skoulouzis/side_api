@@ -1654,6 +1654,10 @@ class DRIPIDs(models.Model):
     provision = models.CharField(max_length=255, blank=True)
     deployment = models.CharField(max_length=255, blank=True)
     compose = models.CharField(max_length=255, blank=True)
+    demo_plan = models.CharField(max_length=255, blank=True)
+    demo_provision = models.CharField(max_length=255, blank=True)
+    demo_deploy = models.CharField(max_length=255, blank=True)
+    demo_compose = models.CharField(max_length=255, blank=True)
 
     class JSONAPIMeta:
         def __init__(self):
